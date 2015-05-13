@@ -49,27 +49,41 @@ struct benchspec {
   void (*variant)(int, int, double**, struct benchscore *);
 };
 
-void djbi1d_skewed_tiles(int n, int jbi_iters, double ** jbi){
-  int r, l, bot, top;
 
-  int stg = (jbi_iters / T_ITERS) + 1;
-  int strp = (n / T_WIDTH_DBL); 
-  for (long Ti = -1; Ti < strp + 1; Ti++) {
-    for (long Tt = 0; Tt < stg; Tt++) {
-      // Tile height
-      bot = max(Tt * T_ITERS, 1);
-      top = min((Tt + 1) * T_ITERS, jbi_iters);
-      for(int t = bot; t < top; t++){
-        // Line boundaries
-        l = max(Ti * T_WIDTH_DBL + (t - bot) , 1);
-        r = min((Ti + 1) * T_WIDTH_DBL + (t - bot), n - 1);
-        for(int i = l; i < r; i++){
-          JBI1D_STENCIL_T(jbi);
+void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
+  double * slashs){
+    #pragma omp parallel
+    {
+      #pragma omp master
+      for(int Ti = 0; Ti < strips; Ti++){
+        for(int Tt = 0; Tt < tsteps){
+          #pragma omp task
+          {
+            double l1[T_WIDTH_DBL+2], l2[T_WIDTH_DBL+2];
+            double * tmp;
+
+            int strpno = Ti + Tt * 2; 
+
+            for(int t = 0; t < T_ITERS * 2; t+=2){
+              l1[0] = slashs[Tt + t];
+              l1[1] = slashs[Tt + t + 1];
+              for(int i = 2; i < T_WIDTH_DBL + 1; i++){
+                l2[i] = (l1[i -2] + l1[i - 1] + l1[i]) / 3.0 ;
+              }
+              slashs[Tt + t] = l2[T_WIDTH_DBL - 1];
+              slashs[Tt + t + 1] = l2[T_WIDTH_DBL];
+              tmp = l1;
+              l1 = l2;
+              l2 = tmp;
+            }
+            for(int i = 2; i < T_WIDTH_DBL; i++){
+              dashs[strpno + i - 1] = l1[i];
+            }
+          }
         }
       }
     }
   }
-
 }
 
 
@@ -127,10 +141,8 @@ void djbi1d_omp_overlap(int n, int jbi_iters, int stages, double ** jbi){
       int h = top - bot;
       int l0 = max((T_WIDTH_DBL_OVERLAP * Ti), 1);
       int r0 = min((T_WIDTH_DBL_OVERLAP * (Ti + 1)), n-1);
-      int w0 = r0 -l0;
       int l = max((l0 - h ), 1);
       int r = min((r0 + h), n-1);
-      int w = r - l;
       {
         // Read tile base
         for(i = l ; i < r ; i++ ){
@@ -141,7 +153,7 @@ void djbi1d_omp_overlap(int n, int jbi_iters, int stages, double ** jbi){
         lvl0 = tile[0];
         lvl1 = tile[1];
 
-        for(int t = 0 ; t < h; t++){
+        for(t = 0 ; t < h; t++){
           int lt = max(t , 0);
           int rt = min((r - l - t), n);
           for(int i = lt ; i < rt; i++){
@@ -312,17 +324,22 @@ void djbi1d_omp_overlap_test(int n, int iters, double ** jbi,
   }
 }
 
-void djbi1d_skewed_tiles_test(int n, int iters, double ** jbi, 
+void djbi1d_skewed_tiles_test(int n, int iters, double ** jbi, \
   struct benchscore * bsc){
   
-  double ** jbi_full_mat = allocmatrix_d(iters, n);
+  int timesteps = (iters / T_ITERS) + 1;
+  int strips = (n / T_WIDTH_DBL);
+  double * dashs = (double*) malloc(sizeof(double) * strips * T_WIDTH_DBL);
+  double * slashs = (double*) malloc(sizeof(double) * timesteps * T_ITERS);
 
-  for(int i = 0; i < n; i++){
-    jbi_full_mat[0][i] = jbi[0][i];
+  for(int i =0; i < n; i++){
+    dashs[i] = jbi[0][i];
   }
- printf("r\n");
+
   clock_gettime( CLOCK_MONOTONIC, &tbegin);
-  djbi1d_skewed_tiles(n, iters, jbi_full_mat);
+
+  djbi1d_skewed_tiles(strips , timesteps, jbi_dashs, jbi_slashs);
+
   clock_gettime( CLOCK_MONOTONIC, &tend);
 
   bsc->wallclock = ELAPSED_TIME(tend, tbegin);

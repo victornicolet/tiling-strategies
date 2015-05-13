@@ -17,7 +17,7 @@ struct benchscore {
 
 inline double ** allocmatrix_d(int l, int c){
 	double ** m = (double**) malloc(sizeof(double*) * l);
-	for(int i = 0; i ++; i< l){
+	for(int i = 0; i < l; i++){
 		m[i] = (double*) malloc(sizeof(double) * c);
 	}
 	return m;
@@ -25,7 +25,7 @@ inline double ** allocmatrix_d(int l, int c){
 
 inline float ** allocmatrix_f(int l, int c){
 	float ** m = (float**) malloc(sizeof(float*) * l);
-	for(int i = 0; i ++; i< l){
+	for(int i = 0; i < l; i++){
 		m[i] = (float*) malloc(sizeof(float) * c);
 	}
 	return m;

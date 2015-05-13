@@ -2,11 +2,11 @@ CC=gcc
 
 CFLAGS=-g -Wall -std=c11
 
-ifeq($(CC),icc)
-	CFLAGS+= -openmp
+ifeq ($(CC),icc)
+	CFLAGS+=-openmp
 else
-	ifeq($(CC),gcc)
-		CFLAGS+= -fopenmp
+	ifeq ($(CC),gcc)
+		CFLAGS+=-fopenmp
 	endif
 endif
 
