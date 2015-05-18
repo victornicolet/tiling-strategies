@@ -17,7 +17,7 @@
 // Iterations within a tile
 #define T_ITERS 32
 // Fill a cache line with 8 doubles or 16 float
-#define T_WIDTH_DBL 16
+#define T_WIDTH_DBL L1_CACHE_SIZE/2
 #define T_WIDTH_FLT 32
 // Different values for overlapped version
 static int T_WIDTH_DBL_OVERLAP =
@@ -67,11 +67,12 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
       for(int Ti = 0; Ti < strips; Ti++){
         for(int Tt = 0; Tt < tsteps; Tt++){
           // Strip number
-          int strpno = (Ti + Tt * 2) % strips;
-          // Bottom tiles : only left-to-right dependencies
+          int sto = (Ti + Tt * 2);
+          int strpno = sto % strips;
+          // Bottom tiles : only left-to-right dependencies + top out
           if(Tt == 0){
-            #pragma omp task depend(in : task[Ti-1][0]) \
-              depend(out : task[Ti + 1][0])
+            #pragma omp task depend(in : task[sto-1][0]) \
+              depend(out : task[sto+1][0], task[sto][Tt+1])
             {
               double l1[T_WIDTH_DBL + 2];
               double l2[T_WIDTH_DBL + 2];
@@ -102,8 +103,8 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
             Only one in dependency, one out
             Here assume T_ITERS > T_WIDTH_DBL
             */
-            #pragma omp task depend(in : task[Ti][Tt-1]) \
-              depend(out : task[Ti+1][Tt])
+            #pragma omp task depend(in : task[sto][Tt-1]) \
+              depend(out : task[sto+1][Tt])
             {
               double l1[T_WIDTH_DBL + 2];
               double l2[T_WIDTH_DBL + 2];
@@ -135,8 +136,8 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
           } else {
             // Regular tile
             // Two in and out dependencies
-            #pragma omp task depend(in: task[Ti-1][Tt], task[Ti][Tt-1]) \
-              depend(out : task[Ti + 1][Tt], task[Ti][Tt + 1])
+            #pragma omp task depend(in: task[sto-1][Tt], task[sto][Tt-1]) \
+              depend(out : task[sto+1][Tt], task[sto][Tt + 1])
             {
               double l1[T_WIDTH_DBL+2];
               double l2[T_WIDTH_DBL+2];
@@ -428,7 +429,7 @@ void djbi1d_skewed_tiles_test(int n, int iters, double ** jbi, \
   struct benchscore * bsc){
   
   int timesteps = (iters / T_ITERS) + 1;
-  int strips = (n / T_WIDTH_DBL);
+  int strips = (n / T_WIDTH_DBL) + timesteps ;
   double * jbi_dashs = (double*) malloc(sizeof(double) * strips * T_WIDTH_DBL);
   double * jbi_slashs = (double*) malloc(sizeof(double) * timesteps * T_ITERS);
 
