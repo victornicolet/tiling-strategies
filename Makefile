@@ -67,8 +67,7 @@ vtune: $(OBJECTS)
 	tar -zcf $(BENCH_RESULT).tar $(BENCH_RESULT)
 
 perfmem: $(P_TARGET)
-	perf record -F $(REPORT_FREQ) -e $(HW_COUNTERS) -a -g \
-	-- ./$(P_TARGET) $(P_ARGS)
+	perf mem record -- ./$(P_TARGET) $(P_ARGS)
 
 memcheck: $(P_TARGET)
 	valgrind --tool=cachegrind $(VALGRIND_OPTS) ./$(P_TARGET) $(P_ARGS)
