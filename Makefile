@@ -48,7 +48,7 @@ jbi1d : jacobi1d.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 clean:
-	rm jbi1d
+	rm jbi1d cachegrind.out.*
 
 vtune: $(OBJECTS)
 	rm -rf $(BENCH_RESULT_DIR)

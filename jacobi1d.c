@@ -17,8 +17,8 @@
 // Iterations within a tile
 #define T_ITERS 32
 // Fill a cache line with 8 doubles or 16 float
-#define T_WIDTH_DBL 8
-#define T_WIDTH_FLT 16
+#define T_WIDTH_DBL 16
+#define T_WIDTH_FLT 32
 // Different values for overlapped version
 static int T_WIDTH_DBL_OVERLAP =
  (L1_CACHE_SIZE - T_ITERS * T_ITERS)/(sizeof(double)*T_ITERS);
