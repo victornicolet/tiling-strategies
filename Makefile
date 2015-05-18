@@ -45,7 +45,7 @@ ifndef P_TARGET
 	P_TARGET=jbi1d
 endif
 ifndef P_ARGS
-	P_ARGS=10 0010
+	P_ARGS=10 0001
 endif
 
 #-------------------------------------------------------------------------------
@@ -59,7 +59,7 @@ jbi1d : jacobi1d.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 clean:
-	rm jbi1d cachegrind.out.*
+	rm jbi1d cachegrind.out.* perf.data.*
 
 vtune: $(OBJECTS)
 	rm -rf $(BENCH_RESULT_DIR)
@@ -68,6 +68,9 @@ vtune: $(OBJECTS)
 
 perfmem: $(P_TARGET)
 	perf mem record -- ./$(P_TARGET) $(P_ARGS)
+
+reportmem: perfmem
+	perf mem report --sort=mem
 
 memcheck: $(P_TARGET)
 	valgrind --tool=cachegrind $(VALGRIND_OPTS) ./$(P_TARGET) $(P_ARGS)
