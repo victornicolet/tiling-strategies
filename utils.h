@@ -8,41 +8,19 @@
 #define min(a,b) ((a) > (b) ? (b) : (a))
 #define max(a,b) ((a) > (b) ? (a) : (b))
 
+#define ALLOC_MX(m, type, dim1, dim2) type ** (m) = \
+	(type **) malloc(sizeof(type *) * (dim1)); \
+	for(int i = 0; i < (dim1); i++){\
+	m[i] = (type *) malloc(sizeof(type) * dim2);\
+	}
+	
+#define FREE_MX(m, dim1) for(int i = 0; i < (dim1); i++){free(m[i]);}free(m);
+
 struct benchscore {
   // Name of the benchmark
   char *name;
   //Elapsed wall-clock time
   double wallclock;
 };
-
-inline double ** allocmatrix_d(int l, int c){
-	double ** m = (double**) malloc(sizeof(double*) * l);
-	for(int i = 0; i < l; i++){
-		m[i] = (double*) malloc(sizeof(double) * c);
-	}
-	return m;
-}
-
-inline float ** allocmatrix_f(int l, int c){
-	float ** m = (float**) malloc(sizeof(float*) * l);
-	for(int i = 0; i < l; i++){
-		m[i] = (float*) malloc(sizeof(float) * c);
-	}
-	return m;
-}
-
-inline void freematrix_d(double ** m, int l){
-	for(int i = 0; i < l; i++){
-		free(m[i]);
-	}
-	free(m);
-}
-
-inline void freematrix_f(float ** m, int l){
-	for(int i = 0; i < l; i++){
-		free(m[i]);
-	}
-	free(m);
-}
 
 #endif
