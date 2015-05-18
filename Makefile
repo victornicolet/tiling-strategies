@@ -20,13 +20,17 @@ SOURCES=jacobi1d.c test.c
 HEADERS=utils.
 OBJECTS=jbi1d
 
-# Profiling
 
-#Profiling
+# Profiling
 BENCH_RESULT=profile
 VTUNE=amplxe-cl
 VTFLAGS=-collect general-exploration -analyze-system
 VT_R_DIR=--result-dir $(BENCH_RESULT_DIR)
+#Hardware counters for profiling
+REPORT_FREQ=99
+HW_COUNTERS=L1-dcache-loads,L1-dcache-load-misses,L1-dcache-stores
+# Valgrind options
+VALGRIND_OPTS+= -q --alignment=16
 ifndef P_TARGET
 	P_TARGET=jbi1d
 endif
@@ -51,11 +55,18 @@ vtune: $(OBJECTS)
 	$(VTUNE) $(VTFLAGS) $(VT_R_DIR) -- ./$(P_TARGET) $(P_ARGS)
 	tar -zcf $(BENCH_RESULT).tar $(BENCH_RESULT)
 
-perf: $(P_TARGET)
-	@echo "Scheduler and IPC mechanisms benchmarks .."
-	perf bench sched $(P_TARGET) $(P_ARGS)
-	@echo "Memory access performance benchmark.."
-	perf bench mem $(P_TARGET) $(P_ARGS)
+perfmem: $(P_TARGET)
+	perf record -F $(REPORT_FREQ) -e $(HW_COUNTERS) -a -g \
+	-- ./$(P_TARGET) $(P_ARGS)
 
+memcheck: $(P_TARGET)
+	valgrind --tool=cachegrind $(VALGRIND_OPTS) ./$(P_TARGET) $(P_ARGS)
+
+viewopts: 
+	@echo "\t-- Profiling parameters --"
+	@echo "P_TARGET\t" $(P_TARGET) 
+	@echo "P_ARGS\t\t" $(P_ARGS)
+	@echo "VALGRIND_OPTS \t" $(VALGRIND_OPTS)
+	@echo "HW_COUNTERS \t" $(HW_COUNTERS)
 tar:
 	tar -zcf $(SOURCES) $(HEADERS) Makefile
