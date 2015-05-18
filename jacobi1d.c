@@ -12,7 +12,7 @@
 
 // Cache line size of 64 bytes on most x86
 #define  CACHE_LINE_SIZE 64
-
+#define  L1_CACHE_SIZE 6044
 // TILE DIMENSIONS -------------------------------
 // Iterations within a tile
 #define T_ITERS 32
@@ -21,7 +21,7 @@
 #define T_WIDTH_FLT 16
 // Different values for overlapped version
 static int T_WIDTH_DBL_OVERLAP =
- (12*1024 - T_ITERS * T_ITERS)/(sizeof(double)*T_ITERS);
+ (L1_CACHE_SIZE - T_ITERS * T_ITERS)/(sizeof(double)*T_ITERS);
  // Specifi for diamond tiles
  #define T_WIDTH_DBL_DIAM 8
  #define T_ITERS_DIAM 32
@@ -58,23 +58,41 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
       #pragma omp master
       for(int Ti = 0; Ti < strips; Ti++){
         for(int Tt = 0; Tt < tsteps; Tt++){
-          // Edge tile : triangular
-          if(Ti = 0){
+          if(Ti == 0){
+            // Left edge tile : triangular
+            // Only one in-out dependency
+            // Here assume T_ITERS > T_WIDTH_DBL
             #pragma omp task depend(in : task[Ti][Tt-1]) \
-              depend(out : task[Ti][Tt+1])
-              {
-                double l1[T_WIDTH_DBL];
-                double l2[T_WIDTH_DBL];
-                double *tmp;
+              depend(out : task[Ti+1][Tt])
+            {
+              double l1[T_WIDTH_DBL];
+              double l2[T_WIDTH_DBL];
+              double *tmp;
+              int strpno = (Ti + Tt * 2) % strips;
 
-                for(int i = 2; i < T_WIDTH_DBL + 2; i++){
-                 l1[i] = dashs[strpno + i - 2];
-                }
-
-                
+              for(int i = 1; i < T_WIDTH_DBL + 2; i++){
+               l1[i] = dashs[strpno + i - 1];
               }
+
+              for(int t= 0; t < 2 * T_ITERS; t+=2){
+                int right = max(T_WIDTH_DBL - t, 0);
+                l1[0] = 0;
+                for(int i = 1; i < right; i++){
+                  l2[i] = (l1[i - 1] + l1[i] + l1[i + 1]) / 3.0;
+                }
+                slashs[Tt + t] = l2[right];
+                slashs[Tt + t + 1] = l2[right - 1];
+
+                *tmp = *l1;
+                *l1 = *l2;
+                *l2 = *tmp;
+              }
+
+              
+            }
           } else {
             // Regular tile
+            // Two in and out dependencies
             #pragma omp task depend(in: task[Ti-1][Tt], task[Ti][Tt-1]) \
               depend(out : task[Ti + 1][Tt], task[Ti][Tt + 1])
             {
@@ -82,7 +100,7 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
               double l2[T_WIDTH_DBL+2];
               double * tmp;
 
-              int strpno = Ti + Tt * 2; 
+              int strpno = (Ti + Tt * 2) % strips; 
               // Load dash in the stack
               for(int i = 2; i < T_WIDTH_DBL + 2; i++){
                 l1[i] = dashs[strpno + i - 2];
@@ -242,6 +260,18 @@ struct benchspec benchmarks[] = {
 int main(int argc, char ** argv){
 
     int nbench = sizeof(benchmarks) / sizeof(struct benchspec);
+
+    if(strcmp(argv[1], "help") == 0){
+        printf("Usage: %s <Nruns> <Mask : %i> [ <Width> <Time iterations>]\n", 
+        argv[0], nbench);
+        printf("Build mask with : OVERLAP NAIVE SKEWED_TILES SEQUENTIAL\n");
+        printf("Dimensions : \n");
+        printf("T_ITERS : \t\t%i\nT_WIDTH_DBL : \t\t %i\n", T_ITERS, 
+          T_WIDTH_DBL);
+        printf("T_WIDTH_DBL_OVERLAP : \t%i\n", T_WIDTH_DBL_OVERLAP);
+        printf("T_WIDTH_DBL_DIAM : \t%i\n", T_WIDTH_DBL_DIAM );
+        return 0;
+    }
 
     if(argc < 3){
       printf("Usage: %s <Nruns> <Mask : %i> [ <Width> <Time iterations>]\n", 

@@ -1,6 +1,8 @@
 CC=gcc
 
-CFLAGS=-g -Wall -std=c11
+CFLAGS=-g -std=c11
+CFLAGS+=-Waddress -Wstrict-aliasing -Wopenmp-simd -Wparentheses
+CFLAGS+=  -Wimplicit-function-declaration -Wformat=2
 
 ifeq ($(CC),icc)
 	CFLAGS+=-openmp
