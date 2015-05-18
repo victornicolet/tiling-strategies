@@ -9,6 +9,7 @@
 #include <immintrin.h>
 
 #include "utils.h"
+
 // Cache line size of 64 bytes on most x86
 #define  CACHE_LINE_SIZE 64
 
@@ -51,40 +52,67 @@ struct benchspec {
 
 
 void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
-  double * slashs){
+  double * slashs, int ** task){
     #pragma omp parallel
     {
       #pragma omp master
       for(int Ti = 0; Ti < strips; Ti++){
-        for(int Tt = 0; Tt < tsteps){
-          #pragma omp task
-          {
-            double l1[T_WIDTH_DBL+2], l2[T_WIDTH_DBL+2];
-            double * tmp;
+        for(int Tt = 0; Tt < tsteps; Tt++){
+          // Edge tile : triangular
+          if(Ti = 0){
+            #pragma omp task depend(in : task[Ti][Tt-1]) \
+              depend(out : task[Ti][Tt+1])
+              {
+                double l1[T_WIDTH_DBL];
+                double l2[T_WIDTH_DBL];
+                double *tmp;
 
-            int strpno = Ti + Tt * 2; 
+                for(int i = 2; i < T_WIDTH_DBL + 2; i++){
+                 l1[i] = dashs[strpno + i - 2];
+                }
 
-            for(int t = 0; t < T_ITERS * 2; t+=2){
-              l1[0] = slashs[Tt + t];
-              l1[1] = slashs[Tt + t + 1];
-              for(int i = 2; i < T_WIDTH_DBL + 1; i++){
-                l2[i] = (l1[i -2] + l1[i - 1] + l1[i]) / 3.0 ;
+                
               }
-              slashs[Tt + t] = l2[T_WIDTH_DBL - 1];
-              slashs[Tt + t + 1] = l2[T_WIDTH_DBL];
-              tmp = l1;
-              l1 = l2;
-              l2 = tmp;
-            }
-            for(int i = 2; i < T_WIDTH_DBL; i++){
-              dashs[strpno + i - 1] = l1[i];
+          } else {
+            // Regular tile
+            #pragma omp task depend(in: task[Ti-1][Tt], task[Ti][Tt-1]) \
+              depend(out : task[Ti + 1][Tt], task[Ti][Tt + 1])
+            {
+              double l1[T_WIDTH_DBL+2];
+              double l2[T_WIDTH_DBL+2];
+              double * tmp;
+
+              int strpno = Ti + Tt * 2; 
+              // Load dash in the stack
+              for(int i = 2; i < T_WIDTH_DBL + 2; i++){
+                l1[i] = dashs[strpno + i - 2];
+              }
+              for(int t = 0; t < T_ITERS * 2; t+=2){
+                // Load slash part
+                l1[0] = slashs[Tt + t];
+                l1[1] = slashs[Tt + t + 1];
+                for(int i = 2; i < T_WIDTH_DBL + 2; i++){
+                  l2[i] = (l1[i -2] + l1[i - 1] + l1[i]) / 3.0 ;
+                }
+                // Write slash
+                slashs[Tt + t] = l2[T_WIDTH_DBL];
+                slashs[Tt + t + 1] = l2[T_WIDTH_DBL + 1];
+
+                *tmp = *l1;
+                *l1 = *l2;
+                *l2 = *tmp;
+              }
+              // Write dash
+              for(int i = 2; i < T_WIDTH_DBL; i++){
+                dashs[strpno + i - 2] = l1[i];
+              }
             }
           }
         }
       }
-    }
   }
 }
+
 
 
 void djbi1d_diamond_tiles(int n,int jbi_iters, double ** jbi, 
@@ -329,24 +357,25 @@ void djbi1d_skewed_tiles_test(int n, int iters, double ** jbi, \
   
   int timesteps = (iters / T_ITERS) + 1;
   int strips = (n / T_WIDTH_DBL);
-  double * dashs = (double*) malloc(sizeof(double) * strips * T_WIDTH_DBL);
-  double * slashs = (double*) malloc(sizeof(double) * timesteps * T_ITERS);
+  double * jbi_dashs = (double*) malloc(sizeof(double) * strips * T_WIDTH_DBL);
+  double * jbi_slashs = (double*) malloc(sizeof(double) * timesteps * T_ITERS);
+
+  ALLOC_MX(tasks, int, strips, timesteps)
 
   for(int i =0; i < n; i++){
-    dashs[i] = jbi[0][i];
+    jbi_dashs[i] = jbi[0][i];
   }
 
   clock_gettime( CLOCK_MONOTONIC, &tbegin);
 
-  djbi1d_skewed_tiles(strips , timesteps, jbi_dashs, jbi_slashs);
+  djbi1d_skewed_tiles(strips , timesteps, jbi_dashs, jbi_slashs, tasks);
 
   clock_gettime( CLOCK_MONOTONIC, &tend);
 
   bsc->wallclock = ELAPSED_TIME(tend, tbegin);
 
-  for(int i = 0; i < n; i++){
-    jbi[1][i] = jbi_full_mat[iters-1][i];
-  }
+  FREE_MX(tasks, strips)
 
-  freematrix_d(jbi_full_mat, iters);
+  free(jbi_dashs);
+  free(jbi_slashs);
 }
