@@ -53,22 +53,61 @@ struct benchspec {
 
 void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
   double * slashs, int ** task){
+    /* In this version we assume T_ITERS >= T_WIDTH_DBL so we have to make a
+    difference between regular tiles ( parallelogram-shaped ones) and triangular
+    tiles.
+    Parallelograms can be cut on one corner (for example leftmost parallelograms
+    are cut on top left corner if T_ITERS > T_WIDTH_DBL ).
+    With this assumptions parallelograms have always the same dependencies, and
+    triangles also.
+    */
     #pragma omp parallel
     {
       #pragma omp master
       for(int Ti = 0; Ti < strips; Ti++){
         for(int Tt = 0; Tt < tsteps; Tt++){
-          if(Ti == 0){
-            // Left edge tile : triangular
-            // Only one in-out dependency
-            // Here assume T_ITERS > T_WIDTH_DBL
+          // Strip number
+          int strpno = (Ti + Tt * 2) % strips;
+          // Bottom tiles : only left-to-right dependencies
+          if(Tt == 0){
+            #pragma omp task depend(in : task[Ti-1][0]) \
+              depend(out : task[Ti + 1][0])
+            {
+              double l1[T_WIDTH_DBL + 2];
+              double l2[T_WIDTH_DBL + 2];
+              double * tmp;
+
+              for(int i = 2; i < T_WIDTH_DBL; i++){
+                l1[i] = dashs[strpno + i -2];
+              }
+              for(int t = 0; t < T_ITERS * 2; t+=2){
+                l1[0] = slashs[Tt + t];
+                l1[1] = slashs[Tt + t + 1];
+
+                for(int i = 2; i < T_WIDTH_DBL + 2; i++){
+                  l2[i] = (l1[i -2] + l1[i - 1] + l1[i]) / 3.0 ;
+                }
+
+                slashs[Tt + t] = l2[T_WIDTH_DBL];
+                slashs[Tt + t + 1] = l2[T_WIDTH_DBL + 1];
+
+                *tmp = *l1;
+                *l1 = *l2;
+                *l2 = *tmp;
+              }
+            }
+
+          } else if(Ti == 0){
+            /* Left edge tile : triangular
+            Only one in dependency, one out
+            Here assume T_ITERS > T_WIDTH_DBL
+            */
             #pragma omp task depend(in : task[Ti][Tt-1]) \
               depend(out : task[Ti+1][Tt])
             {
-              double l1[T_WIDTH_DBL];
-              double l2[T_WIDTH_DBL];
-              double *tmp;
-              int strpno = (Ti + Tt * 2) % strips;
+              double l1[T_WIDTH_DBL + 2];
+              double l2[T_WIDTH_DBL + 2];
+              double *tmp; 
 
               for(int i = 1; i < T_WIDTH_DBL + 2; i++){
                l1[i] = dashs[strpno + i - 1];
@@ -87,6 +126,9 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
                 *l1 = *l2;
                 *l2 = *tmp; 
               }
+              for(int i = 2; i < T_WIDTH_DBL; i++){
+                dashs[strpno + i - 2] = l1[i];
+              }
 
               
             }
@@ -100,7 +142,6 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
               double l2[T_WIDTH_DBL+2];
               double * tmp;
 
-              int strpno = (Ti + Tt * 2) % strips; 
               // Load dash in the stack
               for(int i = 2; i < T_WIDTH_DBL + 2; i++){
                 l1[i] = dashs[strpno + i - 2];
