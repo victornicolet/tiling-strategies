@@ -26,7 +26,7 @@ OBJECTS=jbi1d
 # Profiling options ------------------------------------------------------------
 
 BENCH_RESULT=profile
-
+BENCH_RESULT_DIR=$(BENCH_RESULT)/vtune/
 # VTune options
 VTUNE=amplxe-cl
 VTFLAGS=-collect general-exploration -analyze-system
@@ -75,6 +75,7 @@ memcheck: $(P_TARGET)
 
 viewopts: 
 	@echo "\t-- Profiling parameters --"
+	@echo "BENCH_RESULT_DIR \t" $(BENCH_RESULT_DIR)
 	@echo "P_TARGET\t" $(P_TARGET) 
 	@echo "P_ARGS\t\t" $(P_ARGS)
 	@echo "VALGRIND_OPTS \t" $(VALGRIND_OPTS)
