@@ -23,10 +23,16 @@ OBJECTS=jbi1d
 # Profiling
 
 #Profiling
-BENCH_RESULT=vtune_profile
+BENCH_RESULT=profile
 VTUNE=amplxe-cl
 VTFLAGS=-collect general-exploration -analyze-system
 VT_R_DIR=--result-dir $(BENCH_RESULT_DIR)
+ifndef P_TARGET
+	P_TARGET=jbi1d
+endif
+ifndef P_ARGS
+	P_ARGS=10 0010
+endif
 
 .PHONY: clean
 
@@ -42,8 +48,14 @@ clean:
 
 vtune: $(OBJECTS)
 	rm -rf $(BENCH_RESULT_DIR)
-	$(VTUNE) $(VTFLAGS) $(VT_R_DIR) -- ./jbi1d $(IMAGE) $(RUNS)
+	$(VTUNE) $(VTFLAGS) $(VT_R_DIR) -- ./$(P_TARGET) $(P_ARGS)
 	tar -zcf $(BENCH_RESULT).tar $(BENCH_RESULT)
+
+perf: $(P_TARGET)
+	@echo "Scheduler and IPC mechanisms benchmarks .."
+	perf bench sched $(P_TARGET) $(P_ARGS)
+	@echo "Memory access performance benchmark.."
+	perf bench mem $(P_TARGET) $(P_ARGS)
 
 tar:
 	tar -zcf $(SOURCES) $(HEADERS) Makefile
