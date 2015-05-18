@@ -85,7 +85,7 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
 
                 *tmp = *l1;
                 *l1 = *l2;
-                *l2 = *tmp;
+                *l2 = *tmp; 
               }
 
               
@@ -323,6 +323,7 @@ int main(int argc, char ** argv){
         for(iter = 0; iter < nruns + 1; iter++){
           score[iter].name = benchmarks[bs].name;
           benchmarks[bs].variant(tab_size, jbi_size, jbi, &score[iter]);
+          
           if(iter > 0) {
             printf("%s : Run %i ...", score[iter].name, iter + 1 );
             printf("\t\t %13f ms\n", score[iter].wallclock * 1000.0 );

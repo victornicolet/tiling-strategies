@@ -1,4 +1,6 @@
-CC=gcc
+ifndef CC
+	CC=gcc
+endif
 
 CFLAGS=-g -std=c11
 CFLAGS+=-Waddress -Wstrict-aliasing -Wopenmp-simd -Wparentheses
@@ -15,7 +17,16 @@ endif
 CFLAGS+=-O3
 
 SOURCES=jacobi1d.c test.c
-HEADERS=utils.h
+HEADERS=utils.
+OBJECTS=jbi1d
+
+# Profiling
+
+#Profiling
+BENCH_RESULT=vtune_profile
+VTUNE=amplxe-cl
+VTFLAGS=-collect general-exploration -analyze-system
+VT_R_DIR=--result-dir $(BENCH_RESULT_DIR)
 
 .PHONY: clean
 
@@ -28,6 +39,11 @@ jbi1d : jacobi1d.c
 
 clean:
 	rm jbi1d
+
+vtune: $(OBJECTS)
+	rm -rf $(BENCH_RESULT_DIR)
+	$(VTUNE) $(VTFLAGS) $(VT_R_DIR) -- ./jbi1d $(IMAGE) $(RUNS)
+	tar -zcf $(BENCH_RESULT).tar $(BENCH_RESULT)
 
 tar:
 	tar -zcf $(SOURCES) $(HEADERS) Makefile
