@@ -50,36 +50,37 @@ struct benchspec {
   void (*variant)(int, int, double**, struct benchscore *);
 };
 
-inline void do_i0_t0(double * dashs, double * slashs, double * l1, double * l2){
-    
+inline void do_i0_t0(double * dashs, double * slashs){
+    double * l1 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
+    double * l2 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
     double * tmp;
     uint8_t t,i;
 
-    for(i = 1; i <= T_WIDTH_DBL + 1; i++){
-      l1[i] = dashs[i -1];
+    for(i = 0; i < T_WIDTH_DBL + 2; i++){
+      l1[i] = dashs[i]; 
     }
 
-    for(t = 0; t < T_WIDTH_DBL * 2; t+=2){
+    for(t = 0; t < T_ITERS * 2; t+=2){
       l1[0] = 0;
       int right = max(T_WIDTH_DBL - t/2, 1);
-      for(i = 1; i < right; i++){
+      for(i = 1; i < right + 1; i++){
         l2[i] = (l1[i -1] + l1[i] + l1[i+1]) / 3.0 ;
       }
       slashs[t] = l2[right - 1];
       slashs[t + 1] = l2[right];
-
       SWAP(l1 ,l2, tmp);
     }
 }
 
-inline void do_i0_t(double * dashs, double * slashs, double * l1, double * l2,
-  int strpno, int Tt){
+inline void do_i0_t(double * dashs, double * slashs, int strpno, int Tt){
 
+  double * l1 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
+  double * l2 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
   double * tmp;
   uint8_t t,i;
 
   for(i = 0; i < T_WIDTH_DBL; i++){
-   l1[i+1] = dashs[strpno + i];
+   l1[i+1] = dashs[strpno * T_WIDTH_DBL + i];
   }
 
   for(int t= 0; t < 2 * T_ITERS; t += 2){
@@ -88,24 +89,22 @@ inline void do_i0_t(double * dashs, double * slashs, double * l1, double * l2,
     for(i = 1; i < right; i++){
       l2[i] = (l1[i - 1] + l1[i] + l1[i + 1]) / 3.0;
     }
-    slashs[Tt + t] = l2[right-1];
-    slashs[Tt + t + 1] = l2[right-2];
+    slashs[Tt * 2 * T_ITERS + t] = l2[right-1];
+    slashs[Tt * 2 * T_ITERS + t + 1] = l2[right-2];
 
     SWAP(l1 ,l2, tmp);
   }
-  for(i = 1; i < T_WIDTH_DBL; i++){
-    dashs[strpno + i - 1] = l1[i];
-  }
 }
 
-inline void do_i_t0(double * dashs, double * slashs, double * l1, double * l2,
-  int strpno){
+inline void do_i_t0(double * dashs, double * slashs, int strpno){
 
+  double * l1 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
+  double * l2 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
   double *tmp;
   uint8_t t,i;
 
   for(i = 2; i < T_WIDTH_DBL + 2; i++){
-    l1[i] = dashs[strpno + i -2];
+    l1[i] = dashs[strpno * T_WIDTH_DBL + i -2];
   }
 
   for(t = 0; t < T_ITERS * 2; t+=2){
@@ -121,59 +120,85 @@ inline void do_i_t0(double * dashs, double * slashs, double * l1, double * l2,
 
     SWAP(l1 ,l2, tmp);
   }
+  for(i = 2; i < T_WIDTH_DBL + 2; i++){
+    dashs[strpno * T_WIDTH_DBL + i - 2] = l1[i];
+  }
 }
 
-inline void do_i_t(double * dashs, double * slashs, double * l1, double * l2,
-  int strpno, int Tt){
+inline void do_i_t(double * dashs, double * slashs, int strpno, int Tt){
 
+  double * l1 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
+  double * l2 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
   double * tmp;
   uint8_t t,i;
 
   // Load dash in the stack
   for(i = 2; i < T_WIDTH_DBL + 2; i++){
-    l1[i] = dashs[strpno + i - 2];
+    l1[i] = dashs[strpno * T_WIDTH_DBL + i - 2];
   }
   for(t = 0; t < T_ITERS * 2; t+=2){
     // Load slash part
-    l1[0] = slashs[Tt + t];
-    l1[1] = slashs[Tt + t + 1];
+    l1[0] = slashs[Tt * 2 * T_ITERS + t];
+    l1[1] = slashs[Tt * 2 * T_ITERS + t + 1];
     for(i = 2; i < T_WIDTH_DBL + 2; i++){
       l2[i] = (l1[i -2] + l1[i - 1] + l1[i]) / 3.0 ;
     }
     // Write slash
-    slashs[Tt + t] = l2[T_WIDTH_DBL];
-    slashs[Tt + t + 1] = l2[T_WIDTH_DBL + 1];
+    slashs[Tt * 2 * T_ITERS + t] = l2[T_WIDTH_DBL];
+    slashs[Tt * 2 * T_ITERS + t + 1] = l2[T_WIDTH_DBL + 1];
 
     SWAP(l1, l2, tmp)
   }
   // Write dash
   for(i = 2; i < T_WIDTH_DBL; i++){
-    dashs[strpno + i - 2] = l1[i];
+    dashs[strpno * T_WIDTH_DBL + i - 2] = l1[i];
+  }
+}
+
+
+inline void do_in_t(double * dashs, double * slashs, int strpno, int Tt){
+  double * l1 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
+  double * l2 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
+  double * tmp;
+  uint8_t t,i;
+
+  for(t = 0; t < T_ITERS * 2; t+=2){
+    // Load slash part
+    l1[0] = slashs[Tt * 2 * T_ITERS + t];
+    l1[1] = slashs[Tt * 2 * T_ITERS + t + 1];
+    l1[2 + t/2] = 0.0;
+    for(i = 2; i < 2 + t/2 ; i++){
+      l2[i] = (l1[i -2] + l1[i - 1] + l1[i]) / 3.0 ;
+    }
+    // Write slash
+    slashs[Tt * 2 * T_ITERS + t] = l2[T_WIDTH_DBL];
+    slashs[Tt * 2 * T_ITERS + t + 1] = l2[T_WIDTH_DBL + 1];
+
+    SWAP(l1, l2, tmp)
+  }
+  // Write dash
+  for(i = 2; i < T_WIDTH_DBL; i++){
+    dashs[strpno * T_WIDTH_DBL + i - 2] = l1[i];
   }
 
 }
 
 void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
   double * slashs, int ** task){
-    /* In this version we assume T_ITERS >= T_WIDTH_DBL so we have to make a
+    /* In this version we assume T_ITERS = T_WIDTH_DBL so we have to make a
     difference between regular tiles ( parallelogram-shaped ones) and triangular
-    tiles.
-    Parallelograms can be cut on one corner (for example leftmost parallelograms
-    are cut on top left corner if T_ITERS > T_WIDTH_DBL ).
-    With this assumptions parallelograms have always the same dependencies, and
-    triangles also.
+    tiles, but the pattern is quite regular and dependencies are straightforward
+    at the boundaries of the domain.
     ---------------
 
     timesteps = (iters / T_ITERS) + 1;
     strips = (n / T_WIDTH_DBL) + 1 + timesteps ;
     */
     int Ti, Tt, t, i;
-    #pragma omp parallel
+    //#pragma omp parallel
     {
-      double * l1 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
-      double * l2 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
 
-      #pragma omp master
+      //#pragma omp master
       for(Ti = 0; Ti < strips; Ti++){
         for(Tt = 0; Tt < tsteps; Tt++){
           // Strip number
@@ -182,18 +207,18 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
 
           // Initial tile
           if( Tt == 0 && Ti == 0){
-            #pragma omp task private(l1,l2) \
-             depend(out : task[1][0], task[0][1])
+            //#pragma omp task  \
+            // depend(out : task[1][0], task[0][1])
             {
-              do_i0_t0(dashs, slashs, l1, l2);
+              do_i0_t0(dashs, slashs);
             }
           } else if(Tt == 0){
             // Bottom tiles : only left-to-right dependencies + top out
-            #pragma omp task private(l1,l2) \
-              depend(in : task[sto-1][0]) \
-              depend(out : task[sto+1][0], task[sto][Tt+1])
+            //#pragma omp task \
+            //  depend(in : task[sto-1][0]) \
+            //  depend(out : task[sto+1][0], task[sto][Tt+1])
             {
-              do_i_t0(dashs, slashs, l1, l2, strpno);
+              do_i_t0(dashs, slashs, strpno);
             }
 
           } else if(Ti == 0){
@@ -201,27 +226,29 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
             Only one in dependency, one out
             Here assume T_ITERS > T_WIDTH_DBL
             */
-            #pragma omp task private(l1,l2) \
-              depend(in : task[sto][Tt - 1]) \
-              depend(out : task[sto + 1][Tt])
+            //#pragma omp task \
+            //  depend(in : task[sto][Tt - 1]) \
+            //  depend(out : task[sto + 1][Tt])
             {
-              do_i0_t(dashs, slashs, l1, l2, strpno, Tt);
+              do_i0_t(dashs, slashs, strpno, Tt);
             }
-          } else {
+          } else if(Ti == strips - 1){
+            //#pragma omp task \
+            //  depend(in: task[sto-1][Tt]) \
+            //  depend(out : task[sto][Tt + 1])
+              do_iN_t(dashs, slashs, strpno, Tt);
+          } else{
             // Regular tile
             // Two in and out dependencies
-            #pragma omp task private(l1,l2)\
-              depend(in: task[sto-1][Tt], task[sto][Tt-1]) \
-              depend(out : task[sto+1][Tt], task[sto][Tt + 1])
+            //#pragma omp task \
+            //  depend(in: task[sto-1][Tt], task[sto][Tt-1]) \
+            //  depend(out : task[sto+1][Tt], task[sto][Tt + 1])
             {
-              do_i_t(dashs, slashs, l1, l2, strpno, Tt);
+              do_i_t(dashs, slashs, strpno, Tt);
             }
           }
         }
       }
-
-      free(l1);
-      free(l2);
   }
 }
 
