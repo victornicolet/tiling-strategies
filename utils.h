@@ -16,11 +16,13 @@
 	
 #define FREE_MX(m, dim1) for(int i = 0; i < (dim1); i++){free(m[i]);}free(m);
 
+#define SWAP(l1, l2, tmp)  { tmp = l1; l1 = l2; l2 = tmp; }
 struct benchscore {
   // Name of the benchmark
   char *name;
   //Elapsed wall-clock time
   double wallclock;
 };
+
 
 #endif
