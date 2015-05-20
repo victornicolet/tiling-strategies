@@ -185,7 +185,7 @@ inline void do_in_t(double * dashs, double * slashs, int strpno, int Tt){
 }
 
 void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
-  double * slashs, int ** tasks){
+  double * slashs){
     /* In this version we assume T_ITERS = T_WIDTH_DBL so we have to make a
     difference between regular tiles ( parallelogram-shaped ones) and triangular
     tiles, but the pattern is quite regular and dependencies are straightforward
@@ -204,20 +204,23 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
         for(Ti = 0; Ti < strips; Ti++){
           // Strip number
           int sto = (Ti + Tt);
-          int strpno = sto % strips;
-
+          //int strpno = sto % strips;
+          // Slash begginning 
+          int s_index = Tt * T_ITERS * 2;
+          // Dash beginning
+          int d_index = sto * T_WIDTH_DBL;
           // Initial tile
           if( Tt == 0 && Ti == 0){
             #pragma omp task  \
-             depend(out : tasks[1][0], tasks[0][1])
+             depend(out : slashs[0: 2* T_ITERS])
             {
               do_i0_t0(dashs, slashs);
             }
           } else if(Tt == 0){
             // Bottom tiles : only left-to-right dependencies + top out
             #pragma omp task \
-              depend(in : tasks[sto-1][0]) \
-              depend(out : tasks[sto+1][0], tasks[sto][Tt+1])
+              depend(inout : slashs[0: 2 * T_ITERS]) \
+              depend(out : dashs[d_index: T_WIDTH_DBL])
             {
               do_i_t0(dashs, slashs, sto);
             }
@@ -228,15 +231,15 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
             Here assume T_ITERS > T_WIDTH_DBL
             */
             #pragma omp task \
-              depend(in : tasks[sto][Tt - 1]) \
-              depend(out : tasks[sto + 1][Tt])
+              depend(in : dashs[d_index: T_WIDTH_DBL]) \
+              depend(out : slashs[s_index: 2*T_ITERS])
             {
               do_i0_t(dashs, slashs, sto, Tt);
             }
           } else if(Ti == strips - 1){
             #pragma omp task \
-              depend(in: tasks[sto-1][Tt]) \
-              depend(out : tasks[sto][Tt + 1])
+              depend(in: slashs[s_index : 2* T_ITERS]) \
+              depend(out : dashs[d_index: T_WIDTH_DBL])
             {
              do_in_t(dashs, slashs, sto, Tt);
             }
@@ -244,8 +247,8 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
             // Regular tile
             // Two in and out dependencies
             #pragma omp task \
-              depend(in: tasks[sto-1][Tt], tasks[sto][Tt-1]) \
-              depend(out : tasks[sto+1][Tt], tasks[sto][Tt + 1])
+              depend(inout : slashs[s_index: 2 * T_ITERS]) \
+              depend(inout : dashs[d_index: T_WIDTH_DBL])
             {
               do_i_t(dashs, slashs, sto, Tt);
             }
@@ -520,14 +523,12 @@ void djbi1d_skewed_tiles_test(int n, int iters, double ** jbi, \
     fprintf(stderr, "Error while allocating 2D arrays for skewed_tiles\n");
   }
 
-  ALLOC_MX(tasks, int, (strips + timesteps), timesteps)
-
   for(int i = 0; i < n; i++){
     jbi_dashs[i] = jbi[0][i];
   }
 
   clock_gettime( CLOCK_MONOTONIC, &tbegin);
-  djbi1d_skewed_tiles(strips, timesteps, jbi_dashs, jbi_slashs, tasks);
+  djbi1d_skewed_tiles(strips, timesteps, jbi_dashs, jbi_slashs);
   clock_gettime( CLOCK_MONOTONIC, &tend);
 
   bsc->wallclock = ELAPSED_TIME(tend, tbegin);
@@ -536,8 +537,6 @@ void djbi1d_skewed_tiles_test(int n, int iters, double ** jbi, \
   for(int i = 0 ; i < n; i++){
     jbi[1][i] = jbi_dashs[i + start_stripe_top];
   }
-
-  FREE_MX(tasks, (strips + timesteps))
 
   free(jbi_dashs);
   free(jbi_slashs);
