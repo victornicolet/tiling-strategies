@@ -17,7 +17,7 @@ else
 endif
 
 CFLAGS+=-O3
-LDFLAGS=-lrt
+LDFLAGS=-lrt -lm
 
 SOURCES=jacobi1d.c test.c
 HEADERS=utils.
