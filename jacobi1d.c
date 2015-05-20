@@ -10,6 +10,8 @@
 #include <inttypes.h>
 #include "utils.h"
 
+// App
+#define CHECK_ON_SIZE 8
 // Cache line size of 64 bytes on most x86
 #define  CACHE_LINE_SIZE 64
 #define  L1_CACHE_SIZE 6044
@@ -32,6 +34,11 @@ static int T_WIDTH_DBL_OVERLAP =
   (jbi[0][i-1] + jbi[0][i] + jbi[0][i]) / 3.0
 #define JBI1D_STENCIL(lvl1,lvl0) lvl1[i] = \
   (lvl0[i-1] + lvl0[i+1] + lvl0[i]) / 3.0 
+//-----------------------------------
+#define JBI_INIT(jbi, n) for(j = 0; j < n; j++){\
+      jbi[0][j] = (n  - j)* j / 10000.0  ;\
+      jbi[1][j] = 0;\
+    }
 
 static struct timespec tend;
 static struct timespec tbegin;
@@ -196,10 +203,13 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
     strips = (n / T_WIDTH_DBL) + 1 + timesteps ;
     */
     int Ti, Tt, t, i;
-    #pragma omp parallel
+    #ifndef SEQ
+      #pragma omp parallel
     {
 
       #pragma omp master
+    #endif
+
       for(Tt = 0; Tt < tsteps; Tt++){
         for(Ti = 0; Ti < strips; Ti++){
           // Strip number
@@ -211,16 +221,20 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
           int d_index = sto * T_WIDTH_DBL;
           // Initial tile
           if( Tt == 0 && Ti == 0){
+    #ifndef SEQ
             #pragma omp task  \
              depend(out : slashs[0: 2* T_ITERS])
+    #endif
             {
               do_i0_t0(dashs, slashs);
             }
           } else if(Tt == 0){
             // Bottom tiles : only left-to-right dependencies + top out
+    #ifndef SEQ
             #pragma omp task \
               depend(inout : slashs[0: 2 * T_ITERS]) \
               depend(out : dashs[d_index: T_WIDTH_DBL])
+    #endif
             {
               do_i_t0(dashs, slashs, sto);
             }
@@ -230,32 +244,40 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
             Only one in dependency, one out
             Here assume T_ITERS > T_WIDTH_DBL
             */
+    #ifndef SEQ
             #pragma omp task \
               depend(in : dashs[d_index: T_WIDTH_DBL]) \
               depend(out : slashs[s_index: 2*T_ITERS])
+    #endif
             {
               do_i0_t(dashs, slashs, sto, Tt);
             }
           } else if(Ti == strips - 1){
+    #ifndef SEQ
             #pragma omp task \
               depend(in: slashs[s_index : 2* T_ITERS]) \
               depend(out : dashs[d_index: T_WIDTH_DBL])
+    #endif
             {
              do_in_t(dashs, slashs, sto, Tt);
             }
           } else{
             // Regular tile
             // Two in and out dependencies
+    #ifndef SEQ
             #pragma omp task \
               depend(inout : slashs[s_index: 2 * T_ITERS]) \
               depend(inout : dashs[d_index: T_WIDTH_DBL])
+    #endif
             {
               do_i_t(dashs, slashs, sto, Tt);
             }
           }
         }
       }
+  #ifndef SEQ
   }
+  #endif
 }
 
 
@@ -423,9 +445,8 @@ int main(int argc, char ** argv){
     for(i = 0; i < 2; i++){
       jbi[i] = (double *) malloc(sizeof(double) * tab_size);
     }
-    for(j = 0; j < tab_size; j++){
-      jbi[0][j] = (tab_size  - j)* j / 10000.0  ;
-    }
+
+    JBI_INIT(jbi, tab_size)
 
     char *benchmask = argv[2];
     if(strlen(benchmask) != nbench){
@@ -441,36 +462,50 @@ int main(int argc, char ** argv){
       printf("%10.3f", jbi[0][i]);
     }
 
+    // Get the correct result
+    double * check_res = (double *) malloc(sizeof(double) * CHECK_ON_SIZE);
+    struct benchscore bsc;
+    djbi1d_swap_seq(tab_size, jbi_size, jbi, &bsc);
+
+    for(int i = 0; i < CHECK_ON_SIZE; i++){
+      check_res[i] = jbi[1][i];
+    }
+
     printf("\n");
     double accu;
+    uint8_t wrong_res = 0;
     for(int bs = 0; bs < nbench; bs++){
       if (benchmask[bs] == '1') {
         struct benchscore score[nruns + 1];
         accu = 0.0;
         for(iter = 0; iter < nruns + 1; iter++){
+          JBI_INIT(jbi, tab_size)
           score[iter].name = benchmarks[bs].name;
           benchmarks[bs].variant(tab_size, jbi_size, jbi, &score[iter]);
           
           if(iter > 0) {
-            printf("%s : Run %i ...", score[iter].name, iter + 1 );
+            printf("%s : Run %i ...", score[iter].name, iter );
             printf("\t\t %13f ms\n", score[iter].wallclock * 1000.0 );
             accu += score[iter].wallclock ;
           }
         }
         printf("\n------------- %s ---------\n", benchmarks[bs].name);
         printf("Result: \n");
-        for(i = 0; i < min(tab_size ,8); i++){
+        for(i = 0; i < min(tab_size ,CHECK_ON_SIZE); i++){
           printf("%10.3f", jbi[1][i]);
+          if(jbi[1][i] != check_res[i]){
+            printf("!!");
+            wrong_res = 1;
+          }
+        }
+        if(wrong_res){
+          printf("\nThe result with this method is not correct !\n");
+          wrong_res = 0;
         }
         printf("\n----------------------\n");
         printf("Total time :\t %13f ms\n", (double) accu * 1000.0);
-        printf("Average time :\t %13f ms\n", 
+        printf("Average time :\t %13f ms\n\n", 
           (double) (accu * 1000.0 / (nruns)));
-
-        // Reinitialisation de la matrice
-        for(j = 0; j < tab_size; j++){
-          jbi[0][j] = (tab_size  - j)* j / 100.0  ;
-        }
       }
     }
 
