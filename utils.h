@@ -10,11 +10,28 @@
 
 #define ALLOC_MX(m, type, dim1, dim2) type ** (m) = \
 	(type **) malloc(sizeof(type *) * (dim1)); \
+  if(m == NULL){\
+    fprintf(stderr, "ALLOC_MX:Error while allocating 2D array\n");\
+  }\
 	for(int i = 0; i < (dim1); i++){\
 	m[i] = (type *) malloc(sizeof(type) * dim2);\
+  if(m[i] == NULL){\
+  fprintf(stderr, "ALLOC_MX:Error while allocating 2D array at line %i\n", i); \
+  }\
 	}
 	
-#define FREE_MX(m, dim1) for(int i = 0; i < (dim1); i++){free(m[i]);}free(m);
+#define FREE_MX(m, dim1) if( m == NULL){ \
+      fprintf(stderr, "FREE_MX:Error freeing NULL ! \n"); \
+    } else { \
+      for(int i = 0; i < (dim1); i++){ \
+        if(m[i] == NULL){ \
+          fprintf(stderr, "FREE_MX:Error freeing NULL at line %i\n", i);\
+        } else {\
+          free(m[i]);\
+        }\
+      }\
+      free(m);\
+    }
 
 #define SWAP(l1, l2, tmp)  { tmp = l1; l1 = l2; l2 = tmp; }
 struct benchscore {
