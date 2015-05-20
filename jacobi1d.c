@@ -208,14 +208,14 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
 
           // Initial tile
           if( Tt == 0 && Ti == 0){
-            #pragma omp tasks  \
+            #pragma omp task  \
              depend(out : tasks[1][0], tasks[0][1])
             {
               do_i0_t0(dashs, slashs);
             }
           } else if(Tt == 0){
             // Bottom tiles : only left-to-right dependencies + top out
-            #pragma omp tasks \
+            #pragma omp task \
               depend(in : tasks[sto-1][0]) \
               depend(out : tasks[sto+1][0], tasks[sto][Tt+1])
             {
@@ -227,21 +227,23 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
             Only one in dependency, one out
             Here assume T_ITERS > T_WIDTH_DBL
             */
-            #pragma omp tasks \
+            #pragma omp task \
               depend(in : tasks[sto][Tt - 1]) \
               depend(out : tasks[sto + 1][Tt])
             {
               do_i0_t(dashs, slashs, sto, Tt);
             }
           } else if(Ti == strips - 1){
-            #pragma omp tasks \
+            #pragma omp task \
               depend(in: tasks[sto-1][Tt]) \
               depend(out : tasks[sto][Tt + 1])
-              do_in_t(dashs, slashs, sto, Tt);
+            {
+             do_in_t(dashs, slashs, sto, Tt);
+            }
           } else{
             // Regular tile
             // Two in and out dependencies
-            #pragma omp tasks \
+            #pragma omp task \
               depend(in: tasks[sto-1][Tt], tasks[sto][Tt-1]) \
               depend(out : tasks[sto+1][Tt], tasks[sto][Tt + 1])
             {
@@ -530,8 +532,9 @@ void djbi1d_skewed_tiles_test(int n, int iters, double ** jbi, \
 
   bsc->wallclock = ELAPSED_TIME(tend, tbegin);
 
-  for(int i = 0; i < n; i++){
-    jbi[1][i] = jbi_dashs[i];
+  int start_stripe_top = timesteps * T_WIDTH_DBL;
+  for(int i = 0 ; i < n; i++){
+    jbi[1][i] = jbi_dashs[i + start_stripe_top];
   }
 
   FREE_MX(tasks, (strips + timesteps))
