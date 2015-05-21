@@ -58,8 +58,13 @@ jbi1d : jacobi1d.c
 	@echo $(WMSG)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
+jbi1d_assembly : jbi1d.s
+
+jbi1d.s : jacobi1d.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -S -o $@ $^
+
 clean:
-	rm jbi1d cachegrind.out.* perf.data.*
+	rm -f jbi1d cachegrind.out.* perf.data.* *.s
 
 vtune: $(OBJECTS)
 	rm -rf $(BENCH_RESULT_DIR)
