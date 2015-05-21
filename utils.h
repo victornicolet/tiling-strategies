@@ -34,11 +34,20 @@
     }
 
 #define SWAP(l1, l2, tmp)  { tmp = l1; l1 = l2; l2 = tmp; }
+
 struct benchscore {
   // Name of the benchmark
   char *name;
   //Elapsed wall-clock time
   double wallclock;
+  int runs;
+};
+
+struct benchspec {
+  // Name of the benchmark
+  char *name;
+  // Function to call
+  void (*variant)(int, int, double**, struct benchscore *);
 };
 
 
