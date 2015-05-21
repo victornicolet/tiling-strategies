@@ -11,7 +11,6 @@
 #include "utils.h"
 
 // App
-#define SEQ
 #define CHECK_ON_SIZE 8
 // Cache line size of 64 bytes on most x86
 #define  CACHE_LINE_SIZE 64
@@ -51,143 +50,23 @@ void djbi1d_omp_naive_test(int, int, double**, struct benchscore * );
 void djbi1d_omp_overlap_test(int, int, double**, struct benchscore * );
 void djbi1d_skewed_tiles_test(int, int, double **, struct benchscore * );
 
+/* Functions describing different tasks in the computation
+  Always inlined in the main body */
+void do_i_t(double * dashs, double* slashs, int strpno, int Tt) 
+  __attribute__((always_inline));
+void do_i0_t(double * dashs, double* slashs, int strpno, int Tt)
+  __attribute__((always_inline));
+void do_i0_t0(double * dashs, double* slashs)
+  __attribute__((always_inline));
+void do_in_t(double * dashs, double* slashs, int strpno, int Tt)
+  __attribute__((always_inline));
+
 struct benchspec {
   // Name of the benchmark
   char *name;
   // Function to call
   void (*variant)(int, int, double**, struct benchscore *);
 };
-
-inline void do_i0_t0(double * dashs, double * slashs){
-    double * l1 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
-    double * l2 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
-    double * tmp;
-    uint8_t t,i;
-
-    for(i = 1; i < T_WIDTH_DBL + 2; i++){
-      l1[i] = dashs[i-1]; 
-    }
-
-    for(t = 0; t < T_ITERS * 2; t+=2){
-      l1[0] = 0.0;
-      int right = max(1 + T_WIDTH_DBL - t/2, 1);
-      for(i = 1; i < right + 1; i++){
-        l2[i] = (l1[i -1] + l1[i] + l1[i+1]) / 3.0 ;
-      }
-      slashs[t] = l1[right - 1];
-      slashs[t + 1] = l1[right];
-      SWAP(l1 ,l2, tmp);
-    }
-}
-
-inline void do_i0_t(double * dashs, double * slashs, int strpno, int Tt){
-
-  double * l1 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
-  double * l2 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
-  double * tmp;
-  uint8_t t,i;
-
-  for(i = 0; i < T_WIDTH_DBL; i++){
-   l1[i+1] = dashs[strpno * T_WIDTH_DBL + i];
-  }
-
-  for(int t= 0; t < 2 * T_ITERS; t += 2){
-    int right = max(T_WIDTH_DBL - t + 1, 0);
-    l1[0] = 0.0;
-    for(i = 1; i < right; i++){
-      l2[i] = (l1[i - 1] + l1[i] + l1[i + 1]) / 3.0;
-    }
-    slashs[Tt * 2 * T_ITERS + t] = l1[right-1];
-    slashs[Tt * 2 * T_ITERS + t + 1] = l1[right-2];
-
-    SWAP(l1 ,l2, tmp);
-  }
-}
-
-inline void do_i_t0(double * dashs, double * slashs, int strpno){
-
-  double * l1 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
-  double * l2 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
-  double *tmp;
-  uint8_t t,i;
-
-  for(i = 2; i < T_WIDTH_DBL + 2; i++){
-    l1[i] = dashs[strpno * T_WIDTH_DBL + i -2];
-  }
-
-  for(t = 0; t < T_ITERS * 2; t+=2){
-    l1[0] = slashs[t];
-    l1[1] = slashs[t + 1];
-
-    for(i = 2; i < T_WIDTH_DBL + 2; i++){
-      l2[i] = (l1[i -2] + l1[i - 1] + l1[i]) / 3.0 ;
-    }
-
-    slashs[t] = l1[T_WIDTH_DBL];
-    slashs[t + 1] = l1[T_WIDTH_DBL + 1];
-
-    SWAP(l1 ,l2, tmp);
-  }
-
-  for(i = 2; i < T_WIDTH_DBL + 2; i++){
-    dashs[strpno * T_WIDTH_DBL + i - 2] = l1[i];
-  }
-}
-
-inline void do_i_t(double * dashs, double * slashs, int strpno, int Tt){
-
-  double * l1 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
-  double * l2 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
-  double * tmp;
-  uint8_t t,i;
-
-  // Load dash in the stack
-  for(i = 2; i < T_WIDTH_DBL + 2; i++){
-    l1[i] = dashs[strpno * T_WIDTH_DBL + i - 2];
-  }
-  for(t = 0; t < T_ITERS * 2; t+=2){
-    // Load slash part
-    l1[0] = slashs[Tt * 2 * T_ITERS + t];
-    l1[1] = slashs[Tt * 2 * T_ITERS + t + 1];
-    for(i = 2; i < T_WIDTH_DBL + 2; i++){
-      l2[i] = (l1[i -2] + l1[i - 1] + l1[i]) / 3.0 ;
-    }
-    // Write slash
-    slashs[Tt * 2 * T_ITERS + t] = l1[T_WIDTH_DBL];
-    slashs[Tt * 2 * T_ITERS + t + 1] = l1[T_WIDTH_DBL + 1];
-
-    SWAP(l1, l2, tmp)
-  }
-  // Write dash
-  for(i = 2; i < T_WIDTH_DBL; i++){
-    dashs[strpno * T_WIDTH_DBL + i - 2] = l1[i];
-  }
-}
-
-
-inline void do_in_t(double * dashs, double * slashs, int strpno, int Tt){
-  double * l1 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
-  double * l2 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
-  double * tmp;
-  uint8_t t,i;
-
-  for(t = 0; t < T_ITERS * 2; t+=2){
-    // Load slash part
-    l1[0] = slashs[Tt * 2 * T_ITERS + t];
-    l1[1] = slashs[Tt * 2 * T_ITERS + t + 1];
-    int r = (2 + t/2);
-    l1[r] = 0.0;
-    for(i = 2; i <= r; i++){
-      l2[i] = (l1[i -2] + l1[i - 1] + l1[i]) / 3.0 ;
-    }
-    SWAP(l1, l2, tmp)
-  }
-  // Write dash
-  for(i = 2; i < T_WIDTH_DBL; i++){
-    dashs[strpno * T_WIDTH_DBL + i - 2] = l1[i];
-  }
-
-}
 
 void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
   double * slashs){
@@ -197,9 +76,10 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
     at the boundaries of the domain.
     ---------------
 
-    timesteps = (iters / T_ITERS) + 1;
-    strips = (n / T_WIDTH_DBL) + 1 + timesteps ;
+    tsteps = (iters / T_ITERS) + 1;
+    strips = (n / T_WIDTH_DBL) + 1 ;
     */
+    int tasks[strips+1][tsteps];
     int Ti, Tt, t, i;
     #ifndef SEQ
       #pragma omp parallel
@@ -221,20 +101,20 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
           if( Tt == 0 && Ti == 0){
     #ifndef SEQ
             #pragma omp task  \
-             depend(out : slashs[0: 2* T_ITERS])
+             depend(out : tasks[1][0])
     #endif
             {
               do_i0_t0(dashs, slashs);
             }
-          } else if(Tt == 0){
+          } else if(Tt == 0 && Ti < strips - 1){
             // Bottom tiles : only left-to-right dependencies + top out
     #ifndef SEQ
             #pragma omp task \
-              depend(inout : slashs[0: 2 * T_ITERS]) \
-              depend(out : dashs[d_index: T_WIDTH_DBL])
+              depend(in : tasks[Ti-1][0]) \
+              depend(out : tasks[Ti+1][0],tasks[Ti-1][Tt+1])
     #endif
             {
-              do_i_t0(dashs, slashs, sto);
+              do_i_t(dashs, slashs, sto, 0);
             }
 
           } else if(Ti == 0){
@@ -244,8 +124,8 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
             */
     #ifndef SEQ
             #pragma omp task \
-              depend(in : dashs[d_index: T_WIDTH_DBL]) \
-              depend(out : slashs[s_index: 2*T_ITERS])
+              depend(in : tasks[1][Tt-1]) \
+              depend(out : tasks[1][Tt])
     #endif
             {
               do_i0_t(dashs, slashs, sto, Tt);
@@ -253,8 +133,8 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
           } else if(Ti == strips - 1){
     #ifndef SEQ
             #pragma omp task \
-              depend(in: slashs[s_index : 2* T_ITERS]) \
-              depend(out : dashs[d_index: T_WIDTH_DBL])
+              depend(in: tasks[strips][Tt]) \
+              depend(out : tasks[strips-1][Tt+1])
     #endif
             {
              do_in_t(dashs, slashs, sto, Tt);
@@ -264,8 +144,8 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
             // Two in and out dependencies
     #ifndef SEQ
             #pragma omp task \
-              depend(inout : slashs[s_index: 2 * T_ITERS]) \
-              depend(inout : dashs[d_index: T_WIDTH_DBL])
+              depend(in : tasks[Ti-1][Tt],tasks[Ti+1][Tt-1]) \
+              depend(out : tasks[Ti+1][Tt],tasks[Ti-1][Tt+1])
     #endif
             {
               do_i_t(dashs, slashs, sto, Tt);
@@ -545,13 +425,12 @@ void djbi1d_omp_overlap_test(int n, int iters, double ** jbi,
 
 void djbi1d_skewed_tiles_test(int n, int iters, double ** jbi, \
   struct benchscore * bsc){
-  int timesteps = (iters / T_ITERS) + 1;
+  int tsteps = (iters / T_ITERS) + 1;
   int strips = (n/(T_WIDTH_DBL)) + 1;
-  int diff = timesteps * T_ITERS - iters;
+
   double * jbi_dashs = (double*) malloc(sizeof(double) * 
-    ((strips + timesteps) * T_WIDTH_DBL));
-  double * jbi_slashs = (double*) malloc(sizeof(double) * 
-    timesteps * 2 * T_ITERS);
+    ((strips + tsteps) * T_WIDTH_DBL));
+  double * jbi_slashs = (double*) malloc(sizeof(double) * tsteps * 2 * T_ITERS);
 
   if(jbi_dashs == NULL || jbi_slashs == NULL){
     fprintf(stderr, "Error while allocating 2D arrays for skewed_tiles\n");
@@ -562,16 +441,127 @@ void djbi1d_skewed_tiles_test(int n, int iters, double ** jbi, \
   }
 
   clock_gettime( CLOCK_MONOTONIC, &tbegin);
-  djbi1d_skewed_tiles(strips, timesteps, jbi_dashs, jbi_slashs);
+  djbi1d_skewed_tiles(strips, tsteps, jbi_dashs, jbi_slashs);
   clock_gettime( CLOCK_MONOTONIC, &tend);
 
   bsc->wallclock = ELAPSED_TIME(tend, tbegin);
 
-  int start_stripe_top = (timesteps) * T_WIDTH_DBL - (T_ITERS - diff);
+  int start_stripe_top = tsteps * T_WIDTH_DBL;
   for(int i = 0 ; i < n; i++){
     jbi[1][i] = jbi_dashs[i + start_stripe_top];
   }
 
   free(jbi_dashs);
   free(jbi_slashs);
+}
+
+
+/* Task functions :
+  do_i0_t0 : starting task, bottom-left corner of the space-time matrix
+  do_i0_t : left column, triangular tile
+  do_i_t0 : first time iteration, bottom line
+  do_i_t : regular task
+  do_in_t : right column, triangular tile
+*/
+
+inline void do_i0_t0(double * dashs, double * slashs){
+    double * l1 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 1));
+    double * l2 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 1));
+    double * tmp;
+    uint8_t t,i;
+
+    for(i = 1; i < T_WIDTH_DBL + 1; i++){
+      l1[i] = dashs[i-1]; 
+    }
+
+    for(t = 0; t < T_ITERS * 2; t+=2){
+      l1[0] = 0.0;
+      int right = max(T_WIDTH_DBL - t/2, 1);
+      for(i = 1; i < right; i++){
+        l2[i] = (l1[i -1] + l1[i] + l1[i+1]) / 3.0 ;
+      }
+      slashs[t] = l1[right - 1];
+      slashs[t + 1] = l1[right];
+      SWAP(l1 ,l2, tmp);
+    }
+}
+
+inline void do_i0_t(double * dashs, double * slashs, int strpno, int Tt){
+
+  double * l1 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 1));
+  double * l2 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 1));
+  double * tmp;
+  uint8_t t,i;
+
+  for(i = 1; i < T_WIDTH_DBL; i++){
+   l1[i] = dashs[strpno * T_WIDTH_DBL + i - 1];
+  }
+
+  for(int t= 0; t < 2 * T_ITERS; t += 2){
+    l1[0] = 0.0;
+    int right = max(T_WIDTH_DBL - t/2, 0);
+    for(i = 1; i < right; i++){
+      l2[i] = ((l1[i - 1] + l1[i] + l1[i + 1]) / 3.0);
+    }
+    slashs[Tt * 2 * T_ITERS + t] = l1[right - 1];
+    slashs[Tt * 2 * T_ITERS + t + 1] = l1[right];
+
+    SWAP(l1 ,l2, tmp);
+  }
+}
+
+inline void do_i_t(double * dashs, double * slashs, int strpno, int Tt){
+
+  double * l1 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
+  double * l2 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
+  double * tmp;
+  uint8_t t,i;
+
+  // Load dash
+  for(i = 2; i < T_WIDTH_DBL + 2; i++){
+    l1[i] = dashs[strpno * T_WIDTH_DBL + i - 2];
+  }
+
+  for(t = 0; t < T_ITERS * 2; t+=2){
+    // Load slash part
+    l1[0] = slashs[Tt * 2 * T_ITERS + t];
+    l1[1] = slashs[Tt * 2 * T_ITERS + t + 1];
+    for(i = 2; i < T_WIDTH_DBL + 2; i++){
+      l2[i] = ((l1[i -2] + l1[i - 1] + l1[i]) / 3.0) ;
+    }
+    // Write slash
+    slashs[Tt * 2 * T_ITERS + t] = l1[T_WIDTH_DBL];
+    slashs[Tt * 2 * T_ITERS + t + 1] = l1[T_WIDTH_DBL + 1];
+
+    SWAP(l1, l2, tmp)
+  }
+  // Write dash
+  for(i = 2; i < T_WIDTH_DBL; i++){
+    dashs[strpno * T_WIDTH_DBL + i - 2] = l2[i];
+  }
+}
+
+
+inline void do_in_t(double * dashs, double * slashs, int strpno, int Tt){
+  double * l1 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
+  double * l2 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
+  double * tmp;
+  uint8_t t,i;
+
+  for(t = 0; t < T_ITERS * 2; t+=2){
+    // Load slash part
+    l1[0] = slashs[Tt * 2 * T_ITERS + t];
+    l1[1] = slashs[Tt * 2 * T_ITERS + t + 1];
+    int r = (2 + t/2);
+    l1[r] = 0.0;
+    for(i = 2; i <= r; i++){
+      l2[i] = ((l1[i -2] + l1[i - 1] + l1[i]) / 3.0) ;
+    }
+    SWAP(l1, l2, tmp)
+  }
+  // Write dash
+  for(i = 2; i < T_WIDTH_DBL; i++){
+    dashs[strpno * T_WIDTH_DBL + i - 2] = l1[i];
+  }
+
 }
