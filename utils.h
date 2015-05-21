@@ -51,4 +51,36 @@ struct benchspec {
 };
 
 
+int adjust_num(double num) {
+    double low_bound = 1e7;
+    double high_bound = low_bound*10;
+    double adjusted = num;
+    int is_negative = (num < 0);
+    if(num == 0) {
+        return 0;
+    }
+    if(is_negative) {
+        adjusted *= -1;
+    }
+    while(adjusted < low_bound) {
+        adjusted *= 10;
+    }
+    while(adjusted >= high_bound) {
+        adjusted /= 10;
+    }
+    if(is_negative) {
+        adjusted *= -1;
+    }
+    return round(adjusted);
+}
+
+int compare(double * t1, double * t2, int n){
+  for(int i = 0; i < n; i++){
+    if(adjust_num(t1[i]) != adjust_num(t2[i])){
+      return 0;
+    }
+  }
+  return 1;
+}
+
 #endif
