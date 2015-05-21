@@ -428,30 +428,32 @@ int main(int argc, char ** argv){
     }
 
     if(argc < 3){
-      printf("Usage: %s <Nruns> <Mask : %i> [ <Width> <Time iterations>]\n", 
+      printf("Usage: %s <Nruns> <Mask : %i> [ <height> <Width> <Time iterations>]\n", 
         argv[0], nbench);
       return 0;
     }
 
-    int i, j, iter;
+    uint8_t i, j, iter;
 
-    int tab_size, jbi_size;
+    int tab_width, tab_height, jbi_size;
     if(argc == 5){
-      tab_size = atoi(argv[3]);
-      jbi_size = atoi(argv[4]);
+      tab_width = atoi(argv[3]);
+      tab_height = atoi(argv[4]);
+      jbi_size = atoi(argv[5]);
     } else {
-      tab_size = 16*4096;
+      tab_width = 4*4096;
+      tab_height = 4*4096;
       jbi_size = 1024;
     }
-    tab_size = ((tab_size - 1) / (2*T_ITERS - 1)) * (2*T_ITERS - 1);
-
+    tab_width = ((tab_width - 1) / (2*T_ITERS - 1)) * (2*T_ITERS - 1);
+    tab_height = ((tab_height - 1) / (2*T_ITERS - 1)) * (2*T_ITERS - 1);
 
     double ** jbi = (double **) malloc(sizeof(double) * 2);
     for(i = 0; i < 2; i++){
-      jbi[i] = (double *) malloc(sizeof(double) * tab_size);
+      jbi[i] = (double *) malloc(sizeof(double) * tab_width);
     }
 
-    JBI_INIT(jbi, tab_size)
+    JBI_INIT(jbi, tab_width)
 
     char *benchmask = argv[2];
     if(strlen(benchmask) != nbench){
@@ -463,14 +465,14 @@ int main(int argc, char ** argv){
     int nruns = atoi(argv[1]);
 
     printf("Input : \n");
-    for(i = 0; i < min(tab_size,8); i++){
+    for(i = 0; i < min(tab_width,8); i++){
       printf("%10.3f", jbi[0][i]);
     }
 
     // Get the correct result
     double * check_res = (double *) malloc(sizeof(double) * CHECK_ON_SIZE);
     struct benchscore bsc;
-    djbi1d_swap_seq(tab_size, jbi_size, jbi, &bsc);
+    djbi1d_swap_seq(tab_width, jbi_size, jbi, &bsc);
 
     for(int i = 0; i < CHECK_ON_SIZE; i++){
       check_res[i] = jbi[1][i];
@@ -484,9 +486,9 @@ int main(int argc, char ** argv){
         struct benchscore score[nruns + 1];
         accu = 0.0;
         for(iter = 0; iter < nruns + 1; iter++){
-          JBI_INIT(jbi, tab_size)
+          JBI_INIT(jbi, tab_width)
           score[iter].name = benchmarks[bs].name;
-          benchmarks[bs].variant(tab_size, jbi_size, jbi, &score[iter]);
+          benchmarks[bs].variant(tab_width, jbi_size, jbi, &score[iter]);
           
           if(iter > 0) {
             printf("%s : Run %i ...", score[iter].name, iter );
@@ -496,7 +498,7 @@ int main(int argc, char ** argv){
         }
         printf("\n------------- %s ---------\n", benchmarks[bs].name);
         printf("Result: \n");
-        for(i = 0; i < min(tab_size ,CHECK_ON_SIZE); i++){
+        for(i = 0; i < min(tab_width ,CHECK_ON_SIZE); i++){
           printf("%10.3f", jbi[1][i]);
           if(jbi[1][i] != check_res[i]){
             printf("!!");
