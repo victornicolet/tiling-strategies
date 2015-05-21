@@ -22,7 +22,7 @@ void do_i_t(double * dashs, double* slashs, int strpno, int Tt)
   __attribute__((always_inline));
 void do_i0_t(double * dashs, double* slashs, int strpno, int Tt)
   __attribute__((always_inline));
-void do_i0_t0(double * dashs, double* slashs)
+void do_i0_t0(double * dashs, double* slashs, int T, int I)
   __attribute__((always_inline));
 void do_in_t(double * dashs, double* slashs, int strpno, int Tt)
   __attribute__((always_inline));
@@ -39,12 +39,13 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
     tsteps = (iters / T_ITERS) + 1;
     strips = (n / T_WIDTH_DBL) + 1 ;
     */
-    int tasks[strips+1][tsteps];
-    int Ti, Tt, t, i;
+    uint8_t tasks[strips+1][tsteps];
+    int Ti, Tt;
     #ifndef SEQ
       #pragma omp parallel
+    #endif
     {
-
+    #ifndef SEQ
       #pragma omp master
     #endif
 
@@ -64,7 +65,7 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
              depend(out : tasks[1][0])
     #endif
             {
-              do_i0_t0(dashs, slashs);
+              do_i0_t0(dashs, slashs, Ti, Tt);
             }
           } else if(Tt == 0 && Ti < strips - 1){
             // Bottom tiles : only left-to-right dependencies + top out
@@ -87,7 +88,7 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
               depend(in : tasks[1][Tt-1]) \
               depend(out : tasks[1][Tt])
     #endif
-            {
+            { 
               do_i0_t(dashs, slashs, sto, Tt);
             }
           } else if(Ti == strips - 1){
@@ -97,9 +98,10 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
               depend(out : tasks[strips-1][Tt+1])
     #endif
             {
-             do_in_t(dashs, slashs, sto, Tt);
+              do_in_t(dashs, slashs, sto, Tt);
             }
-          } else{
+
+          }else{
             // Regular tile
             // Two in and out dependencies
     #ifndef SEQ
@@ -111,11 +113,10 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
               do_i_t(dashs, slashs, sto, Tt);
             }
           }
+
         }
       }
-  #ifndef SEQ
   }
-  #endif
 }
 
 
@@ -143,27 +144,39 @@ void djbi1d_diamond_tiles(int n,int jbi_iters, double ** jbi,
   }
 }
 
-void djbi1d_omp_naive(int n, int jbi_iters, double ** jbi){
+void djbi1d_omp_naive(int n, int jbi_iters, double ** jbi,
+  struct benchscore * bsc){
 
+  clock_gettime( CLOCK_MONOTONIC, &tbegin);
   int t,i;
-  double * tmp;
-  for(t = 0; t < jbi_iters-1; t++){
+  double *a, *b, *tmp;
+  a = jbi[0];
+  b = jbi[1];
+  for(t = 1; t < jbi_iters; t++){
     #pragma omp parallel for schedule(static)
     for(i = 1; i < n - 1; i++){
-      #pragma  ivdep
-      JBI1D_STENCIL_SW(jbi);
+      #pragma ivdep
+      JBI1D_STENCIL(b, a);
     }
-    tmp = jbi[0];
-    jbi[0] = jbi[1];
-    jbi[1] = tmp;
+    tmp = b;
+    b = a;
+    a = tmp;
   }
+  jbi[1] = a;
+
+  clock_gettime( CLOCK_MONOTONIC, &tend);
+
+  bsc->wallclock = ELAPSED_TIME(tend, tbegin);
 }
 
-void djbi1d_omp_overlap(int n, int jbi_iters, int stages, double ** jbi){
+void djbi1d_omp_overlap(int n, int jbi_iters, double ** jbi,
+  struct benchscore * bsc){
+  clock_gettime( CLOCK_MONOTONIC, &tbegin);
   int Ti,Tt,t,i;
-  for( Tt = 0; Tt < stages - 1; Tt ++){
-    double * tmp;
-    #pragma omp parallel for schedule(static)
+  double * tmp;
+  for( Tt = 0; Tt < jbi_iters/T_ITERS; Tt ++){
+
+    #pragma omp parallel for schedule(static,4)
     for(Ti = 0; Ti <= (n / T_WIDTH_DBL_OVERLAP); Ti ++){
       double tile[2][T_WIDTH_DBL_OVERLAP + 2 * T_ITERS];
       double * lvl0, *lvl1, *tmp;
@@ -208,6 +221,9 @@ void djbi1d_omp_overlap(int n, int jbi_iters, int stages, double ** jbi){
     jbi[1] = tmp;
   }
 
+  clock_gettime( CLOCK_MONOTONIC, &tend);
+
+  bsc->wallclock = ELAPSED_TIME(tend, tbegin);
 }
 
 
@@ -236,8 +252,8 @@ void djbi1d_swap_seq(int n, int jbi_iters, double ** jbi,
 
 
 struct benchspec benchmarks[] = {
-  {"JACOBI1D_OMP_OVERLAP", djbi1d_omp_overlap_test},
-  {"JACOBI1D_OMP_NAIVE", djbi1d_omp_naive_test },
+  {"JACOBI1D_OMP_OVERLAP", djbi1d_omp_overlap},
+  {"JACOBI1D_OMP_NAIVE", djbi1d_omp_naive },
   {"JACOBI1D_SKEWED_TILES", djbi1d_skewed_tiles_test},
   {"JACOBI1D_SWAP_SEQ", djbi1d_swap_seq},
 };
@@ -267,17 +283,23 @@ int main(int argc, char ** argv){
     }
 
     int i, j, iter;
-
+    int nruns = atoi(argv[1]);
     int tab_size, jbi_size;
     if(argc == 5){
       tab_size = 1 << atoi(argv[3]);
       jbi_size = 1 << atoi(argv[4]);
     } else {
+      #ifdef DEBUG
+        tab_size = DBG_SIZE;
+        jbi_size = DBG_ITER;
+      #endif
       tab_size = 1 << 16;
       jbi_size = 1 << 10;
     }
-    tab_size = ((tab_size - 1) / (2*T_ITERS - 1)) * (2*T_ITERS - 1);
 
+    #ifndef DEBUG
+      tab_size = ((tab_size - 1) / (2*T_ITERS - 1)) * (2*T_ITERS - 1);
+    #endif
 
     double ** jbi = (double **) malloc(sizeof(double) * 2);
     for(i = 0; i < 2; i++){
@@ -293,30 +315,29 @@ int main(int argc, char ** argv){
       return -1;
     }
 
-    int nruns = atoi(argv[1]);
-
     printf("Input : \n");
     for(i = 0; i < CHECK_ON_SIZE; i++){
       printf("%10.3f", jbi[0][i]);
     }
 
     // Get the correct result
-    double * check_res = (double *) malloc(sizeof(double) * CHECK_ON_SIZE);
+    double * check_res = (double *) malloc(sizeof(double) * tab_size);
     struct benchscore bsc;
     djbi1d_swap_seq(tab_size, jbi_size, jbi, &bsc);
 
-    for(int i = 0; i < CHECK_ON_SIZE; i++){
+    for(int i = 0; i < tab_size; i++){
       check_res[i] = jbi[1][i];
     }
 
     printf("\n");
     double accu;
-    uint8_t wrong_res = 0;
+
     for(int bs = 0; bs < nbench; bs++){
       if (benchmask[bs] == '1') {
         struct benchscore score[nruns + 1];
         accu = 0.0;
         for(iter = 0; iter < nruns + 1; iter++){
+
           JBI_INIT(jbi, tab_size)
           score[iter].name = benchmarks[bs].name;
           benchmarks[bs].variant(tab_size, jbi_size, jbi, &score[iter]);
@@ -331,15 +352,12 @@ int main(int argc, char ** argv){
         printf("Result: \n");
         for(i = 0; i < CHECK_ON_SIZE; i++){
           printf("%10.3f", jbi[1][i]);
-          if(jbi[1][i] != check_res[i]){
-            printf("!!");
-            wrong_res = 1;
-          }
         }
-        if(wrong_res){
+
+        if(compare(jbi[1], check_res, tab_size) == 0){
           printf("\nThe result with this method is not correct !\n");
-          wrong_res = 0;
         }
+
         printf("\n----------------------\n");
         printf("Total time :\t %13f ms\n", (double) accu * 1000.0);
         printf("Average time :\t %13f ms\n\n", 
@@ -347,40 +365,11 @@ int main(int argc, char ** argv){
       }
     }
 
+    free(check_res);
     free(jbi[1]);
     free(jbi[0]);
     free(jbi);
 
-}
-
-
-void djbi1d_omp_naive_test(int n, int jbi_iters, double ** jbi,
-  struct benchscore * bsc){
-
-  clock_gettime(CLOCK_MONOTONIC, &tbegin);
-  djbi1d_omp_naive(n ,jbi_iters, jbi);
-  clock_gettime(CLOCK_MONOTONIC, &tend);
-
-  bsc->wallclock = ELAPSED_TIME(tend, tbegin);
-  for(int i = 0; i < n; i++){
-    jbi[1][i] = jbi[0][i];
-  }
-}
-
-// For overlap, return the time spent running jbi - memory allocation no included
-void djbi1d_omp_overlap_test(int n, int iters, double ** jbi, 
-  struct benchscore * bsc){
-  int stages = (iters / T_ITERS) + 1;
-
-  clock_gettime( CLOCK_MONOTONIC, &tbegin);
-  djbi1d_omp_overlap(n, iters, stages, jbi);
-  clock_gettime( CLOCK_MONOTONIC, &tend);
-
-  bsc->wallclock = ELAPSED_TIME(tend, tbegin);
-
-  for(int i = 0; i < n; i++){
-    jbi[1][i] = jbi[0][i];
-  }
 }
 
 void djbi1d_skewed_tiles_test(int n, int iters, double ** jbi, \
@@ -424,11 +413,15 @@ void djbi1d_skewed_tiles_test(int n, int iters, double ** jbi, \
   do_in_t : right column, triangular tile
 */
 
-inline void do_i0_t0(double * dashs, double * slashs){
+inline void do_i0_t0(double * dashs, double * slashs, int T, int I){
     double * l1 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 1));
     double * l2 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 1));
     double * tmp;
     uint8_t t,i;
+
+    #ifdef DEBUG
+      printf("First task T I, %i %i\n", T, I);
+    #endif
 
     for(i = 1; i < T_WIDTH_DBL + 1; i++){
       l1[i] = dashs[i-1]; 
@@ -453,6 +446,10 @@ inline void do_i0_t(double * dashs, double * slashs, int strpno, int Tt){
   double * tmp;
   uint8_t t,i;
 
+  #ifdef DEBUG
+    printf("Do do_i0_t %i %i\n", Tt, strpno - Tt);
+  #endif
+
   for(i = 1; i < T_WIDTH_DBL; i++){
    l1[i] = dashs[strpno * T_WIDTH_DBL + i - 1];
   }
@@ -476,6 +473,11 @@ inline void do_i_t(double * dashs, double * slashs, int strpno, int Tt){
   double * l2 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
   double * tmp;
   uint8_t t,i;
+
+  #ifdef DEBUG
+    if(Tt == ((DBG_ITER / T_ITERS ) + 1))
+      printf("Final line, task %i %i\n", Tt, strpno - Tt);
+  #endif
 
   // Load dash
   for(i = 2; i < T_WIDTH_DBL + 2; i++){
@@ -507,6 +509,14 @@ inline void do_in_t(double * dashs, double * slashs, int strpno, int Tt){
   double * l2 = (double *) malloc(sizeof(double)*(T_WIDTH_DBL + 2));
   double * tmp;
   uint8_t t,i;
+
+  #ifdef DEBUG
+    if(Tt == ((DBG_SIZE / T_WIDTH_DBL ))){
+      printf("Final task %i %i\n", Tt, strpno - Tt);
+    } else {
+      printf("Do do_in_t %i %i\n", Tt, strpno - Tt);
+    }
+  #endif
 
   for(t = 0; t < T_ITERS * 2; t+=2){
     // Load slash part

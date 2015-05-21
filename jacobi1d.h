@@ -1,5 +1,14 @@
 #ifndef JACOBI1D
 #define JACOBI1D
+
+
+// Debugging
+#define DEBUG
+
+#ifdef DEBUG
+  #define DBG_SIZE 16*4096
+  #define DBG_ITER 1024
+ #endif
 // App
 #define CHECK_ON_SIZE 8
 // Cache line size of 64 bytes on most x86
