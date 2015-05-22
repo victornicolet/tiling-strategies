@@ -41,13 +41,13 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
     */
     uint8_t tasks[strips+1][tsteps];
     int Ti, Tt;
-    #ifndef SEQ
-      #pragma omp parallel
-    #endif
+#ifndef SEQ
+  #pragma omp parallel
+#endif
     {
-    #ifndef SEQ
-      #pragma omp master
-    #endif
+#ifndef SEQ
+  #pragma omp master
+#endif
 
       for(Tt = 0; Tt < tsteps; Tt++){
         for(Ti = 0; Ti < strips; Ti++){
@@ -60,18 +60,18 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
           //int d_index = sto * T_WIDTH_DBL;
           // Initial tile
           if( Tt == 0 && Ti == 0){
-    #ifndef SEQ
-            #pragma omp task depend(out : tasks[1][0])
-    #endif
+#ifndef SEQ
+  #pragma omp task depend(out : tasks[1][0])
+#endif
             {
               do_i0_t0(dashs, slashs, Ti, Tt);
             }
           } else if(Tt == 0 && Ti < strips - 1){
             // Bottom tiles : only left-to-right dependencies + top out
-    #ifndef SEQ
-            #pragma omp task depend(in : tasks[Ti-1][0]) \
-              depend(out : tasks[Ti+1][0],tasks[Ti-1][Tt+1])
-    #endif
+#ifndef SEQ
+  #pragma omp task depend(in : tasks[Ti-1][0]) \
+    depend(out : tasks[Ti+1][0],tasks[Ti-1][Tt+1])
+#endif
             {
               do_i_t(dashs, slashs, sto, 0);
             }
@@ -81,18 +81,18 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
             Only one in dependency, one out
             Here assume T_ITERS > T_WIDTH_DBL
             */
-    #ifndef SEQ
-            #pragma omp task depend(in : tasks[1][Tt-1]) \
-              depend(out : tasks[1][Tt])
-    #endif
+#ifndef SEQ
+  #pragma omp task depend(in : tasks[1][Tt-1]) \
+  depend(out : tasks[1][Tt])
+#endif
             { 
               do_i0_t(dashs, slashs, sto, Tt);
             }
           } else if(Ti == strips - 1){
-    #ifndef SEQ
-            #pragma omp task depend(in: tasks[strips][Tt]) \
-              depend(out : tasks[strips-1][Tt+1])
-    #endif
+#ifndef SEQ
+  #pragma omp task depend(in: tasks[strips][Tt]) \
+    depend(out : tasks[strips-1][Tt+1])
+#endif
             {
               do_in_t(dashs, slashs, sto, Tt);
             }
@@ -100,10 +100,10 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
           }else{
             // Regular tile
             // Two in and out dependencies
-    #ifndef SEQ
-            #pragma omp task depend(in : tasks[Ti-1][Tt],tasks[Ti+1][Tt-1]) \
-              depend(out : tasks[Ti+1][Tt],tasks[Ti-1][Tt+1])
-    #endif
+#ifndef SEQ
+  #pragma omp task depend(in : tasks[Ti-1][Tt],tasks[Ti+1][Tt-1]) \
+    depend(out : tasks[Ti+1][Tt],tasks[Ti-1][Tt+1])
+#endif
             {
               do_i_t(dashs, slashs, sto, Tt);
             }
