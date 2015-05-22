@@ -54,9 +54,9 @@ endif
 
 all: $(OBJECTS)
 
-jbi1d : jacobi1d.c
+jbi1d : jacobi1d.c jacobi1d.h
 	@echo $(WMSG)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ jacobi1d.c
 
 jbi1d_assembly : jbi1d.s
 
