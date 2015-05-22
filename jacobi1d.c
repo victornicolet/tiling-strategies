@@ -12,6 +12,8 @@
 static struct timespec tend;
 static struct timespec tbegin;
 
+static FILE * csv_file;
+
 static int run;
 
 /* Functions describing different tasks in the computation
@@ -206,12 +208,23 @@ void djbi1d_omp_overlap(int n, int jbi_iters, double ** jbi,
 
         for(t = 0 ; t < h; t++){
           int lt = max(t + 1 , 1);
-          int rt = min((w - t - 1), n-1);
-          for(int i = lt ; i < rt; i++){
+          int rt = min((w - t - 1), (T_WIDTH_DBL_OVERLAP+
+          T_ITERS * 2)); 
+          for(i = lt ; i < rt; i++){
             JBI1D_STENCIL(lvl1,lvl0);
           }
           memcpy(lvl0, lvl1, 
             (T_WIDTH_DBL_OVERLAP + T_ITERS * 2) * sizeof(double) );
+
+          #ifdef DEBUG
+          if(Ti == 0){
+              fprintf(csv_file, "Left column ; %i ;%i", Tt, t);
+              for( i = 0; i < 8 ; i++){
+                fprintf(csv_file, ";%10.3f", lvl1[i] - jbi[0][i + l]);
+              }
+              fprintf(csv_file, "\n");
+          }
+          #endif
         }
 
         // Write tile top
@@ -274,6 +287,11 @@ int main(int argc, char ** argv){
 
     int nbench = sizeof(benchmarks) / sizeof(struct benchspec);
 
+    csv_file = fopen("jacobi1d.csv", "w");
+    if (csv_file == NULL) {
+      exit(1);
+    }
+
     if(strcmp(argv[1], "help") == 0){
         printf("Usage: %s <Nruns> <Mask : %i> [ <Width> <Time iterations>]\n", 
         argv[0], nbench);
@@ -330,6 +348,15 @@ int main(int argc, char ** argv){
     for(i = 0; i < CHECK_ON_SIZE; i++){
       printf("%10.3f", jbi[0][i]);
     }
+
+    #ifdef DEBUG
+      fprintf(csv_file, "Whare ?; Data\n");
+      fprintf(csv_file, "Input;\n");
+      for(i = 0; i < 1 << 8; i++){
+        fprintf(csv_file, "%10.3f ;", jbi[0][i]);
+      }
+      fprintf(csv_file, "\n");
+    #endif
 
     // Get the correct result
     double * check_res = (double *) malloc(sizeof(double) * tab_size);
