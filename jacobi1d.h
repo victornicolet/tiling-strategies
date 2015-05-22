@@ -11,7 +11,7 @@
   #define DBG_ITER 512
  #endif
 // App
-#define SEQ
+//#define SEQ
 #define CHECK_ON_SIZE 8
 // TILE DIMENSIONS -------------------------------
 // Iterations within a tile

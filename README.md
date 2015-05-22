@@ -10,5 +10,5 @@ Five implementations of one dimensional Jacobi stencil.
 
 ## Compilation & running 
   * $ make jbi1d
-  * $ ./jbi1d <Nruns> <Mask> [ <Width> <Time iterations> ]
+  * $ ./jbi1d Nruns> Mask [ Width Time iterations ]
   Mask example : 1000 ( overlapped version : naive : skewed : sequential )
