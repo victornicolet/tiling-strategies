@@ -14,5 +14,6 @@ Jacobi 1D only :
   * $ make jbi1d
   * $ ./jbi1d Nruns Mask [ Width Time iterations ]
   Mask example : 10000 ( overlapped version : naive : skewed : sequential )
+  * Some macros defined benchmarks/in jacobi1d.h
 
 

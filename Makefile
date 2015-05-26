@@ -54,7 +54,7 @@ endif
 
 all: $(PROGRAM)
 
-$(PROGRAM) : $(SOURCES.c) $(HEADERS)
+$(PROGRAM) : $(PROGRAM).c $(SOURCES.c) $(HEADERS)
 	$(CC) $(CFLAGS) -o $@ $(PROGRAM).c $(LDFLAGS)
 
 jbi1d : $(SRC_DIR)/jacobi1d.c $(SRC_DIR)/jacobi1d.h
