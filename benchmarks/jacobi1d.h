@@ -1,8 +1,7 @@
 #include "../utils.h"
 
-#ifndef JACOBI1D
-#define JACOBI1D
-
+#ifndef JACOBI1D_H
+#define JACOBI1D_H
 // Debugging
 #define DEBUG
 
@@ -55,6 +54,7 @@ void djbi1d_omp_naive(int, int, double**, struct benchscore * );
 void djbi1d_omp_overlap(int, int, double**, struct benchscore * );
 void djbi1d_skewed_tiles_test(int, int, double **, struct benchscore * );
 void djbi1d_sk_full_tiles_test(int, int, double **,struct benchscore * );
+void djbi1d_swap_seq(int, int, double **,struct benchscore *);
 
 int task_index(uint8_t ** tasks, int strips, int steps){
   int i,t;
@@ -73,4 +73,4 @@ int task_index(uint8_t ** tasks, int strips, int steps){
 }
 
 
-#endif /* JACOBI1D */
+#endif /* JACOBI1D_H */

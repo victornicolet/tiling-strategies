@@ -1,5 +1,5 @@
-#ifndef  UTILS
-#define UTILS
+#ifndef  _UTILS_H
+#define _UTILS_H
 
 // Cache line size of 64 bytes on most x86
 #define  CACHE_LINE_SIZE 64

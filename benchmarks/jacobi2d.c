@@ -16,8 +16,8 @@ static struct timespec tbegin;
 
 static int run;
 
-double jacobi2d_seq(int iters, int h, int w, double ** img){
-  uint8_t x,y,t;
+void djbi2d_seq(int h, int w, double ** img, struct benchscore * bsc){
+  uint8_t x,y,t, iters;
 
   ALLOC_MX(temp, double, w, h);
 
@@ -38,8 +38,6 @@ double jacobi2d_seq(int iters, int h, int w, double ** img){
   clock_gettime(CLOCK_MONOTONIC, &tend);
 
   FREE_MX(temp, w)
-
-  return ELAPSED_TIME(tend, tbegin)/1000.0 ;
 }
 
 int main(int argc, char ** argv){

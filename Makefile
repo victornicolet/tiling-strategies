@@ -2,27 +2,26 @@ ifndef CC
 	CC=gcc
 endif
 
-CFLAGS=-g -std=c11
+CFLAGS=-g -std=c11 -O3
 CFLAGS+=-Waddress -Wstrict-aliasing -Wimplicit-function-declaration -Wformat=2
 
 ifeq ($(CC),icc)
 	CFLAGS+=-openmp
 else
-	ifeq ($(CC),gcc)
-		CFLAGS+=-fopenmp -Wopenmp-simd
-	else
-		WMSG="Compiler unsupported : CC =" $(CC)
-		WMSG+="\nYou might want to set CC to gcc or icc"
-	endif
+	CFLAGS+=-fopenmp -Wopenmp-simd
 endif
 
-CFLAGS+=-O3
+ifeq ($(CC), cc)
+	WMSG="Warning : default compiler used, CC=cc"
+endif
+
 LDFLAGS=-lrt -lm
 
 SRC_DIR=benchmarks
-SOURCES=$(SRC_DIR)/jacobi1d.c $(SRC_DIR)/test.c
-HEADERS=utils.h jacobi1d.h jacobi2d.h
-OBJECTS=jbi1d jbi2d
+PROGRAM=test
+SOURCES.c=$(SRC_DIR)/jacobi1d.c $(SRC_DIR)/jacobi2d.c
+HEADERS=utils.h $(SRC_DIR)/jacobi1d.h $(SRC_DIR)/jacobi2d.h
+OBJECTS=$(SOURCES.c:.c=.o)
 
 # Profiling options ------------------------------------------------------------
 
@@ -53,15 +52,14 @@ endif
 
 .PHONY: clean
 
-all: $(OBJECTS)
+all: $(PROGRAM)
+
+$(PROGRAM) : $(SOURCES.c) $(HEADERS)
+	$(CC) $(CFLAGS) -o $@ $(PROGRAM).c $(LDFLAGS)
 
 jbi1d : $(SRC_DIR)/jacobi1d.c $(SRC_DIR)/jacobi1d.h
 	@echo $(WMSG)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRC_DIR)/jacobi1d.c
-
-jbi2d : $(SRC_DIR)/jacobi2d.c $(SRC_DIR)/jacobi2d.h
-	@echo $(WMSG)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRC_DIR)/jacobi2d.c
 
 jbi1d_assembly : jbi1d.s
 
@@ -69,7 +67,7 @@ jbi1d.s : $(SRC_DIR)/jacobi1d.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -S -o $@ $^
 
 clean:
-	rm -f $(OBJECTS) cachegrind.out.* perf.data.* *.s
+	rm -f jbi1d jbi12d $(SRC_DIR)/*.o cachegrind.out.* perf.data.* *.s
 
 vtune: $(OBJECTS)
 	rm -rf $(BENCH_RESULT_DIR)

@@ -1,7 +1,7 @@
 #include "../utils.h"
 
-#ifndef JACOBI2D
-#define JACOBI2D
+#ifndef JACOBI2D_H
+#define JACOBI2D_H
 
 // Debugging
 #define DEBUG
@@ -26,9 +26,7 @@
   t[i+1][j-1] + t[i+1][j-1] + t[i-1][j-1] + t[i-1][j] + t[i-1][j+1])/9.0
 
 
-void djbi1d_omp_naive_test(int, int, double**, struct benchscore * );
-void djbi1d_omp_overlap_test(int, int, double**, struct benchscore * );
-void djbi1d_skewed_tiles_test(int, int, double **, struct benchscore * );
+void djbi2d_seq(int, int, double **,struct benchscore *);
 
 
 

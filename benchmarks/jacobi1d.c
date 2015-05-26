@@ -49,11 +49,11 @@ uint8_t ** djbi1d_sk_full_tiles(int strips, int steps, double * dashs, \
       for(t = 0; t < steps; t ++){
         for(i = 1; i < strips; i++){
           tasks[t][i] = 0;
-          int sto = i + t;
+          int strpno = i + t;
           // Stratup task
           if(t == 0 && i == 1){
 #ifndef SEQ
-            #pragma omp task depend(out : tasks[0][2], tasks[1][1])
+            #pragma omp task depend(out : tasks[t][i])
 #endif
             {
               do_i_t(dashs, slashs, 1, 0);
@@ -61,20 +61,20 @@ uint8_t ** djbi1d_sk_full_tiles(int strips, int steps, double * dashs, \
             }
           }else if(t == 0 && i > 1){
 #ifndef SEQ
-            #pragma omp task depend(out : tasks[0][i+1], tasks[1][i-1])\
+            #pragma omp task depend(out : tasks[t][i])\
             depend(in : tasks[i-1][0])
 #endif
             {
-              do_i_t(dashs, slashs, sto, 0);
+              do_i_t(dashs, slashs, strpno, 0);
               tasks[t][i] ^= 1;
             }
           } else {
 #ifndef SEQ            
-            #pragma omp task depend(out : tasks[t][i+1], tasks[t+1][i-1]) \
+            #pragma omp task depend(out : tasks[t][i]) \
             depend(in  : tasks[t][i-1], tasks[t-1][i+1])
  #endif            
             {
-              do_i_t(dashs, slashs, sto, t);
+              do_i_t(dashs, slashs, strpno, t);
               tasks[t][i] ^= 1;
             }
           }
@@ -110,16 +110,16 @@ void djbi1d_skewed_tiles(int strips, int steps, double * dashs, \
       for(Tt = 0; Tt < steps; Tt++){
         for(Ti = 0; Ti < strips; Ti++){
           // Strip number
-          int sto = (Ti + Tt);
-          //int strpno = sto % strips;
+          int strpno = (Ti + Tt);
+          //int strpno = strpno % strips;
           // Slash beginning 
           //int s_index = Tt * T_ITERS * 2;
           // Dash beginning
-          //int d_index = sto * T_WIDTH_DBL;
+          //int d_index = strpno * T_WIDTH_DBL;
           // Initial tile
           if( Tt == 0 && Ti == 0){
 #ifndef SEQ
-  #pragma omp task depend(out : tasks[1][0])
+  #pragma omp task depend(out : tasks[0][0])
 #endif
             {
               do_i0_t0(dashs, slashs, Ti, Tt);
@@ -128,10 +128,10 @@ void djbi1d_skewed_tiles(int strips, int steps, double * dashs, \
             // Bottom tiles : only left-to-right dependencies + top out
 #ifndef SEQ
   #pragma omp task depend(in : tasks[Ti-1][0]) \
-    depend(out : tasks[Ti+1][0],tasks[Ti-1][Tt+1])
+    depend(out : tasks[Ti][Tt])
 #endif
             {
-              do_i_t(dashs, slashs, sto, 0);
+              do_i_t(dashs, slashs, strpno, 0);
             }
 
           } else if(Ti == 0 && Tt > 0){
@@ -141,18 +141,18 @@ void djbi1d_skewed_tiles(int strips, int steps, double * dashs, \
             */
 #ifndef SEQ
   #pragma omp task depend(in : tasks[1][Tt-1]) \
-  depend(out : tasks[1][Tt])
+  depend(out : tasks[Ti][Tt])
 #endif
             { 
-              do_i0_t(dashs, slashs, sto, Tt);
+              do_i0_t(dashs, slashs, strpno, Tt);
             }
           } else if(Ti == strips - 1){
 #ifndef SEQ
   #pragma omp task depend(in: tasks[strips][Tt]) \
-    depend(out : tasks[strips-1][Tt+1])
+    depend(out : tasks[Ti][Tt])
 #endif
             {
-              do_in_t(dashs, slashs, sto, Tt);
+              do_in_t(dashs, slashs, strpno, Tt);
             }
 
           }else{
@@ -160,10 +160,10 @@ void djbi1d_skewed_tiles(int strips, int steps, double * dashs, \
             // Two in and out dependencies
 #ifndef SEQ
   #pragma omp task depend(in : tasks[Ti-1][Tt],tasks[Ti+1][Tt-1]) \
-    depend(out : tasks[Ti+1][Tt],tasks[Ti-1][Tt+1])
+    depend(out : tasks[Ti][Tt])
 #endif
             {
-              do_i_t(dashs, slashs, sto, Tt);
+              do_i_t(dashs, slashs, strpno, Tt);
             }
           }
 
@@ -613,11 +613,7 @@ inline void do_i0_t(double * dashs, double * slashs, int strpno, int Tt){
   uint8_t t,i;
 
   #ifdef DEBUG
-    printf("Do do_i0_t %i %i, input :\n", Tt, strpno - Tt);
-    for(i = 0; i < CHECK_ON_SIZE; i++){
-      printf("%10.3f", dashs[strpno * T_WIDTH_DBL + i - 1] );
-    }
-    printf("\n");
+    printf("Do do_i0_t %i %i\n", Tt, strpno - Tt);
   #endif
 
   for(i = 1; i < T_WIDTH_DBL; i++){
@@ -649,9 +645,6 @@ inline void do_i_t(double * dashs, double * slashs, int strpno, int Tt){
   #ifdef DEBUG
     if(Tt == ((DBG_ITER / T_ITERS ))){
       printf("Final line, task %i %i\n", Tt, strpno - Tt);
-      for(i = 0; i < CHECK_ON_SIZE; i++)
-        printf("%10.3f", dashs[strpno * T_WIDTH_DBL + i]);
-      printf("\n");
     }
   #endif
 
