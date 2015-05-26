@@ -4,14 +4,14 @@
 #define JACOBI2D_H
 
 // Debugging
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
   #define DBG_SIZE 1024
   #define DBG_ITER 512
- #endif
+#endif
 // App
-#define SEQ
+//#define SEQ
 #define CHECK_ON_SIZE 8
 // TILE DIMENSIONS -------------------------------
 // Iterations within a tile

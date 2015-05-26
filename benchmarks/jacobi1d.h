@@ -3,12 +3,12 @@
 #ifndef JACOBI1D_H
 #define JACOBI1D_H
 // Debugging
-#define DEBUG
+//#define DEBUG
 
 // Small dimensions for debugging
 #ifdef DEBUG
-  #define DBG_SIZE 1024
-  #define DBG_ITER 512
+  #define DBG_SIZE 4096
+  #define DBG_ITER 1024
  #endif
 // App
 //#define SEQ

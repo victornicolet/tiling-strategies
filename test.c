@@ -56,6 +56,13 @@ int main(int argc, char ** argv){
       return -1;
     }
 
+    int dimx, dimy, dimt;
+    if(argc == 4){
+      dimx = atoi(argv[3]);
+    }
+    if(argc == 5){
+      dimy = atoi(argv[4])
+    }
 
     // --------------------------------------
 

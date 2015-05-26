@@ -53,7 +53,8 @@ uint8_t ** djbi1d_sk_full_tiles(int strips, int steps, double * dashs, \
           // Stratup task
           if(t == 0 && i == 1){
 #ifndef SEQ
-            #pragma omp task depend(out : tasks[t][i])
+            #pragma omp task firstprivate(i,t) \
+            depend(out : tasks[t][i])
 #endif
             {
               do_i_t(dashs, slashs, 1, 0);
@@ -61,7 +62,8 @@ uint8_t ** djbi1d_sk_full_tiles(int strips, int steps, double * dashs, \
             }
           }else if(t == 0 && i > 1){
 #ifndef SEQ
-            #pragma omp task depend(out : tasks[t][i])\
+            #pragma omp task firstprivate(i,t) \
+            depend(out : tasks[t][i])\
             depend(in : tasks[i-1][0])
 #endif
             {
@@ -70,7 +72,8 @@ uint8_t ** djbi1d_sk_full_tiles(int strips, int steps, double * dashs, \
             }
           } else {
 #ifndef SEQ            
-            #pragma omp task depend(out : tasks[t][i]) \
+            #pragma omp task firstprivate(i,t) \
+            depend(out : tasks[t][i]) \
             depend(in  : tasks[t][i-1], tasks[t-1][i+1])
  #endif            
             {
@@ -119,7 +122,8 @@ void djbi1d_skewed_tiles(int strips, int steps, double * dashs, \
           // Initial tile
           if( Tt == 0 && Ti == 0){
 #ifndef SEQ
-  #pragma omp task depend(out : tasks[0][0])
+  #pragma omp task firstprivate(Ti,Tt) \
+    depend(out : tasks[0][0])
 #endif
             {
               do_i0_t0(dashs, slashs, Ti, Tt);
@@ -127,7 +131,8 @@ void djbi1d_skewed_tiles(int strips, int steps, double * dashs, \
           } else if(Tt == 0 && Ti < strips - 1){
             // Bottom tiles : only left-to-right dependencies + top out
 #ifndef SEQ
-  #pragma omp task depend(in : tasks[Ti-1][0]) \
+  #pragma omp task firstprivate(Ti,Tt) \
+    depend(in : tasks[Ti-1][0]) \
     depend(out : tasks[Ti][Tt])
 #endif
             {
@@ -140,15 +145,17 @@ void djbi1d_skewed_tiles(int strips, int steps, double * dashs, \
             Here assume T_ITERS > T_WIDTH_DBL
             */
 #ifndef SEQ
-  #pragma omp task depend(in : tasks[1][Tt-1]) \
-  depend(out : tasks[Ti][Tt])
+  #pragma omp task firstprivate(Ti,Tt) \
+    depend(in : tasks[1][Tt-1]) \
+    depend(out : tasks[Ti][Tt])
 #endif
             { 
               do_i0_t(dashs, slashs, strpno, Tt);
             }
           } else if(Ti == strips - 1){
 #ifndef SEQ
-  #pragma omp task depend(in: tasks[strips][Tt]) \
+  #pragma omp task firstprivate(Ti,Tt) \
+    depend(in: tasks[strips][Tt]) \
     depend(out : tasks[Ti][Tt])
 #endif
             {
@@ -159,14 +166,14 @@ void djbi1d_skewed_tiles(int strips, int steps, double * dashs, \
             // Regular tile
             // Two in and out dependencies
 #ifndef SEQ
-  #pragma omp task depend(in : tasks[Ti-1][Tt],tasks[Ti+1][Tt-1]) \
+  #pragma omp task firstprivate(Ti,Tt) \
+    depend(in : tasks[Ti-1][Tt],tasks[Ti+1][Tt-1]) \
     depend(out : tasks[Ti][Tt])
 #endif
             {
               do_i_t(dashs, slashs, strpno, Tt);
             }
           }
-
         }
       }
   }
@@ -431,6 +438,9 @@ int main(int argc, char ** argv){
 
     for(int bs = 0; bs < nbench; bs++){
       if (benchmask[bs] == '1') {
+        #ifdef SEQ
+          printf("WARNING : SEQ defined\n");
+        #endif
         struct benchscore score[nruns + 1];
         accu = 0.0;
         for(iter = 0; iter < nruns + 1; iter++){
