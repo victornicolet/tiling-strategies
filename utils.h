@@ -13,7 +13,7 @@
 #define min(a,b) ((a) > (b) ? (b) : (a))
 #define max(a,b) ((a) > (b) ? (a) : (b))
 #define ABS(a) (((a)>0 ) ? (a) : (-a))
-#define ALLOC_MX(m, type, dim1, dim2) type ** (m) = \
+#define ALLOC_MX(m, type, dim1, dim2) type ** m = \
 	(type **) malloc(sizeof(type *) * (dim1)); \
   if(m == NULL){\
     fprintf(stderr, "ALLOC_MX:Error while allocating 2D array\n");\

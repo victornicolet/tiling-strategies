@@ -28,7 +28,65 @@ void do_in_t(double * dashs, double* slashs, int strpno, int Tt)
   __attribute__((always_inline));
 
 
-void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
+uint8_t ** djbi1d_sk_full_tiles(int strips, int steps, double * dashs, \
+  double * slashs){
+  /* In this algorithm we work only on full parallelograms : no partial tiles. 
+  We are interested in performance measures, and understanding, rather 
+  than corectness here */
+
+  ALLOC_MX(tasks, uint8_t, steps, strips)
+
+#ifndef SEQ
+  #pragma omp parallel
+#endif
+  {
+#ifndef SEQ
+    #pragma omp single
+#endif
+    {
+      int i, t;
+
+      for(t = 0; t < steps; t ++){
+        for(i = 1; i < strips; i++){
+          int sto = i + t;
+          printf("Work\n");
+          // Stratup task
+          if(t == 0 && i == 1){
+#ifndef SEQ
+            #pragma omp task depend(out : tasks[0][2], tasks[1][1])
+#endif
+            {
+              do_i_t(dashs, slashs, 1, 0);
+              tasks[i][t]^=1;
+            }
+          }else if(t == 0 && i > 1){
+#ifndef SEQ
+            #pragma omp task depend(out : tasks[0][i+1], tasks[1][i-1])\
+            depend(in : tasks[i-1][0])
+#endif
+            {
+              do_i_t(dashs, slashs, sto, 0);
+              tasks[i][t]^=1;
+            }
+          } else {
+#ifndef SEQ            
+            #pragma omp task depend(out : tasks[t][i+1], tasks[t+1][i-1]) \
+            depend(in  : tasks[t][i-1], tasks[t-1][i+1])
+ #endif            
+            {
+              do_i_t(dashs, slashs, sto, t);
+              tasks[i][t]^=1;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return tasks;
+}
+
+void djbi1d_skewed_tiles(int strips, int steps, double * dashs, \
   double * slashs){
     /* In this version we assume T_ITERS = T_WIDTH_DBL so we have to make a
     difference between regular tiles ( parallelogram-shaped ones) and triangular
@@ -36,10 +94,10 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
     at the boundaries of the domain.
     ---------------
 
-    tsteps = (iters / T_ITERS) + 1;
+    steps = (iters / T_ITERS) + 1;
     strips = (n / T_WIDTH_DBL) + 1 ;
     */
-    uint8_t tasks[strips+1][tsteps];
+    uint8_t tasks[strips+1][steps];
     int Ti, Tt;
 #ifndef SEQ
   #pragma omp parallel
@@ -49,7 +107,7 @@ void djbi1d_skewed_tiles(int strips, int tsteps, double * dashs, \
   #pragma omp master
 #endif
 
-      for(Tt = 0; Tt < tsteps; Tt++){
+      for(Tt = 0; Tt < steps; Tt++){
         for(Ti = 0; Ti < strips; Ti++){
           // Strip number
           int sto = (Ti + Tt);
@@ -278,6 +336,7 @@ struct benchspec benchmarks[] = {
   {"JACOBI1D_OMP_OVERLAP", djbi1d_omp_overlap},
   {"JACOBI1D_OMP_NAIVE", djbi1d_omp_naive },
   {"JACOBI1D_SKEWED_TILES", djbi1d_skewed_tiles_test},
+  {"JACOBI1D_SK_FULL_TILES", djbi1d_sk_full_tiles_test},
   {"JACOBI1D_SWAP_SEQ", djbi1d_swap_seq},
 };
 
@@ -286,6 +345,12 @@ struct benchspec benchmarks[] = {
 int main(int argc, char ** argv){
 
     int nbench = sizeof(benchmarks) / sizeof(struct benchspec);
+
+    if(argc < 3){
+      printf("Usage: %s <Nruns> <Mask : %i> [ <Width> <Time iterations>]\n", 
+        argv[0], nbench);
+      return 0;
+    }
 
     csv_file = fopen("jacobi1d.csv", "w");
     if (csv_file == NULL) {
@@ -302,12 +367,6 @@ int main(int argc, char ** argv){
         printf("T_WIDTH_DBL_OVERLAP : \t%i\n", T_WIDTH_DBL_OVERLAP);
         printf("T_WIDTH_DBL_DIAM : \t%i\n", T_WIDTH_DBL_DIAM );
         return 0;
-    }
-
-    if(argc < 3){
-      printf("Usage: %s <Nruns> <Mask : %i> [ <Width> <Time iterations>]\n", 
-        argv[0], nbench);
-      return 0;
     }
 
     int i, j, iter;
@@ -410,22 +469,29 @@ int main(int argc, char ** argv){
 
 }
 
-void djbi1d_skewed_tiles_test(int n, int iters, double ** jbi, \
+/* --------*/
+/*  Tests  */
+/* --------*/
+
+void djbi1d_sk_full_tiles_test(int n, int iters, double ** jbi, \
   struct benchscore * bsc){
-  int tsteps = (iters / T_ITERS) + 1;
+  int steps = (iters / T_ITERS) + 1;
   int strips = (n/(T_WIDTH_DBL)) + 1;
 
   #ifdef DEBUG
-    printf("iters : %i, n : %i -- %i steps, %i strips\n", tsteps, strips, 
+    printf("iters : %i, n : %i -- %i steps, %i strips\n", steps, strips, 
       iters, n);
   #endif
 
   double * jbi_dashs = (double*) malloc(sizeof(double) * 
-    ((strips + tsteps) * T_WIDTH_DBL));
-  double * jbi_slashs = (double*) malloc(sizeof(double) * tsteps * 2 * T_ITERS);
+    ((strips + steps) * T_WIDTH_DBL));
+  double * jbi_slashs = (double*) malloc(sizeof(double) * steps * 2 * T_ITERS);
+
+  uint8_t ** tasks;
 
   if(jbi_dashs == NULL || jbi_slashs == NULL){
     fprintf(stderr, "Error while allocating 2D arrays for skewed_tiles\n");
+    return;
   }
 
   for(int i = 0; i < n; i++){
@@ -433,12 +499,61 @@ void djbi1d_skewed_tiles_test(int n, int iters, double ** jbi, \
   }
 
   clock_gettime( CLOCK_MONOTONIC, &tbegin);
-  djbi1d_skewed_tiles(strips, tsteps, jbi_dashs, jbi_slashs);
+  tasks = djbi1d_sk_full_tiles(strips, steps, jbi_dashs, jbi_slashs);
   clock_gettime( CLOCK_MONOTONIC, &tend);
 
   bsc->wallclock = ELAPSED_TIME(tend, tbegin);
 
-  int start_stripe_top = tsteps * T_WIDTH_DBL;
+  #ifdef DEBUG
+    if(task_index(tasks, strips, steps)){
+      printf("The task index for dependencies doesn't seem correct ...\n");
+      for(int t = 0; t < steps; t ++){
+        for(int i = 0; i < strips; i ++){
+          printf("%2i\n", tasks[t][i]);
+        }
+      }
+    }
+  #endif
+  int start_stripe_top = steps * T_WIDTH_DBL;
+  for(int i = 0 ; i < n; i++){
+    jbi[1][i] = jbi_dashs[i + start_stripe_top];
+  }
+
+  free(jbi_dashs);
+  free(jbi_slashs);
+  FREE_MX(tasks, steps)
+}
+
+void djbi1d_skewed_tiles_test(int n, int iters, double ** jbi, \
+  struct benchscore * bsc){
+  int steps = (iters / T_ITERS) + 1;
+  int strips = (n/(T_WIDTH_DBL)) + 1;
+
+  #ifdef DEBUG
+    printf("iters : %i, n : %i -- %i steps, %i strips\n", steps, strips, 
+      iters, n);
+  #endif
+
+  double * jbi_dashs = (double*) malloc(sizeof(double) * 
+    ((strips + steps) * T_WIDTH_DBL));
+  double * jbi_slashs = (double*) malloc(sizeof(double) * steps * 2 * T_ITERS);
+
+  if(jbi_dashs == NULL || jbi_slashs == NULL){
+    fprintf(stderr, "Error while allocating 2D arrays for skewed_tiles\n");
+    return;
+  }
+
+  for(int i = 0; i < n; i++){
+    jbi_dashs[i] = jbi[0][i];
+  }
+
+  clock_gettime( CLOCK_MONOTONIC, &tbegin);
+  djbi1d_skewed_tiles(strips, steps, jbi_dashs, jbi_slashs);
+  clock_gettime( CLOCK_MONOTONIC, &tend);
+
+  bsc->wallclock = ELAPSED_TIME(tend, tbegin);
+
+  int start_stripe_top = steps * T_WIDTH_DBL;
   for(int i = 0 ; i < n; i++){
     jbi[1][i] = jbi_dashs[i + start_stripe_top];
   }

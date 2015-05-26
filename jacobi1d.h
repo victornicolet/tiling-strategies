@@ -51,10 +51,26 @@ static int T_WIDTH_DBL_OVERLAP = T_WIDTH_DBL;
 #define FREE_LINES(l1, l2) if(l1) free(l1); if(l2) free(l2);
 
 
-void djbi1d_omp_naive_test(int, int, double**, struct benchscore * );
-void djbi1d_omp_overlap_test(int, int, double**, struct benchscore * );
+void djbi1d_omp_naive(int, int, double**, struct benchscore * );
+void djbi1d_omp_overlap(int, int, double**, struct benchscore * );
 void djbi1d_skewed_tiles_test(int, int, double **, struct benchscore * );
+void djbi1d_sk_full_tiles_test(int, int, double **,struct benchscore * );
 
+int task_index(uint8_t ** tasks, int strips, int steps){
+  int i,t;
+
+  for(i = 1; i < strips; i++){
+    if(tasks[0][i] == 0 && tasks[0][i + 1] == 1) return -1;
+  }
+
+  for(t = 1; t < steps; t++){
+    for(i = 1; i < strips; i ++){
+      if((tasks[i+1][t-1] == 0 || tasks[i-1][t] == 0) && tasks[i][t] == 1) return -1;
+    }
+  }
+
+  return 1;
+}
 
 
 #endif /* JACOBI1D */
