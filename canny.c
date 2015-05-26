@@ -29,25 +29,29 @@ int pipeline_canny_naive(int width, int height,
   uint8_t x,y;
 
   // Padding image for gaussian filter
-  MX_ALLOC(image_padded, width + 4, height + 4)
+  ALLOC_MX(image_padded, width + 4, height + 4)
 
   LOOP2D(x, y, 0, width, 0, height)
     image_padded[x + 4] = image[x];
   END_LOOP2D
   // Apply Gaussian filter
-  MX_ALLOC(image_G, width, height)
+  ALLOC_MX(image_G, width, height)
   LOOP2D(x, y, 0, width, 0, height)
       image_G[x][y] = GAUSS_MASK_5(image, x+4, y+4);
   END_LOOP2D
   FREE_MX(image_padded, width + 4)
   // Apply gradient intensity
-  MX_ALLOC(gradx, width, height)
-  MX_ALLOC(grady, width, height)
-  LOOP2D(x, y, 0, width, height)
+  ALLOC_MX(gradx, width, height)
+  ALLOC_MX(grady, width, height)
+  LOOP2D(x, y, 0, width, 0, height)
     grady[x][y] = GRAD_Y(image_G, x, y);
     gradx[x][y] = GRAD_X(image_G, x, y);
   END_LOOP2D
-  // Non-maxima suppression
+  // Edge detection 1
+  ALLOC_MX(theta, width, height)
+  LOOP2D(x, y, 0, width, 0, height)
+    theta[x][y] = EDGE(im, x, y)
+  END_LOOP2D
   // Edge levelling
 }
 
