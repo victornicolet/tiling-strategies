@@ -200,6 +200,7 @@ void djbi1d_diamond_tiles(int n,int jbi_iters, double ** jbi,
 void djbi1d_omp_naive(int n, int jbi_iters, double ** jbi,
   struct benchscore * bsc){
 
+  clock_gettime( CLOCK_MONOTONIC, &tbegin);
   int t,i;
   double * l1 = (double *) aligned_alloc(CACHE_LINE_SIZE, sizeof(double) * n);
   double * l2 = (double *) aligned_alloc(CACHE_LINE_SIZE, sizeof(double) * n);
@@ -329,7 +330,6 @@ void djbi1d_swap_seq(int n, int jbi_iters, double ** jbi,
 
   bsc->wallclock = ELAPSED_TIME(tend, tbegin);
 }
-
 
 
 struct benchspec benchmarks[] = {

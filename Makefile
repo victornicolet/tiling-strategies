@@ -20,8 +20,8 @@ CFLAGS+=-O3
 LDFLAGS=-lrt -lm
 
 SOURCES=jacobi1d.c test.c
-HEADERS=utils.
-OBJECTS=jbi1d
+HEADERS=utils.h jacobi1d.h jacobi2d.h
+OBJECTS=jbi1d jbi2d
 
 # Profiling options ------------------------------------------------------------
 
@@ -57,6 +57,10 @@ all: $(OBJECTS)
 jbi1d : jacobi1d.c jacobi1d.h
 	@echo $(WMSG)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ jacobi1d.c
+
+jbi2d : jacobi2d.c jacobi2d.h
+	@echo $(WMSG)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ jacobi2d.c
 
 jbi1d_assembly : jbi1d.s
 
