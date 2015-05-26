@@ -48,8 +48,8 @@ uint8_t ** djbi1d_sk_full_tiles(int strips, int steps, double * dashs, \
 
       for(t = 0; t < steps; t ++){
         for(i = 1; i < strips; i++){
+          tasks[t][i] = 0;
           int sto = i + t;
-          printf("Work\n");
           // Stratup task
           if(t == 0 && i == 1){
 #ifndef SEQ
@@ -57,7 +57,7 @@ uint8_t ** djbi1d_sk_full_tiles(int strips, int steps, double * dashs, \
 #endif
             {
               do_i_t(dashs, slashs, 1, 0);
-              tasks[i][t]^=1;
+              tasks[t][i] ^= 1;
             }
           }else if(t == 0 && i > 1){
 #ifndef SEQ
@@ -66,7 +66,7 @@ uint8_t ** djbi1d_sk_full_tiles(int strips, int steps, double * dashs, \
 #endif
             {
               do_i_t(dashs, slashs, sto, 0);
-              tasks[i][t]^=1;
+              tasks[t][i] ^= 1;
             }
           } else {
 #ifndef SEQ            
@@ -75,7 +75,7 @@ uint8_t ** djbi1d_sk_full_tiles(int strips, int steps, double * dashs, \
  #endif            
             {
               do_i_t(dashs, slashs, sto, t);
-              tasks[i][t]^=1;
+              tasks[t][i] ^= 1;
             }
           }
         }
@@ -112,7 +112,7 @@ void djbi1d_skewed_tiles(int strips, int steps, double * dashs, \
           // Strip number
           int sto = (Ti + Tt);
           //int strpno = sto % strips;
-          // Slash begginning 
+          // Slash beginning 
           //int s_index = Tt * T_ITERS * 2;
           // Dash beginning
           //int d_index = sto * T_WIDTH_DBL;
@@ -505,12 +505,13 @@ void djbi1d_sk_full_tiles_test(int n, int iters, double ** jbi, \
   bsc->wallclock = ELAPSED_TIME(tend, tbegin);
 
   #ifdef DEBUG
-    if(task_index(tasks, strips, steps)){
+    if(task_index(tasks, strips, steps) > 0){
       printf("The task index for dependencies doesn't seem correct ...\n");
       for(int t = 0; t < steps; t ++){
-        for(int i = 0; i < strips; i ++){
-          printf("%2i\n", tasks[t][i]);
+        for(int i = 1; i < strips; i ++){
+          printf("%2i", tasks[t][i]);
         }
+        printf("\n");
       }
     }
   #endif

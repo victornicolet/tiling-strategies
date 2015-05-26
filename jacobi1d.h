@@ -45,8 +45,8 @@ static int T_WIDTH_DBL_OVERLAP = T_WIDTH_DBL;
    sizeof(double)*(size)); \
   double * l2 = (double *) aligned_alloc(CACHE_LINE_SIZE, \
    sizeof(double)*(size)); \
-  if(l1 == NULL || l2 == NULL)\
-    printf("Error in ALLOC_LINES\n"); exit(1);
+  if(l1 == NULL || l2 == NULL) {\
+    printf("Error in ALLOC_LINES\n"); exit(1);}
 
 #define FREE_LINES(l1, l2) if(l1) free(l1); if(l2) free(l2);
 
