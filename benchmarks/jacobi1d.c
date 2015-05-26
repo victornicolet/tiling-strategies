@@ -101,6 +101,10 @@ void djbi1d_skewed_tiles(int strips, int steps, double * dashs, \
     strips = (n / T_WIDTH_DBL) + 1 ;
     */
     uint8_t tasks[strips+1][steps];
+
+    #ifdef DEBUG_PARALLEL
+      int * tsk = (int*) malloc(sizeof(int) * (strips + 1) * steps);
+    #endif
     int Ti, Tt;
 #ifndef SEQ
   #pragma omp parallel
@@ -111,7 +115,7 @@ void djbi1d_skewed_tiles(int strips, int steps, double * dashs, \
 #endif
 
       for(Tt = 0; Tt < steps; Tt++){
-        for(Ti = 0; Ti < strips; Ti++){
+        for(Ti = 0; Ti < strips + 1; Ti++){
           // Strip number
           int strpno = (Ti + Tt);
           //int strpno = strpno % strips;
@@ -126,6 +130,9 @@ void djbi1d_skewed_tiles(int strips, int steps, double * dashs, \
     depend(out : tasks[0][0])
 #endif
             {
+              #ifdef DEBUG_PARALLEL
+                tsk[0] = 1;
+              #endif
               do_i0_t0(dashs, slashs, Ti, Tt);
             }
           } else if(Tt == 0 && Ti < strips - 1){
@@ -136,6 +143,12 @@ void djbi1d_skewed_tiles(int strips, int steps, double * dashs, \
     depend(out : tasks[Ti][Tt])
 #endif
             {
+              #ifdef DEBUG_PARALLEL
+                if(tsk[Ti - 1] != 1 ){
+                  printf("Unsatisified dependency !\n");
+                }
+                tsk[Tt * steps + Ti] = 1;
+              #endif
               do_i_t(dashs, slashs, strpno, 0);
             }
 
@@ -150,15 +163,27 @@ void djbi1d_skewed_tiles(int strips, int steps, double * dashs, \
     depend(out : tasks[Ti][Tt])
 #endif
             { 
+              #ifdef DEBUG_PARALLEL
+                if(tsk[(Tt - 1) * steps + Ti] != 1 ){
+                  printf("Unsatisified dependency !\n");
+                }
+                tsk[Tt * steps + Ti] = 1;
+              #endif
               do_i0_t(dashs, slashs, strpno, Tt);
             }
-          } else if(Ti == strips - 1){
+          } else if(Ti == strips){
 #ifndef SEQ
   #pragma omp task firstprivate(Ti,Tt) \
-    depend(in: tasks[strips][Tt]) \
+    depend(in: tasks[Ti-1][Tt]) \
     depend(out : tasks[Ti][Tt])
 #endif
             {
+              #ifdef DEBUG_PARALLEL
+                if(tsk[Tt * steps + Ti - 1] != 1 ){
+                  printf("Unsatisified dependency !\n");
+                }
+                tsk[Tt * steps + Ti] = 1;
+              #endif
               do_in_t(dashs, slashs, strpno, Tt);
             }
 
@@ -171,6 +196,13 @@ void djbi1d_skewed_tiles(int strips, int steps, double * dashs, \
     depend(out : tasks[Ti][Tt])
 #endif
             {
+              #ifdef DEBUG_PARALLEL
+                if(tsk[Tt * steps + Ti - 1] != 1 || \
+                  tsk[(Tt-1) * steps + (Ti+1)] != 1){
+                  printf("Unsatisified dependency !\n");
+                }
+                tsk[Tt * steps + Ti] = 1;
+              #endif
               do_i_t(dashs, slashs, strpno, Tt);
             }
           }
@@ -438,9 +470,6 @@ int main(int argc, char ** argv){
 
     for(int bs = 0; bs < nbench; bs++){
       if (benchmask[bs] == '1') {
-        #ifdef SEQ
-          printf("WARNING : SEQ defined\n");
-        #endif
         struct benchscore score[nruns + 1];
         accu = 0.0;
         for(iter = 0; iter < nruns + 1; iter++){
@@ -471,6 +500,12 @@ int main(int argc, char ** argv){
           (double) (accu * 1000.0 / (nruns)));
       }
     }
+    #ifdef SEQ
+          printf("WARNING : SEQ defined\n");
+    #endif
+    #ifdef DEBUG_PARALLEL
+          printf("WARNING : DEBUG_PARALLEL defined\n");
+    #endif
 
     free(check_res);
     free(jbi[1]);

@@ -4,7 +4,7 @@
 #define JACOBI1D_H
 // Debugging
 //#define DEBUG
-
+#define DEBUG_PARALLEL
 // Small dimensions for debugging
 #ifdef DEBUG
   #define DBG_SIZE 4096
