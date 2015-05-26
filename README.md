@@ -9,7 +9,10 @@ Five implementations of one dimensional Jacobi stencil.
 - skewed tiling version with task-based approach. The calculation space is tiled with hyperplanes 1:0 along space dimension, 1:1 along time dimension.
 
 ## Compilation & running 
+
+Jacobi 1D only :
   * $ make jbi1d
-  * $ ./jbi1d Nruns> Mask [ Width Time iterations ]
-  Mask example : 1000 ( overlapped version : naive : skewed : sequential )
+  * $ ./jbi1d Nruns Mask [ Width Time iterations ]
+  Mask example : 10000 ( overlapped version : naive : skewed : sequential )
+
 
