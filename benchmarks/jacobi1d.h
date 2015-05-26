@@ -1,4 +1,4 @@
-#include "utils.h"
+#include "../utils.h"
 
 #ifndef JACOBI1D
 #define JACOBI1D

@@ -19,7 +19,8 @@ endif
 CFLAGS+=-O3
 LDFLAGS=-lrt -lm
 
-SOURCES=jacobi1d.c test.c
+SRC_DIR=benchmarks
+SOURCES=$(SRC_DIR)/jacobi1d.c $(SRC_DIR)/test.c
 HEADERS=utils.h jacobi1d.h jacobi2d.h
 OBJECTS=jbi1d jbi2d
 
@@ -54,21 +55,21 @@ endif
 
 all: $(OBJECTS)
 
-jbi1d : jacobi1d.c jacobi1d.h
+jbi1d : $(SRC_DIR)/jacobi1d.c $(SRC_DIR)/jacobi1d.h
 	@echo $(WMSG)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ jacobi1d.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRC_DIR)/jacobi1d.c
 
-jbi2d : jacobi2d.c jacobi2d.h
+jbi2d : $(SRC_DIR)/jacobi2d.c $(SRC_DIR)/jacobi2d.h
 	@echo $(WMSG)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ jacobi2d.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRC_DIR)/jacobi2d.c
 
 jbi1d_assembly : jbi1d.s
 
-jbi1d.s : jacobi1d.c
+jbi1d.s : $(SRC_DIR)/jacobi1d.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -S -o $@ $^
 
 clean:
-	rm -f jbi1d cachegrind.out.* perf.data.* *.s
+	rm -f $(OBJECTS) cachegrind.out.* perf.data.* *.s
 
 vtune: $(OBJECTS)
 	rm -rf $(BENCH_RESULT_DIR)

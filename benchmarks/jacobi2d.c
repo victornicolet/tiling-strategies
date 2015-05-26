@@ -9,7 +9,6 @@
 #include <immintrin.h>
 #include <inttypes.h>
 #include "jacobi2d.h"
-#include "utils.h"
 
 
 static struct timespec tend;
