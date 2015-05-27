@@ -45,7 +45,7 @@ ifndef P_TARGET
 	P_TARGET=jbi1d
 endif
 ifndef P_ARGS
-	P_ARGS=10 0001
+	P_ARGS=10 000010
 endif
 
 #-------------------------------------------------------------------------------

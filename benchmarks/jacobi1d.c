@@ -27,6 +27,94 @@ void do_i0_t0(double * dashs, double* slashs, int T, int I)
 void do_in_t(double * dashs, double* slashs, int strpno, int Tt)
   __attribute__((always_inline));
 
+struct benchspec benchmarks[] = {
+  {"JACOBI1D_OMP_OVERLAP", djbi1d_omp_overlap},
+  {"JACOBI1D_OMP_NAIVE", djbi1d_omp_naive },
+  {"JACOBI1D_SKEWED_TILES", djbi1d_skewed_tiles_test},
+  {"JACOBI1D_SK_FULL_TILES", djbi1d_sk_full_tiles_test},
+  {"JACOBI1D_SWAP_SEQ", djbi1d_swap_seq},
+  {"JACOBI1D_HALF_DIMAONDS", djbi1d_half_diamonds_test}
+};
+
+void djbi1d_half_diamonds(int w, int iters, double * jbi){
+
+  int base_w = 2 * iters ;
+  int strips = (w / base_w) + 1;
+  // Store the border between base-down pyramids and base-up pyramids
+  int tmp_stride = 4 * iters - 2;
+  double * tmp = (double *) malloc(sizeof(double) * tmp_stride * strips);
+
+  int ti,t,i;
+
+  // First loop : base down tiles
+#ifndef SEQ
+  #pragma omp parallel for schedule(static)
+#endif
+  for(ti = 0; ti < strips; ti ++){
+
+    int tmp_pos = strips * ti;
+
+    double li1[base_w], li0[base_w];
+    // Initial values
+    int x0 = ti * base_w;
+    int l0 = max(x0, 0);
+    int r0 = min(x0 + base_w, w);
+    for(i = l0; i < r0; i ++){
+      li0[i - x0] = jbi[i];
+    }
+
+    for(t = 1; t < iters; t ++){
+      int l = max(x0+ t, 1);
+      int r = min(x0 + base_w - t, w-1);
+      // Fill the border-storing array
+      tmp[tmp_pos + tmp_stride - 2*(t-1)]     = li0[r - x0];
+      tmp[tmp_pos + tmp_stride - 2*(t-1) - 1] = li0[r - x0 - 1];
+      tmp[tmp_pos + 2*(t-1)]                  = li0[l - x0];
+      tmp[tmp_pos + 2*(t-1) + 1]              = li0[l - x0 + 1];
+
+      for(i = l; i < r; i ++){
+        li1[i - x0] = (li0[i-1-x0] + li0[i - x0] + li0[i+1-x0]) / 3.0;
+      }
+      for(i = l; i < r; i ++){
+        li0[i - x0] = li1[i - x0];
+      }
+    }
+  }
+
+  // Second loop : tip down tiles
+#ifndef SEQ
+  #pragma omp parallel for schedule(static)
+#endif
+  for(ti = 0; ti < strips + 1; ti ++){
+
+    int tmp_pos = strips * ti;
+    int x0 = ti * base_w;
+    double li1[base_w], li0[base_w]; 
+
+    for(t = 1; t < iters + 1; t --){
+      int l = max(ti * base_w - t, 1);
+      int r = min(ti * base_w + t, w-1);
+      // Fill the border-storing array
+      li0[r - x0]      = tmp[min(tmp_pos + 2 * (t - 1), w)];
+      li0[r - x0 - 1]  = tmp[min(tmp_pos + 2 * (t - 1) - 1, w)];
+      li0[l - x0]      = tmp[max(tmp_pos - 2 * (t - 1), 0)];
+      li0[l - x0 + 1]  = tmp[max(tmp_pos - 2 * (t - 1) + 1, 0)];
+ 
+      for(i = l; i < r; i ++){
+        li1[i - x0] = (li0[i-1-x0] + li0[i - x0] + li0[i+1-x0]) / 3.0;
+      }
+      for(i = l; i < r; i ++){
+        li0[i - x0] = li1[i - x0];
+      }
+    }
+    int l0 = max(x0 - iters, 0);
+    int r0 = min(x0 + iters, w);
+    for(i = l0; i < r0; i++){
+      jbi[i] = li0[i - l0];
+    }
+  }
+
+}
 
 uint8_t ** djbi1d_sk_full_tiles(int strips, int steps, double * dashs, \
   double * slashs){
@@ -371,16 +459,6 @@ void djbi1d_swap_seq(int n, int jbi_iters, double ** jbi,
 }
 
 
-struct benchspec benchmarks[] = {
-  {"JACOBI1D_OMP_OVERLAP", djbi1d_omp_overlap},
-  {"JACOBI1D_OMP_NAIVE", djbi1d_omp_naive },
-  {"JACOBI1D_SKEWED_TILES", djbi1d_skewed_tiles_test},
-  {"JACOBI1D_SK_FULL_TILES", djbi1d_sk_full_tiles_test},
-  {"JACOBI1D_SWAP_SEQ", djbi1d_swap_seq},
-};
-
-
-
 int main(int argc, char ** argv){
 
     int nbench = sizeof(benchmarks) / sizeof(struct benchspec);
@@ -517,6 +595,18 @@ int main(int argc, char ** argv){
 /* --------*/
 /*  Tests  */
 /* --------*/
+
+void djbi1d_half_diamonds_test(int n, int iters, double ** jbi, \
+  struct benchscore * bsc){
+
+  clock_gettime( CLOCK_MONOTONIC, &tbegin);
+  djbi1d_half_diamonds(n, iters, jbi[0]);
+  clock_gettime( CLOCK_MONOTONIC, &tend);
+  bsc->wallclock = ELAPSED_TIME(tend, tbegin);
+
+  memcpy(jbi[1], jbi[0], sizeof(double) * n);
+}
+
 
 void djbi1d_sk_full_tiles_test(int n, int iters, double ** jbi, \
   struct benchscore * bsc){
