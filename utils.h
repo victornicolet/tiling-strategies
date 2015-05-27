@@ -53,6 +53,10 @@ struct benchspec {
   void (*variant)(int, int, double**, struct benchscore *);
   // Spatial dimensions
   int dim;
+  // Base size
+  long size;
+  // Iterated stencil multiplier
+  long iters;
 };
 
 

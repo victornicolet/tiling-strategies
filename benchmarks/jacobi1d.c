@@ -14,8 +14,6 @@ static struct timespec tbegin;
 
 static FILE * csv_file;
 
-static int run;
-
 /* Functions describing different tasks in the computation
   Always inlined in the main body */
 void do_i_t(double * dashs, double* slashs, int strpno, int Tt) 
@@ -28,12 +26,12 @@ void do_in_t(double * dashs, double* slashs, int strpno, int Tt)
   __attribute__((always_inline));
 
 struct benchspec benchmarks[] = {
-  {"JACOBI1D_OMP_OVERLAP", djbi1d_omp_overlap},
-  {"JACOBI1D_OMP_NAIVE", djbi1d_omp_naive },
-  {"JACOBI1D_SKEWED_TILES", djbi1d_skewed_tiles_test},
-  {"JACOBI1D_SK_FULL_TILES", djbi1d_sk_full_tiles_test},
-  {"JACOBI1D_SWAP_SEQ", djbi1d_swap_seq},
-  {"JACOBI1D_HALF_DIMAONDS", djbi1d_half_diamonds_test}
+  {"JACOBI1D_OMP_OVERLAP", djbi1d_omp_overlap, 2, 1 << 10, 1 << 7},
+  {"JACOBI1D_OMP_NAIVE", djbi1d_omp_naive, 2, 1 << 10, 1 << 7},
+  {"JACOBI1D_SKEWED_TILES", djbi1d_skewed_tiles_test, 2, 1 << 10, 1 << 7},
+  {"JACOBI1D_SK_FULL_TILES", djbi1d_sk_full_tiles_test, 2, 1 << 10, 1 << 7},
+  {"JACOBI1D_SWAP_SEQ", djbi1d_swap_seq, 2, 1 << 10, 1 << 7},
+  {"JACOBI1D_HALF_DIMAONDS", djbi1d_half_diamonds_test, 2, 1 << 10, 1 << 5}
 };
 
 void djbi1d_half_diamonds(int w, int iters, double * jbi){
@@ -361,7 +359,6 @@ void djbi1d_omp_overlap(int n, int jbi_iters, double ** jbi,
   struct benchscore * bsc){
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
   int Ti,Tt,t,i;
-  double * tmp;
 
   for( Tt = 0; Tt <= jbi_iters/T_ITERS; Tt ++){
 #ifndef SEQ
@@ -373,8 +370,6 @@ void djbi1d_omp_overlap(int n, int jbi_iters, double ** jbi,
           T_ITERS * 2));
       double * lvl0 = (double *) malloc(sizeof(double) * (T_WIDTH_DBL_OVERLAP+
           T_ITERS * 2));
-
-      double *tmp;
 
       // Compute tile bounds
       int bot = max((T_ITERS * Tt), 0);
@@ -488,17 +483,14 @@ int main(int argc, char ** argv){
 
     int i, j, iter;
     int nruns = atoi(argv[1]);
-    int tab_size, jbi_size;
+    int tab_size, iterations;
     if(argc == 5){
       tab_size = 1 << atoi(argv[3]);
-      jbi_size = 1 << atoi(argv[4]);
+      iterations = 1 << atoi(argv[4]);
     } else {
       #ifdef DEBUG
         tab_size = DBG_SIZE;
-        jbi_size = DBG_ITER;
-      #else
-        tab_size = 1 << 16;
-        jbi_size = 1 << 10;
+        iterations = DBG_ITER;
       #endif
     }
 
@@ -506,23 +498,11 @@ int main(int argc, char ** argv){
       tab_size = ((tab_size - 1) / (2*T_ITERS - 1)) * (2*T_ITERS - 1);
     #endif
 
-    double ** jbi = (double **) malloc(sizeof(double) * 2);
-    for(i = 0; i < 2; i++){
-      jbi[i] = (double *) malloc(sizeof(double) * tab_size);
-    }
-
-    JBI_INIT(jbi, tab_size)
-
     char *benchmask = argv[2];
     if(strlen(benchmask) != nbench){
       printf("Error : not a valid mask ! Your mask must be %i bits long\n", 
         nbench);
       return -1;
-    }
-
-    printf("Input : \n");
-    for(i = 0; i < CHECK_ON_SIZE; i++){
-      printf("%10.3f", jbi[0][i]);
     }
 
     #ifdef DEBUG
@@ -534,27 +514,41 @@ int main(int argc, char ** argv){
       fprintf(csv_file, "\n");
     #endif
 
-    // Get the correct result
-    double * check_res = (double *) malloc(sizeof(double) * tab_size);
-    struct benchscore bsc;
-    djbi1d_swap_seq(tab_size, jbi_size, jbi, &bsc);
-
-    for(int i = 0; i < tab_size; i++){
-      check_res[i] = jbi[1][i];
-    }
-
     printf("\n");
     double accu;
 
     for(int bs = 0; bs < nbench; bs++){
       if (benchmask[bs] == '1') {
+
         struct benchscore score[nruns + 1];
         accu = 0.0;
+        if(argc < 5){
+          #ifndef DEBUG
+            tab_size = benchmarks[bs].size;
+            iterations = benchmarks[bs].iters;
+          #endif
+        }
+
+        double ** jbi = (double **) malloc(sizeof(double) * 2);
+        for(i = 0; i < 2; i++){
+          jbi[i] = (double *) malloc(sizeof(double) * tab_size);
+        }
+        // Get the correct result
+        double * check_res = (double *) malloc(sizeof(double) * tab_size);
+        struct benchscore bsc;
+        djbi1d_swap_seq(tab_size, iterations, jbi, &bsc);
+        for(i = 0; i < tab_size; i++) check_res[i] = jbi[1][i];
+
+        printf("Input : \n");
+        for(i = 0; i < DISPLAY_SIZE; i++){
+          printf("%10.3f", jbi[0][i]);
+        }
+
         for(iter = 0; iter < nruns + 1; iter++){
 
           JBI_INIT(jbi, tab_size)
           score[iter].name = benchmarks[bs].name;
-          benchmarks[bs].variant(tab_size, jbi_size, jbi, &score[iter]);
+          benchmarks[bs].variant(tab_size, iterations, jbi, &score[iter]);
           
           if(iter > 0) {
             printf("%s : Run %i ...", score[iter].name, iter );
@@ -564,18 +558,22 @@ int main(int argc, char ** argv){
         }
         printf("\n------------- %s ---------\n", benchmarks[bs].name);
         printf("Result: \n");
-        for(i = 0; i < CHECK_ON_SIZE; i++){
+        for(i = 0; i < DISPLAY_SIZE; i++){
           printf("%10.3f", jbi[1][i]);
         }
 
         if(compare(jbi[1], check_res, tab_size) == 0){
           printf("\nThe result with this method is not correct !\n");
         }
-
         printf("\n----------------------\n");
         printf("Total time :\t %13f ms\n", (double) accu * 1000.0);
         printf("Average time :\t %13f ms\n\n", 
           (double) (accu * 1000.0 / (nruns)));
+
+        free(check_res);
+        free(jbi[1]);
+        free(jbi[0]);
+        free(jbi);
       }
     }
     #ifdef SEQ
@@ -584,12 +582,6 @@ int main(int argc, char ** argv){
     #ifdef DEBUG_PARALLEL
           printf("WARNING : DEBUG_PARALLEL defined\n");
     #endif
-
-    free(check_res);
-    free(jbi[1]);
-    free(jbi[0]);
-    free(jbi);
-
 }
 
 /* --------*/
@@ -732,7 +724,7 @@ inline void do_i0_t0(double * dashs, double * slashs, int T, int I){
     memcpy(l1, l2,(T_WIDTH_DBL + 1)  * sizeof(double));
   }
   #ifdef DEBUG
-    for(i = 0; i < CHECK_ON_SIZE; i++)
+    for(i = 0; i < DISPLAY_SIZE; i++)
       printf("%10.3f", dashs[i]);
     printf("\n");
   #endif
@@ -755,7 +747,7 @@ inline void do_i0_t(double * dashs, double * slashs, int strpno, int Tt){
    l1[i] = dashs[strpno * T_WIDTH_DBL + i - 1];
   }
 
-  for(int t= 0; t < 2 * T_ITERS; t += 2){
+  for(t = 0; t < 2 * T_ITERS; t += 2){
     l1[0] = 0.0;
     int right = max(T_WIDTH_DBL - t/2, 0);
     for(i = 1; i < right; i++){
