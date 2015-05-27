@@ -51,12 +51,14 @@ struct benchspec {
   char *name;
   // Function to call
   void (*variant)(int, int, double**, struct benchscore *);
+  // Function to check alg. arguments 
+  int (*checkfunc)(int, int);
   // Spatial dimensions
   int dim;
   // Base size
   long size;
   // Iterated stencil multiplier
-  long iters;
+  int iters;
 };
 
 

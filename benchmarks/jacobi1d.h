@@ -3,14 +3,14 @@
 #ifndef JACOBI1D_H
 #define JACOBI1D_H
 // Debugging
-//#define DEBUG
-#define DEBUG_GDB
+#define DEBUG
+//#define DEBUG_GDB
 // Check dependencies
 //define DEBUG_PARALLEL
 // Small dimensions for debugging
 #ifdef DEBUG
   #define DBG_SIZE 4096
-  #define DBG_ITER 32
+  #define DBG_ITER 2
 #endif
 // App
 // SEQ -> compile sequential version of the algorithm
@@ -76,6 +76,30 @@ int task_index(uint8_t ** tasks, int strips, int steps){
   }
 
   return 1;
+}
+
+int check_low_iter(int w, int iter){
+  if((iter >= 16) && (iter <= 64) && (w > iter *(1 << 3))){
+    return 1;
+  } else {
+    return -1;
+  }
+}
+
+int check_tilable(int w, int iter){
+  if(w > (T_WIDTH_DBL << 2) && iter > 2*T_ITERS){
+    return 1;
+  } else {
+    return -1;
+  }
+}
+
+int check_default(int w, int iter){
+  if( w > iter && iter > 2){
+    return 1;
+  } else {
+    return -1;
+  }
 }
 
 
