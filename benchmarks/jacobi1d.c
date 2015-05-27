@@ -7,6 +7,7 @@
 #include <string.h>
 #include <immintrin.h>
 #include <inttypes.h>
+#include <signal.h>
 #include "jacobi1d.h"
 
 static struct timespec tend;
@@ -50,7 +51,7 @@ void djbi1d_half_diamonds(int w, int iters, double * jbi){
 #endif
   for(ti = 0; ti < strips; ti ++){
 
-    int tmp_pos = strips * ti;
+    int tmp_pos = tmp_stride * ti;
 
     double li1[base_w], li0[base_w];
     // Initial values
@@ -85,18 +86,22 @@ void djbi1d_half_diamonds(int w, int iters, double * jbi){
 #endif
   for(ti = 0; ti < strips + 1; ti ++){
 
-    int tmp_pos = strips * ti;
+    int tmp_pos = tmp_stride * ti;
     int x0 = ti * base_w;
     double li1[base_w], li0[base_w]; 
 
-    for(t = 1; t < iters + 1; t --){
-      int l = max(ti * base_w - t, 1);
-      int r = min(ti * base_w + t, w-1);
-      // Fill the border-storing array
-      li0[r - x0]      = tmp[min(tmp_pos + 2 * (t - 1), w)];
-      li0[r - x0 - 1]  = tmp[min(tmp_pos + 2 * (t - 1) - 1, w)];
-      li0[l - x0]      = tmp[max(tmp_pos - 2 * (t - 1), 0)];
-      li0[l - x0 + 1]  = tmp[max(tmp_pos - 2 * (t - 1) + 1, 0)];
+    for(t = 1; t < iters + 1; t ++){
+      int l = max(x0 - t, 1);
+      int r = min(x0 + t, w-1);
+      // Load from the border-storing array
+      li0[min(r - x0, w-1)]      = 
+        tmp[min(tmp_pos + 2 * (t - 1), tmp_stride * strips)];
+      li0[min(r - x0, w-1) - 1]  = 
+        tmp[min(tmp_pos + 2 * (t - 1) - 1, tmp_stride * strips)];
+      li0[max(l - x0, 0)]      = 
+        tmp[max(tmp_pos - 2 * (t - 1), 0)];
+      li0[max(l - x0, 0) + 1]  = 
+        tmp[max(tmp_pos - 2 * (t - 1) + 1, 0)];
  
       for(i = l; i < r; i ++){
         li1[i - x0] = (li0[i-1-x0] + li0[i - x0] + li0[i+1-x0]) / 3.0;
@@ -105,6 +110,10 @@ void djbi1d_half_diamonds(int w, int iters, double * jbi){
         li0[i - x0] = li1[i - x0];
       }
     }
+  #ifdef DEBUG_GDB
+    raise(SIGABRT); // To continue in gdb : (gdb) signal 0
+  #endif
+
     int l0 = max(x0 - iters, 0);
     int r0 = min(x0 + iters, w);
     for(i = l0; i < r0; i++){
@@ -506,12 +515,8 @@ int main(int argc, char ** argv){
     }
 
     #ifdef DEBUG
-      fprintf(csv_file, "Whare ?; Data\n");
+      fprintf(csv_file, "Where ?; Data\n");
       fprintf(csv_file, "Input;\n");
-      for(i = 0; i < 1 << 8; i++){
-        fprintf(csv_file, "%10.3f ;", jbi[0][i]);
-      }
-      fprintf(csv_file, "\n");
     #endif
 
     printf("\n");
@@ -543,6 +548,12 @@ int main(int argc, char ** argv){
         for(i = 0; i < DISPLAY_SIZE; i++){
           printf("%10.3f", jbi[0][i]);
         }
+        #ifdef DEBUG
+          for(i = 0; i < 1 << 8; i++){
+            fprintf(csv_file, "%10.3f ;", jbi[0][i]);
+          }
+          fprintf(csv_file, "\n");
+        #endif
 
         for(iter = 0; iter < nruns + 1; iter++){
 

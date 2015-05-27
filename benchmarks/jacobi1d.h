@@ -4,17 +4,18 @@
 #define JACOBI1D_H
 // Debugging
 //#define DEBUG
+#define DEBUG_GDB
 // Check dependencies
-#define DEBUG_PARALLEL
+//define DEBUG_PARALLEL
 // Small dimensions for debugging
 #ifdef DEBUG
   #define DBG_SIZE 4096
-  #define DBG_ITER 1024
+  #define DBG_ITER 32
 #endif
 // App
 // SEQ -> compile sequential version of the algorithm
 // All 'pragmas omp' are removed
-//#define SEQ
+#define SEQ
 // Number of doubles displayed
 #define DISPLAY_SIZE 8
 // TILE DIMENSIONS -------------------------------
