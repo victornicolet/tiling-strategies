@@ -3,6 +3,7 @@ ifndef CC
 endif
 
 CFLAGS=-g -std=c11 -O3 -Wall
+CFLAGS+= -fdiagnostics-color=auto
 
 ifeq ($(CC),icc)
 	CFLAGS+=-openmp
