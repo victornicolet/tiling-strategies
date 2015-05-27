@@ -2,8 +2,7 @@ ifndef CC
 	CC=gcc
 endif
 
-CFLAGS=-g -std=c11 -O3
-CFLAGS+=-Waddress -Wstrict-aliasing -Wimplicit-function-declaration -Wformat=2
+CFLAGS=-g -std=c11 -O3 -Wall
 
 ifeq ($(CC),icc)
 	CFLAGS+=-openmp
@@ -19,6 +18,7 @@ LDFLAGS=-lrt -lm
 
 SRC_DIR=benchmarks
 PROGRAM=test
+PROGRAMS= $(PROGRAM) jbi1d jbi2d
 SOURCES.c=$(SRC_DIR)/jacobi1d.c $(SRC_DIR)/jacobi2d.c
 HEADERS=utils.h $(SRC_DIR)/jacobi1d.h $(SRC_DIR)/jacobi2d.h
 OBJECTS=$(SOURCES.c:.c=.o)
@@ -67,7 +67,7 @@ jbi1d.s : $(SRC_DIR)/jacobi1d.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -S -o $@ $^
 
 clean:
-	rm -f jbi1d jbi12d $(SRC_DIR)/*.o cachegrind.out.* perf.data.* *.s
+	rm -f $(PROGRAMS) $(SRC_DIR)/*.o cachegrind.out.* perf.data.* *.s
 
 vtune: $(OBJECTS)
 	rm -rf $(BENCH_RESULT_DIR)
