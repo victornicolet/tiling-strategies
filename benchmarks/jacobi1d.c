@@ -27,12 +27,15 @@ void do_in_t(double * dashs, double* slashs, int strpno, int Tt)
   __attribute__((always_inline));
 
 struct benchspec benchmarks[] = {
-  {"JACOBI1D_OMP_OVERLAP", djbi1d_omp_overlap, 2, 1 << 10, 1 << 7},
-  {"JACOBI1D_OMP_NAIVE", djbi1d_omp_naive, 2, 1 << 10, 1 << 7},
-  {"JACOBI1D_SKEWED_TILES", djbi1d_skewed_tiles_test, 2, 1 << 10, 1 << 7},
-  {"JACOBI1D_SK_FULL_TILES", djbi1d_sk_full_tiles_test, 2, 1 << 10, 1 << 7},
-  {"JACOBI1D_SWAP_SEQ", djbi1d_swap_seq, 2, 1 << 10, 1 << 7},
-  {"JACOBI1D_HALF_DIMAONDS", djbi1d_half_diamonds_test, 2, 1 << 10, 1 << 5}
+  {"JACOBI1D_OMP_OVERLAP", djbi1d_omp_overlap, check_tilable, 2, 1 << 13, 1 << 7},
+  {"JACOBI1D_OMP_NAIVE", djbi1d_omp_naive, check_default, 2, 1 << 13, 1 << 7},
+  {"JACOBI1D_SKEWED_TILES", djbi1d_skewed_tiles_test, check_tilable,
+     2, 1 << 13, 1 << 7},
+  {"JACOBI1D_SK_FULL_TILES", djbi1d_sk_full_tiles_test, check_tilable,
+     2, 1 << 13, 1 << 7},
+  {"JACOBI1D_SWAP_SEQ", djbi1d_swap_seq, check_default, 2, 1 << 13, 1 << 7},
+  {"JACOBI1D_HALF_DIAMONDS", djbi1d_half_diamonds_test, check_low_iter,
+   2, 1 << 18, 1 << 5}
 };
 
 void djbi1d_half_diamonds(int w, int iters, double * jbi){
@@ -44,6 +47,11 @@ void djbi1d_half_diamonds(int w, int iters, double * jbi){
   double * tmp = (double *) malloc(sizeof(double) * tmp_stride * strips);
 
   int ti,t,i;
+#ifdef DEBUG
+  int prevr0 = -1;
+  int * counters = (int *) calloc(w, sizeof(int)); 
+#endif
+
 
   // First loop : base down tiles
 #ifndef SEQ
@@ -55,27 +63,29 @@ void djbi1d_half_diamonds(int w, int iters, double * jbi){
 
     double li1[base_w], li0[base_w];
     // Initial values
-    int x0 = ti * base_w;
-    int l0 = max(x0, 0);
-    int r0 = min(x0 + base_w, w);
+    int l0 = max(ti * base_w, 0);
+    int r0 = min(l0 + base_w, w);
     for(i = l0; i < r0; i ++){
-      li0[i - x0] = jbi[i];
+      li0[i - l0] = jbi[i];
     }
 
     for(t = 1; t < iters; t ++){
-      int l = max(x0+ t, 1);
-      int r = min(x0 + base_w - t, w-1);
+      int l = max(l0 + t, 1);
+      int r = min(l0 + base_w - t, w-1);
       // Fill the border-storing array
-      tmp[tmp_pos + tmp_stride - 2*(t-1)]     = li0[r - x0];
-      tmp[tmp_pos + tmp_stride - 2*(t-1) - 1] = li0[r - x0 - 1];
-      tmp[tmp_pos + 2*(t-1)]                  = li0[l - x0];
-      tmp[tmp_pos + 2*(t-1) + 1]              = li0[l - x0 + 1];
+      tmp[tmp_pos + tmp_stride - 2*(t-1)]     = li0[r - l0];
+      tmp[tmp_pos + tmp_stride - 2*(t-1) - 1] = li0[r - l0 - 1];
+      tmp[tmp_pos + 2*(t-1)]                  = li0[l - l0];
+      tmp[tmp_pos + 2*(t-1) + 1]              = li0[l - l0 + 1];
 
       for(i = l; i < r; i ++){
-        li1[i - x0] = (li0[i-1-x0] + li0[i - x0] + li0[i+1-x0]) / 3.0;
+        #ifdef DEBUG
+          counters[i]++;
+        #endif
+        li1[i - l0] = (li0[i-1-l0] + li0[i - l0] + li0[i+1-l0]) / 3.0;
       }
       for(i = l; i < r; i ++){
-        li0[i - x0] = li1[i - x0];
+        li0[i - l0] = li1[i - l0];
       }
     }
   }
@@ -88,26 +98,28 @@ void djbi1d_half_diamonds(int w, int iters, double * jbi){
 
     int tmp_pos = tmp_stride * ti;
     int x0 = ti * base_w;
-    double li1[base_w], li0[base_w]; 
+    double li1[base_w + 2], li0[base_w + 2]; 
 
-    for(t = 1; t < iters + 1; t ++){
+    for(t = 1; t < iters; t ++){
       int l = max(x0 - t, 1);
       int r = min(x0 + t, w-1);
       // Load from the border-storing array
-      li0[min(r - x0, w-1)]      = 
+      li0[r - l]      = 
         tmp[min(tmp_pos + 2 * (t - 1), tmp_stride * strips)];
-      li0[min(r - x0, w-1) - 1]  = 
+      li0[r - l + 1]  = 
         tmp[min(tmp_pos + 2 * (t - 1) - 1, tmp_stride * strips)];
-      li0[max(l - x0, 0)]      = 
+      li0[0]        =
         tmp[max(tmp_pos - 2 * (t - 1), 0)];
-      li0[max(l - x0, 0) + 1]  = 
+      li0[1]    = 
         tmp[max(tmp_pos - 2 * (t - 1) + 1, 0)];
- 
-      for(i = l; i < r; i ++){
-        li1[i - x0] = (li0[i-1-x0] + li0[i - x0] + li0[i+1-x0]) / 3.0;
+      for(i = l; i <= r; i ++){
+        #ifdef DEBUG
+          counters[i]++;
+        #endif
+        li1[i - l + 1] = (li0[i - l] + li0[i + 1 - l] + li0[i + 2 - l]) / 3.0;
       }
-      for(i = l; i < r; i ++){
-        li0[i - x0] = li1[i - x0];
+      for(int ii = l; ii <= r; ii ++){
+        li0[ii - l] = li1[ii - l];
       }
     }
   #ifdef DEBUG_GDB
@@ -116,10 +128,55 @@ void djbi1d_half_diamonds(int w, int iters, double * jbi){
 
     int l0 = max(x0 - iters, 0);
     int r0 = min(x0 + iters, w);
+
+  // Debug general tile layout
+  #ifdef DEBUG
+    #ifdef SEQ
+      if(prevr0 > l0 && prevr0 != -1){
+        fprintf(stderr, "prevr0 : %i r0 : %i l0 : %i \n", prevr0, r0, l0);
+        fprintf(stderr, "Error ! Top of tile %i overlaps with previous tile ! \n \
+          Aborting...\n",
+         ti);
+        return;
+      } else if((prevr0 - l0) > 1 && prevr0 != -1){
+        fprintf(stderr, "prevr0 : %i r0 : %i l0 : %i \n", prevr0, r0, l0);
+        fprintf(stderr, "Error ! Top of tile %i too far from previous tile ! \n \
+          Aborting...\n",
+         ti);
+        return;
+      }
+      prevr0 = r0;
+    #endif
+  #endif
+
+    // Copy back to memory
     for(i = l0; i < r0; i++){
       jbi[i] = li0[i - l0];
     }
   }
+  // Check counters
+  #ifdef DEBUG
+    int pv = 0, counting = 0, prints = 0;
+    for(i = 1; i < w; i ++){
+      if(counters[i] != iters){
+        if(pv != i - 1){
+          fprintf(stderr, "Error : bad operations count from cell %i ", i);
+          counting = 1;
+        }
+        pv = i;
+      }
+      if(i != pv && counting == 1){
+        fprintf(stderr, "to cell %i. ", i );
+        fprintf(stderr, "[%i operations]\n", counters[pv]);
+        counting = 0;
+        prints ++;
+      }
+      if(prints > 3){
+        fprintf(stderr, "Too much cells with bad operation counts..\n");
+        break;
+      }
+    }
+  #endif
 
 }
 
@@ -534,20 +591,33 @@ int main(int argc, char ** argv){
           #endif
         }
 
+        if(benchmarks[bs].checkfunc(tab_size, iterations) < 0){
+          fprintf(stderr, "Error : argument incompatible with variant\n");
+          fprintf(stderr, "Iterations : %i \t Width : %i\n", 
+            iterations, tab_size);
+          fprintf(stderr, "Variant : %s\n", benchmarks[bs].name);
+          #ifndef DEBUG
+            continue;
+          #endif
+        }
+
         double ** jbi = (double **) malloc(sizeof(double) * 2);
         for(i = 0; i < 2; i++){
           jbi[i] = (double *) malloc(sizeof(double) * tab_size);
         }
         // Get the correct result
+        JBI_INIT(jbi, tab_size)
         double * check_res = (double *) malloc(sizeof(double) * tab_size);
         struct benchscore bsc;
         djbi1d_swap_seq(tab_size, iterations, jbi, &bsc);
         for(i = 0; i < tab_size; i++) check_res[i] = jbi[1][i];
 
+        JBI_INIT(jbi, tab_size)
         printf("Input : \n");
         for(i = 0; i < DISPLAY_SIZE; i++){
           printf("%10.3f", jbi[0][i]);
         }
+        printf("\n");
         #ifdef DEBUG
           for(i = 0; i < 1 << 8; i++){
             fprintf(csv_file, "%10.3f ;", jbi[0][i]);
@@ -574,7 +644,11 @@ int main(int argc, char ** argv){
         }
 
         if(compare(jbi[1], check_res, tab_size) == 0){
-          printf("\nThe result with this method is not correct !\n");
+          printf("\nThe result with this method is not correct ! ");
+          printf("This should be the correct result :\n");
+          for(i = 0; i < DISPLAY_SIZE; i++){
+            printf("%10.3f", check_res[i]);
+          }
         }
         printf("\n----------------------\n");
         printf("Total time :\t %13f ms\n", (double) accu * 1000.0);
@@ -601,12 +675,10 @@ int main(int argc, char ** argv){
 
 void djbi1d_half_diamonds_test(int n, int iters, double ** jbi, \
   struct benchscore * bsc){
-
   clock_gettime( CLOCK_MONOTONIC, &tbegin);
   djbi1d_half_diamonds(n, iters, jbi[0]);
   clock_gettime( CLOCK_MONOTONIC, &tend);
   bsc->wallclock = ELAPSED_TIME(tend, tbegin);
-
   memcpy(jbi[1], jbi[0], sizeof(double) * n);
 }
 
