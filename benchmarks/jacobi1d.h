@@ -38,11 +38,6 @@ static int T_WIDTH_DBL_OVERLAP = T_WIDTH_DBL;
 #define JBI1D_STENCIL(lvl1,lvl0) lvl1[i] = \
   (lvl0[i-1] + lvl0[i+1] + lvl0[i]) / 3.0 
 //-----------------------------------
-#define JBI_INIT(jbi, n) for(j = 0; j < n; j++){\
-      jbi[0][j] = ABS(cos((double) j )) * (1 << 8);\
-      jbi[1][j] = 0;\
-    } \
-    jbi[0][0] = 0.0 ; jbi[0][n-1] = 0.0;
 
 #define ALLOC_LINES(l1, l2, size) double * l1 = \
    (double *) aligned_alloc(CACHE_LINE_SIZE, \

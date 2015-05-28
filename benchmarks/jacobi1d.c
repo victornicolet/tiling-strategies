@@ -555,6 +555,16 @@ void djbi1d_swap_seq(int n, int jbi_iters, double ** jbi,
   bsc->wallclock = ELAPSED_TIME(tend, tbegin);
 }
 
+void jbi_init(double **jbi, int n) {
+  int j;
+
+  for (j = 0; j < n; j++) {
+    jbi[0][j] = fabs(cos((double) j )) * (1 << 8);
+    jbi[1][j] = 0;
+  }
+  jbi[0][0] = 0.0;
+  jbi[0][n-1] = 0.0;
+}
 
 int main(int argc, char ** argv){
 
@@ -642,13 +652,13 @@ int main(int argc, char ** argv){
           jbi[i] = (double *) malloc(sizeof(double) * tab_size);
         }
         // Get the correct result
-        JBI_INIT(jbi, tab_size)
+        jbi_init(jbi, tab_size);
         double * check_res = (double *) malloc(sizeof(double) * tab_size);
         struct benchscore bsc;
         djbi1d_swap_seq(tab_size, iterations, jbi, &bsc);
         for(i = 0; i < tab_size; i++) check_res[i] = jbi[1][i];
 
-        JBI_INIT(jbi, tab_size)
+        jbi_init(jbi, tab_size);
         printf("Input : \n");
         for(i = 0; i < DISPLAY_SIZE; i++){
           printf("%10.3f", jbi[0][i]);
@@ -662,11 +672,10 @@ int main(int argc, char ** argv){
         #endif
 
         for(iter = 0; iter < nruns + 1; iter++){
-
-          JBI_INIT(jbi, tab_size)
+          jbi_init(jbi, tab_size);
           score[iter].name = benchmarks[bs].name;
           benchmarks[bs].variant(tab_size, iterations, jbi, &score[iter]);
-          
+
           if(iter > 0) {
             printf("%s : Run %i ...", score[iter].name, iter );
             printf("\t\t %13f ms\n", score[iter].wallclock * 1000.0 );
