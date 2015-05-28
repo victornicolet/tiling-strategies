@@ -299,12 +299,9 @@ void djbi1d_skewed_tiles(int strips, int steps, double * dashs, \
     int Ti, Tt;
 #ifndef SEQ
   #pragma omp parallel
-#endif
-    {
-#ifndef SEQ
   #pragma omp master
 #endif
-
+    {
       for(Tt = 0; Tt < steps; Tt++){
         for(Ti = 0; Ti < strips + 1; Ti++){
           // Strip number
