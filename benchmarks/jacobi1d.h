@@ -36,7 +36,7 @@ static int T_WIDTH_DBL_OVERLAP = T_WIDTH_DBL;
 #define JBI1D_STENCIL_SW(jbi) jbi[1][i] = \
   (jbi[0][i-1] + jbi[0][i] + jbi[0][i]) / 3.0
 #define JBI1D_STENCIL(lvl1,lvl0) lvl1[i] = \
-  (lvl0[i-1] + lvl0[i+1] + lvl0[i]) / 3.0 
+  (lvl0[i-1] + lvl0[i+1] + lvl0[i]) / 3.0
 //-----------------------------------
 
 #define ALLOC_LINES(l1, l2, size) double * l1 = \

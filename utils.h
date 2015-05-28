@@ -51,7 +51,7 @@ struct benchspec {
   char *name;
   // Function to call
   void (*variant)(int, int, double**, struct benchscore *);
-  // Function to check alg. arguments 
+  // Function to check alg. arguments
   int (*checkfunc)(int, int);
   // Spatial dimensions
   int dim;

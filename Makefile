@@ -84,10 +84,10 @@ reportmem: perfmem
 memcheck: $(P_TARGET)
 	valgrind --tool=cachegrind $(VALGRIND_OPTS) ./$(P_TARGET) $(P_ARGS)
 
-viewopts: 
+viewopts:
 	@echo "\t-- Profiling parameters --"
 	@echo "BENCH_RESULT_DIR \t" $(BENCH_RESULT_DIR)
-	@echo "P_TARGET\t" $(P_TARGET) 
+	@echo "P_TARGET\t" $(P_TARGET)
 	@echo "P_ARGS\t\t" $(P_ARGS)
 	@echo "VALGRIND_OPTS \t" $(VALGRIND_OPTS)
 	@echo "HW_COUNTERS \t" $(HW_COUNTERS)
