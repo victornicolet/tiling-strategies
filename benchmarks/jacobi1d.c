@@ -541,6 +541,8 @@ void djbi1d_swap_seq(int n, int jbi_iters, double ** jbi,
     for(i = 1; i < n - 1; i++){
       JBI1D_STENCIL(l2, l1);
     }
+    l2[0] = l1[0];
+    l2[n - 1] = l1[n - 1];
     memcpy(l1, l2, n * sizeof(double));
   }
   // End
@@ -844,6 +846,8 @@ inline void do_i0_t0(double * dashs, double * slashs, int T, int I){
   for(t = 0; t < T_ITERS * 2; t+=2){
     l1[0] = 0.0;
     int right = max(T_WIDTH_DBL - t/2, 1);
+
+    memcpy(l2, l1,(T_WIDTH_DBL + 1)  * sizeof(double));
     for(i = 1; i < right; i++){
       l2[i] = (l1[i -1] + l1[i] + l1[i+1]) / 3.0 ;
     }
@@ -872,13 +876,15 @@ inline void do_i0_t(double * dashs, double * slashs, int strpno, int Tt){
     printf("Do do_i0_t %i %i\n", Tt, strpno - Tt);
   #endif
 
-  for(i = 1; i < T_WIDTH_DBL; i++){
+  for(i = 1; i < T_WIDTH_DBL + 1; i++){
    l1[i] = dashs[strpno * T_WIDTH_DBL + i - 1];
   }
 
   for(t = 0; t < 2 * T_ITERS; t += 2){
     l1[0] = 0.0;
     int right = max(T_WIDTH_DBL - t/2, 0);
+
+    memcpy(l2, l1,(T_WIDTH_DBL + 1)  * sizeof(double));
     for(i = 1; i < right; i++){
       l2[i] = ((l1[i - 1] + l1[i] + l1[i + 1]) / 3.0);
     }
@@ -913,9 +919,12 @@ inline void do_i_t(double * dashs, double * slashs, int strpno, int Tt){
     // Load slash part
     l1[0] = slashs[Tt * 2 * T_ITERS + t];
     l1[1] = slashs[Tt * 2 * T_ITERS + t + 1];
+
+    memcpy(l2, l1,(T_WIDTH_DBL + 2)  * sizeof(double));
     for(i = 2; i < T_WIDTH_DBL + 2; i++){
       l2[i] = ((l1[i -2] + l1[i - 1] + l1[i]) / 3.0) ;
     }
+
     // Write slash
     slashs[Tt * 2 * T_ITERS + t] = l1[T_WIDTH_DBL];
     slashs[Tt * 2 * T_ITERS + t + 1] = l1[T_WIDTH_DBL + 1];
