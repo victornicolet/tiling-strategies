@@ -57,45 +57,16 @@ void djbi1d_sk_full_tiles_test(int, int, double **,struct benchscore * );
 void djbi1d_half_diamonds_test(int, int, double **,struct benchscore * );
 void djbi1d_swap_seq(int, int, double **,struct benchscore *);
 
-int task_index(uint8_t ** tasks, int strips, int steps){
-  int i,t;
+int check_low_iter(int, int);
+int check_tilable(int, int);
+int check_default(int, int);
 
-  for(i = 1; i < strips; i++){
-    if(tasks[0][i] == 0 && tasks[0][i + 1] == 1) return -1;
+double * alloc_line(int num_elements){
+  double * line = aligned_alloc(CACHE_LINE_SIZE, num_elements * sizeof * line);
+  if(line == NULL){
+    fprintf(stderr, "Error while allocating line of %i doubles.\n", num_elements);
   }
-
-  for(t = 1; t < steps; t++){
-    for(i = 1; i < strips; i ++){
-      if((tasks[i+1][t-1] == 0 || tasks[i-1][t] == 0) && tasks[i][t] == 1) return -1;
-    }
-  }
-
-  return 1;
+  return line;
 }
-
-int check_low_iter(int w, int iter){
-  if((iter >= 16) && (iter <= 64) && (w > iter *(1 << 3))){
-    return 1;
-  } else {
-    return -1;
-  }
-}
-
-int check_tilable(int w, int iter){
-  if(w > (T_WIDTH_DBL << 2) && iter > 2*T_ITERS){
-    return 1;
-  } else {
-    return -1;
-  }
-}
-
-int check_default(int w, int iter){
-  if( w > iter && iter > 2){
-    return 1;
-  } else {
-    return -1;
-  }
-}
-
 
 #endif /* JACOBI1D_H */
