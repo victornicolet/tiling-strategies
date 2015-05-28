@@ -49,7 +49,6 @@ void djbi1d_half_diamonds(int w, int iters, double * jbi){
   int ti,t,i;
 #ifdef DEBUG
   int prevr0 = -1;
-<<<<<<< HEAD
   int * counters = (int *) calloc(w, sizeof(int));
   char ** viewtile = (char **) malloc(iters * sizeof(char*)); 
   for(i = 0; i < iters; i ++){
@@ -59,9 +58,6 @@ void djbi1d_half_diamonds(int w, int iters, double * jbi){
     }
   }
   int track_cell = 5;
-=======
-  int * counters = (int *) calloc(w, sizeof(int)); 
->>>>>>> dd59a95047e0706938c2d6ddcb1ebe5e44859757
 #endif
 
 
