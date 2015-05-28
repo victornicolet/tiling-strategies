@@ -219,13 +219,19 @@ void djbi1d_half_diamonds(int w, int iters, double * jbi){
 
 }
 
-uint8_t ** djbi1d_sk_full_tiles(int strips, int steps, double * dashs, \
-  double * slashs){
   /* In this algorithm we work only on full parallelograms : no partial tiles.
   We are interested in performance measures, and understanding, rather
   than corectness here */
+uint8_t ** djbi1d_sk_full_tiles(int num_strips, int num_steps, double * dashs, \
+  double * slashs){
 
-  ALLOC_MX(tasks, uint8_t, steps, strips)
+  int i,t;
+
+  uint8_t ** taskdep_index = malloc(num_steps * sizeof ** taskdep_index);
+  for(i = 0; i < num_strips; i++){
+    taskdep_index[i] = malloc(num_steps * sizeof * taskdep_index[i]);
+  }
+
 
 #ifndef SEQ
   #pragma omp parallel
@@ -235,41 +241,39 @@ uint8_t ** djbi1d_sk_full_tiles(int strips, int steps, double * dashs, \
     #pragma omp single
 #endif
     {
-      int i, t;
-
-      for(t = 0; t < steps; t ++){
-        for(i = 1; i < strips; i++){
-          tasks[t][i] = 0;
+      for(t = 0; t < num_steps; t ++){
+        for(i = 1; i < num_strips; i++){
+          taskdep_index[t][i] = 0;
           int strpno = i + t;
           // Stratup task
           if(t == 0 && i == 1){
 #ifndef SEQ
             #pragma omp task firstprivate(i,t) \
-            depend(out : tasks[t][i])
+            depend(out : taskdep_index[t][i])
 #endif
             {
               do_i_t(dashs, slashs, 1, 0);
-              tasks[t][i] ^= 1;
+              taskdep_index[t][i] ^= 1;
             }
           }else if(t == 0 && i > 1){
 #ifndef SEQ
             #pragma omp task firstprivate(i,t) \
-            depend(out : tasks[t][i])\
-            depend(in : tasks[i-1][0])
+            depend(out : taskdep_index[t][i])\
+            depend(in : taskdep_index[i-1][0])
 #endif
             {
               do_i_t(dashs, slashs, strpno, 0);
-              tasks[t][i] ^= 1;
+              taskdep_index[t][i] ^= 1;
             }
           } else {
 #ifndef SEQ
             #pragma omp task firstprivate(i,t) \
-            depend(out : tasks[t][i]) \
-            depend(in  : tasks[t][i-1], tasks[t-1][i+1])
+            depend(out : taskdep_index[t][i]) \
+            depend(in  : taskdep_index[t][i-1], taskdep_index[t-1][i+1])
  #endif
             {
               do_i_t(dashs, slashs, strpno, t);
-              tasks[t][i] ^= 1;
+              taskdep_index[t][i] ^= 1;
             }
           }
         }
@@ -822,33 +826,36 @@ void djbi1d_skewed_tiles_test(int n, int iters, double ** jbi, \
 
 
 /* Task functions :
-  do_i0_t0 : starting task, bottom-left corner of the space-time matrix
+  do_i0_t0 : starting task, botile_tom-left corner of the space-time matrix
   do_i0_t : left column, triangular tile
-  do_i_t0 : first time iteration, bottom line
+  do_i_t0 : first time iteration, botile_tom line
   do_i_t : regular task
   do_in_t : right column, triangular tile
 */
 
-inline void do_i0_t0(double * dashs, double * slashs, int T, int I){
+inline void
+do_i0_t0(double * dashs, double * slashs, int tile_t, int tile_i)
+{
 
-  ALLOC_LINES(l1, l2, (T_WIDTH_DBL + 1))
+  double * l1 = alloc_line(T_WIDTH_DBL + 1);
+  double * l2 = alloc_line(T_WIDTH_DBL + 1);
 
   uint8_t t,i;
 
   #ifdef DEBUG
-    printf("First task T I, %i %i\n", T, I);
+    printf("First task T I, %i %i\n", tile_t, tile_i);
   #endif
 
-  for(i = 1; i < T_WIDTH_DBL + 1; i++){
+  for (i = 1; i < T_WIDTH_DBL + 1; i++){
     l1[i] = dashs[i-1];
   }
 
-  for(t = 0; t < T_ITERS * 2; t+=2){
+  for (t = 0; t < T_ITERS * 2; t+=2){
     l1[0] = 0.0;
     int right = max(T_WIDTH_DBL - t/2, 1);
 
     memcpy(l2, l1,(T_WIDTH_DBL + 1)  * sizeof(double));
-    for(i = 1; i < right; i++){
+    for (i = 1; i < right; i++){
       l2[i] = (l1[i -1] + l1[i] + l1[i+1]) / 3.0 ;
     }
 
@@ -863,17 +870,21 @@ inline void do_i0_t0(double * dashs, double * slashs, int T, int I){
   #endif
 
 
-  FREE_LINES(l1, l2)
+  free(l1);
+  free(l2);
 }
 
-inline void do_i0_t(double * dashs, double * slashs, int strpno, int Tt){
+inline void
+do_i0_t(double * dashs, double * slashs, int strpno, int tile_t)
+{
 
-  ALLOC_LINES(l1, l2, (T_WIDTH_DBL + 1))
+  double * l1 = alloc_line(T_WIDTH_DBL + 1);
+  double * l2 = alloc_line(T_WIDTH_DBL + 1);
 
   uint8_t t,i;
 
   #ifdef DEBUG
-    printf("Do do_i0_t %i %i\n", Tt, strpno - Tt);
+    printf("Do do_i0_t %i %i\n", tile_t, strpno - tile_t);
   #endif
 
   for(i = 1; i < T_WIDTH_DBL + 1; i++){
@@ -937,28 +948,30 @@ inline void do_i_t(double * dashs, double * slashs, int strpno, int Tt){
   }
 
 
-  FREE_LINES(l1, l2)
+  free(l1);
+  free(l2);
 }
 
 
-inline void do_in_t(double * dashs, double * slashs, int strpno, int Tt){
+inline void do_in_t(double * dashs, double * slashs, int strpno, int tile_t){
 
-  ALLOC_LINES(l1, l2, (T_WIDTH_DBL + 2))
+  double * l1 = alloc_line(T_WIDTH_DBL + 2);
+  double * l2 = alloc_line(T_WIDTH_DBL + 2);
 
   uint8_t t,i;
 
   #ifdef DEBUG
-    if(Tt == ((DBG_SIZE / T_WIDTH_DBL ))){
-      printf("Final task %i %i\n", Tt, strpno - Tt);
+    if(tile_t == ((DBG_SIZE / T_WIDTH_DBL ))){
+      printf("Final task %i %i\n", tile_t, strpno - tile_t);
     } else {
-      printf("Do do_in_t %i %i\n", Tt, strpno - Tt);
+      printf("Do do_in_t %i %i\n", tile_t, strpno - tile_t);
     }
   #endif
 
   for(t = 0; t < T_ITERS * 2; t+=2){
     // Load slash part
-    l1[0] = slashs[Tt * 2 * T_ITERS + t];
-    l1[1] = slashs[Tt * 2 * T_ITERS + t + 1];
+    l1[0] = slashs[tile_t * 2 * T_ITERS + t];
+    l1[1] = slashs[tile_t * 2 * T_ITERS + t + 1];
     int r = (2 + t/2);
     l1[r] = 0.0;
     for(i = 2; i <= r; i++){
@@ -971,5 +984,6 @@ inline void do_in_t(double * dashs, double * slashs, int strpno, int Tt){
     dashs[strpno * T_WIDTH_DBL + i - 2] = l1[i];
   }
 
-  FREE_LINES(l1, l2)
+  free(l1);
+  free(l2);
 }

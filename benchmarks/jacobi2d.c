@@ -80,7 +80,7 @@ void djbi2d_half_diamonds(struct jbi2d_args args, struct benchscore * bsc){
 void djbi2d_seq(struct jbi2d_args args, struct benchscore * bsc){
   uint8_t x,y,t, iters;
 
-  ALLOC_MX(temp, double, args.X, args.Y);
+  double ** temp = alloc_mx(args.X, args.Y);
 
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
   #pragma scop
@@ -99,7 +99,7 @@ void djbi2d_seq(struct jbi2d_args args, struct benchscore * bsc){
 
   clock_gettime(CLOCK_MONOTONIC, &tend);
 
-  FREE_MX(temp, args.X)
+  free_mx(temp, args.X)
 }
 
 int djbi2d_(struct jbi2d_args input, double ** output){
