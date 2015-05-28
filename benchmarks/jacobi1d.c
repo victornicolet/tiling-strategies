@@ -41,7 +41,7 @@ struct benchspec benchmarks[] = {
 void djbi1d_half_diamonds(int w, int iters, double * jbi){
 
   int base_w = 2 * iters ;
-  int strips = (w / base_w) + 1;
+  int strips = (w / base_w);
   // Store the border between base-down pyramids and base-up pyramids
   int tmp_stride = 4 * iters - 2;
   double * tmp = (double *) malloc(sizeof(double) * tmp_stride * strips);
@@ -49,7 +49,15 @@ void djbi1d_half_diamonds(int w, int iters, double * jbi){
   int ti,t,i;
 #ifdef DEBUG
   int prevr0 = -1;
-  int * counters = (int *) calloc(w, sizeof(int)); 
+  int * counters = (int *) calloc(w, sizeof(int));
+  char ** viewtile = (char **) malloc(iters * sizeof(char*)); 
+  for(i = 0; i < iters; i ++){
+    viewtile[i] = (char *) malloc(w * sizeof(char));
+    for(int ii = 0; ii < w; ii++){
+      viewtile[i][ii] = 's';
+    }
+  }
+  int track_cell = 5;
 #endif
 
 
@@ -73,23 +81,38 @@ void djbi1d_half_diamonds(int w, int iters, double * jbi){
       int l = max(l0 + t, 1);
       int r = min(l0 + base_w - t, w-1);
       // Fill the border-storing array
-      tmp[tmp_pos + tmp_stride - 2*(t-1)]     = li0[r - l0];
-      tmp[tmp_pos + tmp_stride - 2*(t-1) - 1] = li0[r - l0 - 1];
-      tmp[tmp_pos + 2*(t-1)]                  = li0[l - l0];
-      tmp[tmp_pos + 2*(t-1) + 1]              = li0[l - l0 + 1];
+      tmp[tmp_pos + tmp_stride - 2*t]     = li0[r - l0];
+      tmp[tmp_pos + tmp_stride - 2*t - 1] = li0[r - l0 - 1];
+      tmp[tmp_pos + 2*(t-1)]              = li0[l - l0];
+      tmp[tmp_pos + 2*(t-1) + 1]          = li0[l - l0 + 1];
 
       for(i = l; i < r; i ++){
-        #ifdef DEBUG
-          counters[i]++;
-        #endif
         li1[i - l0] = (li0[i-1-l0] + li0[i - l0] + li0[i+1-l0]) / 3.0;
+        #ifdef DEBUG
+          viewtile[t-1][i] = 'X';
+          counters[i]++;
+          if(i == track_cell){
+            printf("%i, %i : %10.3f\n", i, t, li0[i]);
+          }
+        #endif
       }
       for(i = l; i < r; i ++){
         li0[i - l0] = li1[i - l0];
       }
     }
   }
-
+#ifdef DEBUG
+  for(int tt = iters - 1; tt >= 0; tt --){
+    for(int ii = 0; ii < 80; ii++){
+      printf("%c", viewtile[tt][ii]);
+    }
+    printf("\n");
+  }
+#endif
+ // --------------------------------------
+#ifdef GDB_DEBUG
+  raise(SIGABRT);
+#endif
   // Second loop : tip down tiles
 #ifndef SEQ
   #pragma omp parallel for schedule(static)
@@ -98,47 +121,56 @@ void djbi1d_half_diamonds(int w, int iters, double * jbi){
 
     int tmp_pos = tmp_stride * ti;
     int x0 = ti * base_w;
+    int l0 = max(x0 - iters - 1, 0);
+    int r0 = min(x0 + iters, w);
     double li1[base_w + 2], li0[base_w + 2]; 
 
-    for(t = 1; t < iters; t ++){
-      int l = max(x0 - t, 1);
-      int r = min(x0 + t, w-1);
+    for(t = 0; t < iters; t ++){
+      int l = max(x0 - (t+1), 1);
+      int r = min(x0 + t + 1, w);
       // Load from the border-storing array
-      li0[r - l]      = 
+      li0[r - l0 - 1]     = 
         tmp[min(tmp_pos + 2 * (t - 1), tmp_stride * strips)];
-      li0[r - l + 1]  = 
+      li0[r - l0] = 
         tmp[min(tmp_pos + 2 * (t - 1) - 1, tmp_stride * strips)];
-      li0[0]        =
+      li0[l - l0 - 1] =
         tmp[max(tmp_pos - 2 * (t - 1), 0)];
-      li0[1]    = 
+      li0[l - l0] = 
         tmp[max(tmp_pos - 2 * (t - 1) + 1, 0)];
-      for(i = l; i <= r; i ++){
+
+      for(i = l; i < r; i ++){
+        li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
         #ifdef DEBUG
+          if(viewtile[t][i] == 's'){
+            viewtile[t][i] = '.';
+          } else {
+            viewtile[t][i] = 'o';
+          }
           counters[i]++;
+          if(i == track_cell){
+            printf("%i, %i : %10.3f\n", i, t, li0[i]);
+          }
         #endif
-        li1[i - l + 1] = (li0[i - l] + li0[i + 1 - l] + li0[i + 2 - l]) / 3.0;
       }
-      for(int ii = l; ii <= r; ii ++){
-        li0[ii - l] = li1[ii - l];
+      for(int ii = 0; ii < base_w + 2; ii ++){
+        li0[ii] = li1[ii];
       }
     }
-  #ifdef DEBUG_GDB
-    raise(SIGABRT); // To continue in gdb : (gdb) signal 0
-  #endif
-
-    int l0 = max(x0 - iters, 0);
-    int r0 = min(x0 + iters, w);
+  // --------------------------------------
+#ifdef GDB_DEBUG
+  raise(SIGABRT);
+#endif
 
   // Debug general tile layout
   #ifdef DEBUG
     #ifdef SEQ
-      if(prevr0 > l0 && prevr0 != -1){
+      if(prevr0 > l0 + 1 && prevr0 != -1){
         fprintf(stderr, "prevr0 : %i r0 : %i l0 : %i \n", prevr0, r0, l0);
         fprintf(stderr, "Error ! Top of tile %i overlaps with previous tile ! \n \
           Aborting...\n",
          ti);
         return;
-      } else if((prevr0 - l0) > 1 && prevr0 != -1){
+      } else if((prevr0 - l0 - 1) > 1 && prevr0 != -1){
         fprintf(stderr, "prevr0 : %i r0 : %i l0 : %i \n", prevr0, r0, l0);
         fprintf(stderr, "Error ! Top of tile %i too far from previous tile ! \n \
           Aborting...\n",
@@ -150,14 +182,14 @@ void djbi1d_half_diamonds(int w, int iters, double * jbi){
   #endif
 
     // Copy back to memory
-    for(i = l0; i < r0; i++){
+    for(i = l0 + 1; i < r0; i++){
       jbi[i] = li0[i - l0];
     }
   }
   // Check counters
   #ifdef DEBUG
     int pv = 0, counting = 0, prints = 0;
-    for(i = 1; i < w; i ++){
+    for(i = 1; i < w - 1; i ++){
       if(counters[i] != iters){
         if(pv != i - 1){
           fprintf(stderr, "Error : bad operations count from cell %i ", i);
@@ -175,6 +207,13 @@ void djbi1d_half_diamonds(int w, int iters, double * jbi){
         fprintf(stderr, "Too much cells with bad operation counts..\n");
         break;
       }
+    }
+    printf("\n");
+    for(int tt = iters - 1; tt >= 0; tt --){
+      for(int ii = 0; ii < 80; ii++){
+        printf("%c", viewtile[tt][ii]);
+      }
+      printf("\n");
     }
   #endif
 
