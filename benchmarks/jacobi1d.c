@@ -38,7 +38,7 @@ struct benchspec benchmarks[] = {
   {"JACOBI1D_SWAP_SEQ", djbi1d_sequential, check_default,
         2, 1 << 13, 1 << 5},
   {"JACOBI1D_HALF_DIAMONDS", djbi1d_half_diamonds_test, check_low_iter,
-        2, 1 << 13, 1 << 5}
+        2, 1 << 13, 1 << 4}
 };
 
 /*
@@ -135,13 +135,15 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
 
   // First loop : base down tiles
 #ifndef SEQ
-  #pragma omp parallel for schedule(static) shared(tmp)
+  #pragma omp parallel for schedule(static) shared(tmp) \
+   private(tmp_pos, l0, r0, l, r, x0)
 #endif
   for (tile_no = 0; tile_no < num_tiles; tile_no ++) {
 
     tmp_pos = tmp_stride * tile_no;
 
-    double li1[tile_base_sz], li0[tile_base_sz];
+    double * li1 = alloc_line(tile_base_sz + 2);
+    double * li0 = alloc_line(tile_base_sz + 2);
     // Initial values
     l0 = max(tile_no * tile_base_sz, 0);
     r0 = min(l0 + tile_base_sz, pb_size);
@@ -177,6 +179,9 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
         li0[i - l0] = li1[i - l0];
       }
     }
+
+    free(li1);
+    free(li0);
   }
 
 
@@ -194,7 +199,8 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
 
   // Second loop : tip down tiles
 #ifndef SEQ
-  #pragma omp parallel for schedule(static) shared(tmp)
+  #pragma omp parallel for schedule(static) shared(tmp) \
+  private(tmp_pos, l0, r0, l, r, x0)
 #endif
   for (tile_no = 0; tile_no < num_tiles + 1; tile_no ++) {
 
@@ -202,22 +208,24 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
     x0 = tile_no * tile_base_sz;
     l0 = max(x0 - num_iters - 1, 0);
     r0 = min(x0 + num_iters, pb_size);
-    double li1[tile_base_sz + 2], li0[tile_base_sz + 2];
+
+    double * li1 = alloc_line(tile_base_sz + 2);
+    double * li0 = alloc_line(tile_base_sz + 2);
 
     for (t = 0; t < num_iters; t ++) {
       l = max(x0 - (t+1), 1);
-      r = min(x0 + t + 1, pb_size);
+      r = min(x0 + t, pb_size);
       // Load from the border-storing array
-      li0[r - l0 - 1]     =
-        tmp[min(tmp_pos + 2 * (t - 1), tmp_stride * num_tiles)];
+      li0[max(r - l0 - 1, 0)]     =
+        tmp[max(min(tmp_pos + 2 * (t - 1), tmp_stride * num_tiles - 1), 0)];
       li0[r - l0] =
-        tmp[min(tmp_pos + 2 * (t - 1) - 1, tmp_stride * num_tiles)];
+        tmp[max(min(tmp_pos + 2 * (t - 1) - 1, tmp_stride * num_tiles - 1), 0)];
       li0[l - l0 - 1] =
-        tmp[max(tmp_pos - 2 * (t - 1), 0)];
+        tmp[min(max(tmp_pos - 2 * (t - 1), 0), tmp_stride * num_tiles - 1)];
       li0[l - l0] =
-        tmp[max(tmp_pos - 2 * (t - 1) + 1, 0)];
+        tmp[min(max(tmp_pos - 2 * (t - 1) + 1, 0), tmp_stride * num_tiles - 1)];
 
-      for (i = l; i < r; i ++) {
+      for (i = l; i <= r; i ++) {
         li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
 #ifdef DEBUG
           if (viewtile[t][i] == 's') {
@@ -227,7 +235,7 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
           }
           counters[i]++;
           if (i == track_cell) {
-            printf("%i, %i : %10.3f\n", i, t, li0[i]);
+            printf("%i, %i : %10.3f\n", i, t, li0[i - l0]);
           }
 #endif
       }
@@ -258,6 +266,8 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
       prevr0 = r0;
 #endif
 #endif
+      free(li0);
+      free(li1);
   }
 
 

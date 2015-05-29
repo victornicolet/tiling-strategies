@@ -1,7 +1,8 @@
-/jbi2d
-/jbi1d.s
-/perf.data.old
-/perf.data
+benchmarks/jacobi1d.csv
+jbi2d
+jbi1d.s
+perf.data.old
+perf.data
 jacobi1d
 jacobi1d.csv
 jbi1d
