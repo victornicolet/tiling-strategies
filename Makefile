@@ -15,6 +15,14 @@ ifeq ($(CC), cc)
 	WMSG="Warning : default compiler used, CC=cc"
 endif
 
+# Debuggging and sequential version testing
+ifdef DBG
+	CFLAGS+=-DDEBUG
+endif
+ifdef SEQ
+	CFLAGS+=-DSEQ
+endif
+
 LDFLAGS=-lrt -lm
 
 SRC_DIR=benchmarks
@@ -61,6 +69,7 @@ $(PROGRAM) : $(PROGRAM).c $(SOURCES.c) $(HEADERS)
 jbi1d : $(SRC_DIR)/jacobi1d.c $(SRC_DIR)/jacobi1d.h
 	@echo $(WMSG)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRC_DIR)/jacobi1d.c
+
 
 jbi1d_assembly : jbi1d.s
 
