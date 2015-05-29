@@ -8,7 +8,8 @@
 
 #define BILLION 1000000000.0
 // a, b timespec structs -> returns difference btw a and b in secs
-#define ELAPSED_TIME(a,b) (a.tv_sec - b.tv_sec) + ((a.tv_nsec - b.tv_nsec ) / BILLION)
+#define ELAPSED_TIME(a,b) (a.tv_sec - b.tv_sec) +                             \
+                          ((a.tv_nsec - b.tv_nsec ) / BILLION)
 
 #define min(a,b) ((a) > (b) ? (b) : (a))
 #define max(a,b) ((a) > (b) ? (a) : (b))

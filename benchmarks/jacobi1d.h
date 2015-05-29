@@ -39,16 +39,6 @@ static int T_WIDTH_DBL_OVERLAP = T_WIDTH_DBL;
   (lvl0[i-1] + lvl0[i+1] + lvl0[i]) / 3.0
 //-----------------------------------
 
-#define ALLOC_LINES(l1, l2, size) double * l1 = \
-   (double *) aligned_alloc(CACHE_LINE_SIZE, \
-   sizeof(double)*(size)); \
-  double * l2 = (double *) aligned_alloc(CACHE_LINE_SIZE, \
-   sizeof(double)*(size)); \
-  if(l1 == NULL || l2 == NULL) {\
-    printf("Error in ALLOC_LINES\n"); exit(1);}
-
-#define FREE_LINES(l1, l2) if(l1) free(l1); if(l2) free(l2);
-
 
 void djbi1d_omp_naive(int, int, double**, struct benchscore * );
 void djbi1d_omp_overlap(int, int, double**, struct benchscore * );
@@ -61,10 +51,13 @@ int check_low_iter(int, int);
 int check_tilable(int, int);
 int check_default(int, int);
 
-double * alloc_line(int num_elements){
-  double * line = aligned_alloc(CACHE_LINE_SIZE, num_elements * sizeof * line);
-  if(line == NULL){
-    fprintf(stderr, "Error while allocating line of %i doubles.\n", num_elements);
+double *
+alloc_line(int num_elements)
+{
+  double * line = aligned_alloc(CACHE_LINE_SIZE, num_elements * sizeof(*line));
+  if (line == NULL) {
+    fprintf(stderr, "Error while allocating line of %i doubles.\n",
+            num_elements);
   }
   return line;
 }
