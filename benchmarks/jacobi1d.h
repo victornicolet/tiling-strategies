@@ -10,7 +10,7 @@
 // Small dimensions for debugging
 #ifdef DEBUG
   #define DBG_SIZE 4096
-  #define DBG_ITER 6
+  #define DBG_ITER 4
 #endif
 // App
 // SEQ -> compile sequential version of the algorithm
@@ -45,7 +45,7 @@ void djbi1d_omp_overlap(int, int, double**, struct benchscore * );
 void djbi1d_skewed_tiles_test(int, int, double **, struct benchscore * );
 void djbi1d_sk_full_tiles_test(int, int, double **,struct benchscore * );
 void djbi1d_half_diamonds_test(int, int, double **,struct benchscore * );
-void djbi1d_swap_seq(int, int, double **,struct benchscore *);
+void djbi1d_sequential(int, int, double **,struct benchscore *);
 
 int check_low_iter(int, int);
 int check_tilable(int, int);
