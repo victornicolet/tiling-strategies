@@ -1,45 +1,81 @@
-#ifndef  UTILS
-#define UTILS
+#ifndef  _UTILS_H
+#define _UTILS_H
+
+// Cache line size of 64 bytes on most x86
+#define  CACHE_LINE_SIZE 64
+#define  L1_CACHE_SIZE 6044
+
 
 #define BILLION 1000000000.0
+#define DOUBLE_COMPARISON_THRESHOLD 10e-7
 // a, b timespec structs -> returns difference btw a and b in secs
-#define ELAPSED_TIME(a,b) (a.tv_sec - b.tv_sec) + ((a.tv_nsec - b.tv_nsec ) / BILLION)
+#define ELAPSED_TIME(a,b) (a.tv_sec - b.tv_sec) +                             \
+                          ((a.tv_nsec - b.tv_nsec ) / BILLION)
 
 #define min(a,b) ((a) > (b) ? (b) : (a))
 #define max(a,b) ((a) > (b) ? (a) : (b))
+#define ABS(a) (((a)>0 ) ? (a) : (-a))
 
-#define ALLOC_MX(m, type, dim1, dim2) type ** (m) = \
-	(type **) malloc(sizeof(type *) * (dim1)); \
-  if(m == NULL){\
-    fprintf(stderr, "ALLOC_MX:Error while allocating 2D array\n");\
-  }\
-	for(int i = 0; i < (dim1); i++){\
-	m[i] = (type *) malloc(sizeof(type) * dim2);\
-  if(m[i] == NULL){\
-  fprintf(stderr, "ALLOC_MX:Error while allocating 2D array at line %i\n", i); \
-  }\
-	}
-	
-#define FREE_MX(m, dim1) if( m == NULL){ \
-      fprintf(stderr, "FREE_MX:Error freeing NULL ! \n"); \
-    } else { \
-      for(int i = 0; i < (dim1); i++){ \
-        if(m[i] == NULL){ \
-          fprintf(stderr, "FREE_MX:Error freeing NULL at line %i\n", i);\
-        } else {\
-          free(m[i]);\
-        }\
-      }\
-      free(m);\
-    }
-
-#define SWAP(l1, l2, tmp)  { tmp = l1; l1 = l2; l2 = tmp; }
 struct benchscore {
   // Name of the benchmark
   char *name;
   //Elapsed wall-clock time
   double wallclock;
+  int runs;
 };
 
+struct benchspec {
+  // Name of the benchmark
+  char *name;
+  // Function to call
+  void (*variant)(int, int, double**, struct benchscore *);
+  // Function to check alg. arguments
+  int (*checkfunc)(int, int);
+  // Spatial dimensions
+  int dim;
+  // Base size
+  long size;
+  // Iterated stencil multiplier
+  int iters;
+};
+
+static inline double **
+alloc_double_mx(int dim1, int dim2)
+{
+  int i;
+  double ** mx = malloc(dim1 * sizeof ** mx);
+
+  if(mx == NULL){
+    fprintf(stderr, "Error while allocating matrix\n");
+    return NULL;
+  }
+
+  for (i = 0; i < dim2; i++){
+    mx[i] = malloc(dim1 * sizeof *mx[i]);
+
+    if(mx[i] == NULL){
+      fprintf(stderr, "Error while allocating matrix on line %i\n", i);
+      return NULL;
+    }
+  }
+
+  return mx;
+}
+
+static inline void
+free_mx(double ** mx, int dim1)
+{
+  int i;
+  for(i = 0; i < dim1; i++){
+    free(mx[i]);
+  }
+  free(mx);
+}
+
+int adjust_num(double);
+
+int compare(double *, double *, int);
+
+void swap(void *, void *, size_t);
 
 #endif

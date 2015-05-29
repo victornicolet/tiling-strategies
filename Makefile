@@ -2,26 +2,35 @@ ifndef CC
 	CC=gcc
 endif
 
-CFLAGS=-g -std=c11
-CFLAGS+=-Waddress -Wstrict-aliasing -Wimplicit-function-declaration -Wformat=2
+CFLAGS=-g -std=c11 -O3 -Wall
+CFLAGS+= -fdiagnostics-color=auto
 
 ifeq ($(CC),icc)
 	CFLAGS+=-openmp
 else
-	ifeq ($(CC),gcc)
-		CFLAGS+=-fopenmp -Wopenmp-simd
-	else
-		WMSG="Compiler unsupported : CC =" $(CC)
-		WMSG+="\nYou might want to set CC to gcc or icc"
-	endif
+	CFLAGS+=-fopenmp -Wopenmp-simd
 endif
 
-CFLAGS+=-O3
+ifeq ($(CC), cc)
+	WMSG="Warning : default compiler used, CC=cc"
+endif
+
+# Debuggging and sequential version testing
+ifdef DBG
+	CFLAGS+=-DDEBUG
+endif
+ifdef SEQ
+	CFLAGS+=-DSEQ
+endif
+
 LDFLAGS=-lrt -lm
 
-SOURCES=jacobi1d.c test.c
-HEADERS=utils.
-OBJECTS=jbi1d
+SRC_DIR=benchmarks
+PROGRAM=test
+PROGRAMS= $(PROGRAM) jbi1d jbi2d
+SOURCES.c=$(SRC_DIR)/jacobi1d.c $(SRC_DIR)/jacobi2d.c utils.c
+HEADERS=utils.h $(SRC_DIR)/jacobi1d.h $(SRC_DIR)/jacobi2d.h
+OBJECTS=$(SOURCES.c:.c=.o)
 
 # Profiling options ------------------------------------------------------------
 
@@ -45,26 +54,30 @@ ifndef P_TARGET
 	P_TARGET=jbi1d
 endif
 ifndef P_ARGS
-	P_ARGS=10 0001
+	P_ARGS=10 000010
 endif
 
 #-------------------------------------------------------------------------------
 
 .PHONY: clean
 
-all: $(OBJECTS)
+all: $(PROGRAM)
 
-jbi1d : jacobi1d.c
+$(PROGRAM) : $(PROGRAM).c $(SOURCES.c) $(HEADERS)
+	$(CC) $(CFLAGS) -o $@ $(PROGRAM).c $(LDFLAGS)
+
+jbi1d : $(SRC_DIR)/jacobi1d.c $(SRC_DIR)/jacobi1d.h
 	@echo $(WMSG)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRC_DIR)/jacobi1d.c utils.c
+
 
 jbi1d_assembly : jbi1d.s
 
-jbi1d.s : jacobi1d.c
+jbi1d.s : $(SRC_DIR)/jacobi1d.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -S -o $@ $^
 
 clean:
-	rm -f jbi1d cachegrind.out.* perf.data.* *.s
+	rm -f $(PROGRAMS) $(SRC_DIR)/*.o cachegrind.out.* perf.data.* *.s
 
 vtune: $(OBJECTS)
 	rm -rf $(BENCH_RESULT_DIR)
@@ -80,10 +93,10 @@ reportmem: perfmem
 memcheck: $(P_TARGET)
 	valgrind --tool=cachegrind $(VALGRIND_OPTS) ./$(P_TARGET) $(P_ARGS)
 
-viewopts: 
+viewopts:
 	@echo "\t-- Profiling parameters --"
 	@echo "BENCH_RESULT_DIR \t" $(BENCH_RESULT_DIR)
-	@echo "P_TARGET\t" $(P_TARGET) 
+	@echo "P_TARGET\t" $(P_TARGET)
 	@echo "P_ARGS\t\t" $(P_ARGS)
 	@echo "VALGRIND_OPTS \t" $(VALGRIND_OPTS)
 	@echo "HW_COUNTERS \t" $(HW_COUNTERS)
