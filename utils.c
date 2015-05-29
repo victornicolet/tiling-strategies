@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "utils.h"
 
@@ -9,10 +10,11 @@ int
 compare(double * t1, double * t2, int n)
 {
   for(int i = 0; i < n; i++){
-    if(adjust_num(t1[i]) != adjust_num(t2[i])){
+    if(fabs(t1[i] - t2[i]) > DOUBLE_COMPARISON_THRESHOLD){
       return 0;
     }
   }
+  return 1;
 }
 
 

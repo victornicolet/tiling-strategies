@@ -68,7 +68,7 @@ $(PROGRAM) : $(PROGRAM).c $(SOURCES.c) $(HEADERS)
 
 jbi1d : $(SRC_DIR)/jacobi1d.c $(SRC_DIR)/jacobi1d.h
 	@echo $(WMSG)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRC_DIR)/jacobi1d.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRC_DIR)/jacobi1d.c utils.c
 
 
 jbi1d_assembly : jbi1d.s
