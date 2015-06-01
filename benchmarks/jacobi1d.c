@@ -133,7 +133,7 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
 #endif
 
 
-  // First loop : base down tiles
+/* First loop : base down tiles */
 #ifndef SEQ
   #pragma omp parallel for schedule(static) shared(tmp) \
    private(tmp_pos, l0, r0, l, r, x0)
@@ -144,7 +144,7 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
 
     double * li1 = alloc_line(tile_base_sz + 2);
     double * li0 = alloc_line(tile_base_sz + 2);
-    // Initial values
+    /* Initial values */
     l0 = max(tile_no * tile_base_sz, 0);
     r0 = min(l0 + tile_base_sz, pb_size);
     for (i = l0; i < r0; i ++) {
@@ -159,7 +159,7 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
     for (t = 1; t < num_iters; t ++) {
       l = max(l0 + t, 1);
       r = min(l0 + tile_base_sz - t, pb_size-1);
-      // Fill the border-storing array
+/* The border of the pyramids needs to be strored for further computation */
       tmp[tmp_pos + tmp_stride - 2*t]     = li0[r - l0];
       tmp[tmp_pos + tmp_stride - 2*t - 1] = li0[r - l0 - 1];
       tmp[tmp_pos + 2*(t-1)]              = li0[l - l0];
@@ -197,7 +197,7 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
 #endif
 
 
-  // Second loop : tip down tiles
+/* Second loop : tip down tiles */
 #ifndef SEQ
   #pragma omp parallel for schedule(static) shared(tmp) \
   private(tmp_pos, l0, r0, l, r, x0)
@@ -215,7 +215,7 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
     for (t = 0; t < num_iters; t ++) {
       l = max(x0 - (t+1), 1);
       r = min(x0 + t, pb_size);
-      // Load from the border-storing array
+      /* Load from the border-storing array */
       li0[max(r - l0 - 1, 0)]     =
         tmp[max(min(tmp_pos + 2 * (t - 1), tmp_stride * num_tiles - 1), 0)];
       li0[r - l0] =
@@ -244,11 +244,13 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
         li0[ii] = li1[ii];
       }
     }
-    // Copy back to memory
+    /* Copy back to memory */
     for (i = l0 + 1; i < r0; i++) {
       jbi[i] = li0[i - l0];
     }
-  /* Only debug below this line */
+
+/* ---------------------------*/
+/* Only debug below this line */
 
 #ifdef DEBUG
 #ifdef SEQ
@@ -303,9 +305,12 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
 
 }
 
-  /* In this algorithm we work only on full parallelograms : no partial tiles.
-  We are interested in performance measures, and understanding, rather
-  than corectness here */
+
+
+/* In this algorithm we work only on full parallelograms : no partial tiles.
+ * We are interested in performance measures, and understanding, rather
+ * than corectness here
+ */
 uint8_t **
 djbi1d_sk_full_tiles(int num_strips, int num_steps, double * dashs,
   double * slashs)
@@ -331,7 +336,6 @@ djbi1d_sk_full_tiles(int num_strips, int num_steps, double * dashs,
         for (i = 1; i < num_strips; i++) {
           taskdep_index[t][i] = 0;
           int strpno = i + t;
-          // Stratup task
           if (t == 0 && i == 1) {
 #ifndef SEQ
             #pragma omp task firstprivate(i,t)                                \
@@ -374,17 +378,17 @@ void
 djbi1d_skewed_tiles(int num_strips, int num_steps, double * dashs,
   double * slashs)
 {
-    /* In this version we assume T_ITERS = T_WIDTH_DBL so we have to make a
-    difference between regular tiles ( parallelogram-shaped ones) and
-    triangular tiles, but the patile_tern is quite regular and dependencies are
-    straightforward at the boundaries of the domain.
-    ---------------
+/* In this version we assume T_ITERS = T_WIDTH_DBL so we have to make a
+ *   difference between regular tiles ( parallelogram-shaped ones) and
+ *   triangular tiles, but the patile_tern is quite regular and dependencies are
+ *   straightforward at the boundaries of the domain.
+ *   ---------------
+ *
+ *  num_steps = (iters / T_ITERS) + 1;
+ *   num_strips = (n / T_WIDTH_DBL) + 1 ;
+ */
 
-    num_steps = (iters / T_ITERS) + 1;
-    num_strips = (n / T_WIDTH_DBL) + 1 ;
-    */
-
-    // Unused except in omp task pragmas
+    /* Unused except in omp task pragmas */
     uint8_t taskdep_index[num_strips+1][num_steps] __attribute__((unused));
 
     #ifdef DEBUG_PARALLEL
@@ -398,14 +402,9 @@ djbi1d_skewed_tiles(int num_strips, int num_steps, double * dashs,
     {
       for (tile_t = 0; tile_t < num_steps; tile_t++) {
         for (tile_i = 0; tile_i < num_strips + 1; tile_i++) {
-          // Strip number
+          /* Strip number */
           int strpno = (tile_i + tile_t);
-          //int strpno = strpno % num_strips;
-          // Slash beginning
-          //int s_index = tile_t * T_ITERS * 2;
-          // Dash beginning
-          //int d_index = strpno * T_WIDTH_DBL;
-          // Initial tile
+
           if ( tile_t == 0 && tile_i == 0) {
 #ifndef SEQ
             #pragma omp task firstprivate(tile_i,tile_t)                      \
@@ -418,7 +417,7 @@ djbi1d_skewed_tiles(int num_strips, int num_steps, double * dashs,
               do_i0_t0(dashs, slashs, tile_i, tile_t);
             }
           } else if (tile_t == 0 && tile_i < num_strips - 1) {
-            // Botile_tom tiles : only left-to-right dependencies + top out
+            /* Bottom tiles : only left-to-right dependencies + top out */
 #ifndef SEQ
             #pragma omp task firstprivate(tile_i,tile_t)                      \
               depend(in : taskdep_index[tile_i-1][0])                         \
@@ -435,10 +434,10 @@ djbi1d_skewed_tiles(int num_strips, int num_steps, double * dashs,
             }
 
           } else if (tile_i == 0 && tile_t > 0) {
-            /* Left edge tile : triangular
-            Only one in dependency, one out
-            Here assume T_ITERS > T_WIDTH_DBL
-            */
+            /* Left edge tile : triangular tiles
+             * Only one in dependency, one out
+             * ( here we assume T_ITERS == T_WIDTH_DBL )
+             */
 #ifndef SEQ
             #pragma omp task firstprivate(tile_i,tile_t)                      \
               depend(in : taskdep_index[1][tile_t-1])                         \
@@ -470,8 +469,7 @@ djbi1d_skewed_tiles(int num_strips, int num_steps, double * dashs,
             }
 
           }else{
-            // Regular tile
-            // Two in and out dependencies
+            /* Regular tile two in and out dependencies */
 #ifndef SEQ
             #pragma omp task firstprivate(tile_i,tile_t)                      \
               depend(in : taskdep_index[tile_i-1][tile_t],                    \
@@ -506,11 +504,11 @@ djbi1d_diamond_tiles(int n,int num_stencil_iters, double ** jbi,
   int strp = (n / T_WIDTH_DBL_DIAM);
   for (long tile_i = -1; tile_i < strp + 1; tile_i++) {
     for (long tile_t = 0; tile_t < stg; tile_t++) {
-      // tile_ile height
+      /* tile_ile height */
       bot = max(tile_t * T_ITERS_DIAM, 1);
       top = min((tile_t + 1) * T_ITERS_DIAM, num_stencil_iters);
       for (int t = bot; t < top; t++) {
-        // Line boundaries
+        /* Line boundaries */
         l = max(tile_i * T_WIDTH_DBL_DIAM - (t - bot) , 1);
         r = min((tile_i + 1) * T_WIDTH_DBL_DIAM - (t - bot), n - 1);
         for (int i = l; i < r; i++) {
@@ -543,7 +541,7 @@ djbi1d_omp_naive(int n, int num_stencil_iters, double ** jbi,
     }
     memcpy(l1, l2, n * sizeof(double));
   }
-  // End
+
   clock_gettime( CLOCK_MONOTONIC, &tend);
 
   for (int i = 0; i < n; i++) {
@@ -575,7 +573,7 @@ djbi1d_omp_overlap(int pb_size, int num_stencil_iters, double ** jbi,
       double * lvl0 = malloc(tile_base_sz * sizeof(*lvl0));
 
 
-      // Compute tile bounds
+      /* Compute tile bounds */
       int bot = max((T_ITERS * tile_t), 1);
       int top = min((T_ITERS * (tile_t + 1)), num_stencil_iters);
       int h = top - bot;
@@ -584,7 +582,7 @@ djbi1d_omp_overlap(int pb_size, int num_stencil_iters, double ** jbi,
       int l = max((l0 - h ), 0);
       int r = min((r0 + h), pb_size);
       {
-        // Read tile base
+        /* Read tile base */
         for (i = l ; i < r ; i++ ) {
           lvl0[i- l] = jbi[0][i];
           lvl1[i- l] = 0.0;
@@ -613,7 +611,7 @@ djbi1d_omp_overlap(int pb_size, int num_stencil_iters, double ** jbi,
 #endif
         }
 
-        // Write tile top
+        /* Write tile top */
         for (i = l0 ; i < r0 ; i++ ) {
           jbi[1][i] = lvl0[i-l];
         }
@@ -621,8 +619,9 @@ djbi1d_omp_overlap(int pb_size, int num_stencil_iters, double ** jbi,
       free(lvl1);
       free(lvl0);
     }
-    // Implicit barrier here, when all chunks of the loops are finished,
-    // we copy the resulting data in the "source"
+/* Implicit barrier here, when all chunks of the loops are finished,
+ * we copy the resulting data in the "source"
+ */
     memcpy(jbi[0], jbi[1], pb_size * sizeof(double));
   }
 
@@ -637,7 +636,7 @@ djbi1d_omp_overlap(int pb_size, int num_stencil_iters, double ** jbi,
 void
 djbi1d_sequential(int n, int jbi_iters, double ** jbi, struct benchscore * bsc)
 {
-    // Boundaries initial condition
+  /* Boundaries initial condition */
   int t,i;
   double * l1 = (double *) aligned_alloc(CACHE_LINE_SIZE, sizeof(*l1) * n);
   double * l2 = (double *) aligned_alloc(CACHE_LINE_SIZE, sizeof(*l2) * n);
@@ -653,7 +652,7 @@ djbi1d_sequential(int n, int jbi_iters, double ** jbi, struct benchscore * bsc)
     l2[n - 1] = l1[n - 1];
     memcpy(l1, l2, n * sizeof(*l2));
   }
-  // End
+
   clock_gettime( CLOCK_MONOTONIC, &tend);
   for (int i = 0; i < n; i++) {
     jbi[1][i] = l1[i];
@@ -762,7 +761,7 @@ main(int argc, char ** argv)
         }
 
 
-        // Get the correct result
+        /* Get the correct result */
         jbi_init(jbi, tab_size);
         double * check_res = malloc(tab_size * sizeof(*check_res));
         struct benchscore bsc;
@@ -861,7 +860,9 @@ djbi1d_sk_full_tiles_test(int pb_size, int num_stencil_iters, double ** jbi, \
 
 
 
-  //Unused except in omp task pragmas. Attribute set to remove compiler warnings
+  /* Unused except in omp task pragmas. Attribute set to remove compiler
+   * warnings
+   */
   uint8_t ** tasks __attribute__ ((unused));
 
   if (jbi_dashs == NULL || jbi_slashs == NULL) {
@@ -944,12 +945,12 @@ djbi1d_skewed_tiles_test(int pb_size, int num_stencil_iters, double ** jbi,
 
 
 /* Task functions :
-  do_i0_t0 : starting task, botile_tom-left corner of the space-time matrix
-  do_i0_t : left column, triangular tile
-  do_i_t0 : first time iteration, botile_tom line
-  do_i_t : regular task
-  do_in_t : right column, triangular tile
-*/
+ * do_i0_t0 : starting task, botile_tom-left corner of the space-time matrix
+ * do_i0_t : left column, triangular tile
+ * do_i_t0 : first time iteration, botile_tom line
+ * do_i_t : regular task
+ * do_in_t : right column, triangular tile
+ */
 
 inline void
 do_i0_t0(double * dashs, double * slashs, int tile_t, int tile_i)
@@ -1041,13 +1042,13 @@ inline void do_i_t(double * dashs, double * slashs, int strpno, int tile_t) {
     }
   #endif
 
-  // Load dash
+  /* Load dash */
   for (i = 2; i < T_WIDTH_DBL + 2; i++) {
     l1[i] = dashs[strpno * T_WIDTH_DBL + i - 2];
   }
 
   for (t = 0; t < T_ITERS * 2; t+=2) {
-    // Load slash part
+    /* Load slash part */
     l1[0] = slashs[tile_t * 2 * T_ITERS + t];
     l1[1] = slashs[tile_t * 2 * T_ITERS + t + 1];
 
@@ -1056,13 +1057,13 @@ inline void do_i_t(double * dashs, double * slashs, int strpno, int tile_t) {
       l2[i] = ((l1[i -2] + l1[i - 1] + l1[i]) / 3.0) ;
     }
 
-    // Write slash
+    /* Write slash */
     slashs[tile_t * 2 * T_ITERS + t] = l1[T_WIDTH_DBL];
     slashs[tile_t * 2 * T_ITERS + t + 1] = l1[T_WIDTH_DBL + 1];
 
     memcpy(l1, l2,(T_WIDTH_DBL + 2)  * sizeof(*l1));
   }
-  // Write dash
+  /* Write dash */
   for (i = 2; i < T_WIDTH_DBL; i++) {
     dashs[strpno * T_WIDTH_DBL + i - 2] = l2[i];
   }
@@ -1089,7 +1090,7 @@ inline void do_in_t(double * dashs, double * slashs, int strpno, int tile_t) {
   #endif
 
   for (t = 0; t < T_ITERS * 2; t+=2) {
-    // Load slash part
+    /* Load slash part */
     l1[0] = slashs[tile_t * 2 * T_ITERS + t];
     l1[1] = slashs[tile_t * 2 * T_ITERS + t + 1];
     int r = (2 + t/2);
@@ -1099,7 +1100,7 @@ inline void do_in_t(double * dashs, double * slashs, int strpno, int tile_t) {
     }
     memcpy(l1, l2,(T_WIDTH_DBL + 2)  * sizeof(*l1));
   }
-  // Write dash
+  /* Write dash */
   for (i = 2; i < T_WIDTH_DBL; i++) {
     dashs[strpno * T_WIDTH_DBL + i - 2] = l1[i];
   }

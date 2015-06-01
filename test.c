@@ -11,6 +11,7 @@
 #include "benchmarks/jacobi1d.h"
 #include "benchmarks/jacobi2d.h"
 
+/* Problem size (in space) between 2 ^ MIN_POW and 2 ^ MAX_POW */
 #define MIN_POW 10
 #define MAX_POW 16
 
@@ -32,10 +33,10 @@ int main(int argc, char ** argv){
 
   int nbench = sizeof(benchmarks) / sizeof(struct benchspec);
 
-  //---------- Parameters section -----------
+  /*---------- Parameters section -----------*/
 
   if(argc < 2){
-    printf("Usage : %s <Mask (%i bit wide) > <Test runs / alg.>\n", argv[0], 
+    printf("Usage : %s <Mask (%i bit wide) > <Test runs / alg.>\n", argv[0],
       nbench);
     printf("Available benchmarks  :\n");
 
@@ -51,7 +52,7 @@ int main(int argc, char ** argv){
       nruns = atoi(argv[2]);
     }
     if( maskl = strlen(benchmask) > nbench){
-      printf("Error : not a valid mask ! Your mask must be %i bits long\n", 
+      printf("Error : not a valid mask ! Your mask must be %i bits long\n",
         nbench);
       return -1;
     }
@@ -64,7 +65,7 @@ int main(int argc, char ** argv){
       dimy = atoi(argv[4])
     }
 
-    // --------------------------------------
+    /* -------------------------------------- */
 
     for(int bs = 0; bs < maskl; bs++){
       if (benchmask[bs] == '1') {
@@ -89,5 +90,5 @@ void test2d(struct benchspec benchmarks, int dimx, int dimy, int dimt){
 void test1d(struct benchspec benchmarks, int dimx, int dimt){
   double * data = (double *) aligned_alloc(CACHE_LINE_SIZE, \
     sizeof(double) * dimx);
-  
+
 }

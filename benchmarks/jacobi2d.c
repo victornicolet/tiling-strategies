@@ -14,31 +14,25 @@
 static struct timespec tend;
 static struct timespec tbegin;
 
-static int run;
 
-struct jbi2d_args {
-  int X;
-  int Y;
-  int iters;
-  double ** input;
-};
-
-void djbi2d_half_diamonds(struct jbi2d_args args, struct benchscore * bsc) {
+void
+djbi2d_half_diamonds(struct jbi2d_args args, struct benchscore * bsc)
+{
 
   int stepwidth = 2 * args.iters ;
   int x_steps = (args.X / stepwidth );
   int y_steps = (args.Y / stepwidth );
 
-  int xx,yy,x,y,t;
-  // First loop : base-down pyramids
+  int xx, yy, x, y, t;
+/* First loop : base-down pyramids */
   for (xx = 0; xx < x_steps; xx ++) {
     for (yy = 0; yy < y_steps; yy ++) {
-      /* Tile base :
-        x0, y1 ---- x1,y1
-          |           |
-          |           |
-        x0,y0 ---- x1,y0
-        */
+/* Tile base :
+ *     x0, y1 ---- x1,y1
+ *         |           |
+ *         |           |
+ *       x0,y0 ---- x1,y0
+ */
       int x0, x1, y0, y1;
 
       for (t = 0; t < args.iters; t++) {
@@ -56,7 +50,7 @@ void djbi2d_half_diamonds(struct jbi2d_args args, struct benchscore * bsc) {
     }
   }
 
-  // Second loop : tip-down pyramids
+/* Second loop : tip-down pyramids */
   for (xx = 0; xx < x_steps; xx ++) {
     for (yy = 0; yy < y_steps; yy ++) {
       int x0, x1, y0, y1;
@@ -77,10 +71,13 @@ void djbi2d_half_diamonds(struct jbi2d_args args, struct benchscore * bsc) {
   }
 }
 
-void djbi2d_seq(struct jbi2d_args args, struct benchscore * bsc) {
+
+void
+djbi2d_seq(struct jbi2d_args args, struct benchscore * bsc)
+{
   uint8_t x,y,t, iters;
 
-  double ** temp = alloc_mx(args.X, args.Y);
+  double ** temp = alloc_double_mx(args.X, args.Y);
 
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
   #pragma scop
@@ -90,9 +87,9 @@ void djbi2d_seq(struct jbi2d_args args, struct benchscore * bsc) {
         temp[x][y] = JACOBI2D_T(args.input,x,y);
       }
     }
-    // Copy back into the image
+/* Copy back into the image */
     for (x = 0; x < args.X; x++) {
-      memcpy(img[x], temp[x], args.Y * sizeof(double));
+      memcpy(args.input[x], temp[x], args.Y * sizeof(double));
     }
   }
   #pragma endscop
@@ -102,12 +99,15 @@ void djbi2d_seq(struct jbi2d_args args, struct benchscore * bsc) {
   free_mx(temp, args.X);
 }
 
-int djbi2d_(struct jbi2d_args input, double ** output) {
+
+int
+djbi2d_(struct jbi2d_args input, double ** output)
+{
   int i;
 
   djbi2d_seq(input, NULL);
   for (i = 0; i < input.X; i ++) {
-    if(compare(input[i], output[i]) == 0) {
+    if (compare(input.input[i], output[i], input.Y) == 0) {
       return 0;
     }
   }
@@ -115,5 +115,6 @@ int djbi2d_(struct jbi2d_args input, double ** output) {
 }
 
 int main(int argc, char ** argv) {
+  printf("WIp\n");
   return 0;
 }

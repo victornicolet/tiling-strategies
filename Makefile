@@ -70,10 +70,18 @@ jbi1d : $(SRC_DIR)/jacobi1d.c $(SRC_DIR)/jacobi1d.h
 	@echo $(WMSG)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRC_DIR)/jacobi1d.c utils.c
 
+jbi2d : $(SRC_DIR)/jacobi1d.c $(SRC_DIR)/jacobi1d.h
+	@echo $(WMSG)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRC_DIR)/jacobi2d.c utils.c
 
 jbi1d_assembly : jbi1d.s
 
+jbi2d_assembly : jbi2d.s
+
 jbi1d.s : $(SRC_DIR)/jacobi1d.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -S -o $@ $^
+
+jbi2d.s : $(SRC_DIR)/jacobi2d.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -S -o $@ $^
 
 clean:

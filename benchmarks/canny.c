@@ -29,7 +29,7 @@ pipeline_canny_naive(int width, int height,
 
   uint8_t x,y,t;
 
-  // Padding image for gaussian filter
+  /* Padding image for gaussian filter */
   double ** image_padded;
   alloc_double_mx(image_padded, width, height);
 
@@ -40,7 +40,7 @@ pipeline_canny_naive(int width, int height,
   }
 
 
-  // Apply Gaussian filter
+  /* Apply Gaussian filter */
   double ** image_G;
   alloc_double_mx(image_G, width, height);
 
@@ -52,7 +52,7 @@ pipeline_canny_naive(int width, int height,
   free_mx(image_padded, width + 4);
 
 
-  // Apply gradient intensity
+  /* Apply gradient intensity */
   double ** gradx, ** grady;
   alloc_double_mx(grady, height, width);
   alloc_double_mx(gradx, height, width);
@@ -65,7 +65,7 @@ pipeline_canny_naive(int width, int height,
   }
 
 
-  // Edge detection 1
+  /* Edge detection 1 */
   double ** theta;
   alloc_double_mx(theta, width, height);
 
@@ -76,7 +76,7 @@ pipeline_canny_naive(int width, int height,
   }
 
 
-  // Edge levelling
+  /* Edge levelling */
   double ** tmp;
   alloc_double_mx(tmp, width, height);
 
