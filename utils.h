@@ -16,6 +16,18 @@
 #define max(a,b) ((a) > (b) ? (a) : (b))
 #define ABS(a) (((a)>0 ) ? (a) : (-a))
 
+/* Colors in terminal */
+#define KNRM  "\x1B[0m"
+#define KRED  "\x1B[31m"
+#define KGRN  "\x1B[32m"
+#define KYEL  "\x1B[33m"
+#define KBLU  "\x1B[34m"
+#define KMAG  "\x1B[35m"
+#define KCYN  "\x1B[36m"
+#define KWHT  "\x1B[37m"
+#define KRESET "\033[0m"
+
+
 struct benchscore {
   // Name of the benchmark
   char *name;
@@ -38,6 +50,8 @@ struct benchspec {
   // Iterated stencil multiplier
   int iters;
 };
+
+void print_benchspecs(int, struct benchspec *);
 
 static inline double **
 alloc_double_mx(int dim1, int dim2)

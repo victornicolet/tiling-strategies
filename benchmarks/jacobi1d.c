@@ -666,6 +666,20 @@ main(int argc, char ** argv)
 
     int nbench = sizeof(benchmarks) / sizeof(struct benchspec);
 
+    if (strcmp(argv[1], "help") == 0) {
+        printf("Usage: %s <Nruns> <Mask : %i> [ <Width> <tile_ime iterations>]\n",
+        argv[0], nbench);
+        printf("Build mask with : OVERLAP NAIVE SKEWED_TILES SEQUENTIAL \
+          HALF_DIAMONDS\n");
+        printf("Dimensions : \n");
+        printf("T_ITERS : \t\t%i\nT_WIDTH_DBL : \t\t %i\n", T_ITERS,
+          T_WIDTH_DBL);
+        printf("T_WIDTH_DBL_OVERLAP : \t%i\n", T_WIDTH_DBL_OVERLAP);
+        printf("T_WIDTH_DBL_DIAM : \t%i\n", T_WIDTH_DBL_DIAM );
+        print_benchspecs(nbench, benchmarks);
+        return 0;
+    }
+
     if (argc < 3) {
       printf("Usage: %s <Nruns> <Mask : %i> [ <Width> <time iterations>]\n",
         argv[0], nbench);
@@ -677,17 +691,6 @@ main(int argc, char ** argv)
       exit(1);
     }
 
-    if (strcmp(argv[1], "help") == 0) {
-        printf("Usage: %s <Nruns> <Mask : %i> [ <Width> <tile_ime iterations>]\n",
-        argv[0], nbench);
-        printf("Build mask with : OVERLAP NAIVE SKEWED_TILES SEQUENTIAL\n");
-        printf("Dimensions : \n");
-        printf("T_ITERS : \t\t%i\nT_WIDTH_DBL : \t\t %i\n", T_ITERS,
-          T_WIDTH_DBL);
-        printf("T_WIDTH_DBL_OVERLAP : \t%i\n", T_WIDTH_DBL_OVERLAP);
-        printf("T_WIDTH_DBL_DIAM : \t%i\n", T_WIDTH_DBL_DIAM );
-        return 0;
-    }
 
     int i, iter;
     int nruns = atoi(argv[1]);
@@ -734,7 +737,8 @@ main(int argc, char ** argv)
           }
 #endif
         if (benchmarks[bs].checkfunc(tab_size, iterations) < 0 && 0) {
-          fprintf(stderr, "Warning : argument incompatible with variant\n");
+          fprintf(stderr, "%sWarning :%s argument incompatible with variant\n",
+            KRED, KRESET);
           fprintf(stderr, "Iterations : %i \t Width : %i\n",
             iterations, tab_size);
           fprintf(stderr, "Variant : %s\n", benchmarks[bs].name);

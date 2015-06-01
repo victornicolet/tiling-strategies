@@ -5,7 +5,6 @@
 
 #include "utils.h"
 
-
 int
 compare(double * t1, double * t2, int n)
 {
@@ -15,6 +14,18 @@ compare(double * t1, double * t2, int n)
     }
   }
   return 1;
+}
+
+void
+print_benchspecs(int n, struct benchspec * benchmarks)
+{
+  int i;
+  for (i = 0; i < n; i++) {
+    printf("Bench:%s %s %s\n Iterations :\t%s%i%s \tProblem size :\t%s%li%s\n",
+      KRED, benchmarks[i].name, KRESET,
+      KCYN, benchmarks[i].iters, KRESET,
+      KCYN, benchmarks[i].size , KRESET);
+  }
 }
 
 
