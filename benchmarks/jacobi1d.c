@@ -118,8 +118,6 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
   double * tmp = malloc(tmp_stride * num_tiles * sizeof(*tmp));
 
 #ifdef DEBUG
-  int prevr0 __attribute__ ((unused));
-  prevr0 = -1;
   int * counters = calloc(pb_size, sizeof(*counters));
   char ** viewtile = malloc(num_iters * sizeof(*viewtile));
 
@@ -129,7 +127,7 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
       viewtile[i][ii] = 's';
     }
   }
-  int track_cell = 5;
+  int track_cell = 2;
 #endif
 
 
@@ -144,26 +142,27 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
 
     double * li1 = alloc_line(tile_base_sz + 2);
     double * li0 = alloc_line(tile_base_sz + 2);
+
     /* Initial values */
     l0 = max(tile_no * tile_base_sz, 0);
-    r0 = min(l0 + tile_base_sz, pb_size);
-    for (i = l0; i < r0; i ++) {
+    r0 = min(l0 + tile_base_sz, pb_size - 1);
+    for (i = l0; i <= r0; i ++) {
       li0[i - l0] = jbi[i];
       li1[i - l0] = 0.0;
     }
-    for(i = r0; i < tile_base_sz + l0; i++){
+    for(i = r0 + 1; i < tile_base_sz + l0; i++){
       li0[i - l0] = 0.0;
       li1[i - l0] = 0.0;
     }
 
     for (t = 1; t < num_iters; t ++) {
       l = max(l0 + t, 1);
-      r = min(l0 + tile_base_sz - t, pb_size-1);
-/* The border of the pyramids needs to be strored for further computation */
-      tmp[tmp_pos + tmp_stride - 2*t]     = li0[r - l0];
-      tmp[tmp_pos + tmp_stride - 2*t - 1] = li0[r - l0 - 1];
-      tmp[tmp_pos + 2*(t-1)]              = li0[l - l0];
-      tmp[tmp_pos + 2*(t-1) + 1]          = li0[l - l0 + 1];
+      r = min(l0 + tile_base_sz - t, pb_size);
+/* The border of the pyramids needs to be stored for further computation */
+      tmp[tmp_pos + tmp_stride - 2*t]     = li0[r - l0 + 1];
+      tmp[tmp_pos + tmp_stride - 2*t - 1] = li0[r - l0];
+      tmp[tmp_pos + 2*(t-1)]              = li0[l - l0 - 1];
+      tmp[tmp_pos + 2*(t-1) + 1]          = li0[l - l0];
 
       for (i = l; i < r; i ++) {
         li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
@@ -179,9 +178,6 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
         li0[i - l0] = li1[i - l0];
       }
     }
-
-    free(li1);
-    free(li0);
   }
 
 
@@ -216,14 +212,15 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
       l = max(x0 - (t+1), 1);
       r = min(x0 + t, pb_size);
       /* Load from the border-storing array */
-      li0[max(r - l0 - 1, 0)]     =
+       li0[max(r - l0 - 1, 0)]  =
         tmp[max(min(tmp_pos + 2 * (t - 1), tmp_stride * num_tiles - 1), 0)];
-      li0[r - l0] =
+       li0[r - l0] =
         tmp[max(min(tmp_pos + 2 * (t - 1) - 1, tmp_stride * num_tiles - 1), 0)];
-      li0[l - l0 - 1] =
+       li0[l - l0 - 1] =
         tmp[min(max(tmp_pos - 2 * (t - 1), 0), tmp_stride * num_tiles - 1)];
-      li0[l - l0] =
+       li0[l - l0] =
         tmp[min(max(tmp_pos - 2 * (t - 1) + 1, 0), tmp_stride * num_tiles - 1)];
+
 
       for (i = l; i <= r; i ++) {
         li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
@@ -248,30 +245,15 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
     for (i = l0 + 1; i < r0; i++) {
       jbi[i] = li0[i - l0];
     }
+    free(li0);
+    free(li1);
+
+
+  }
+  free(tmp);
 
 /* ---------------------------*/
 /* Only debug below this line */
-
-#ifdef DEBUG
-#ifdef SEQ
-      if (prevr0 > l0 + 1 && prevr0 != -1) {
-        fprintf(stderr, "prevr0 : %i r0 : %i l0 : %i \n", prevr0, r0, l0);
-        fprintf(stderr, "Error ! Top of tile %i overlaps with previous tile !\
-          \nAborting...\n", tile_no);
-        return;
-      } else if ((prevr0 - l0 - 1) > 1 && prevr0 != -1) {
-        fprintf(stderr, "prevr0 : %i r0 : %i l0 : %i \n", prevr0, r0, l0);
-        fprintf(stderr, "Error ! Top of tile %i too far from previous tile !\
-          \nAborting...\n", tile_no);
-        return;
-      }
-      prevr0 = r0;
-#endif
-#endif
-      free(li0);
-      free(li1);
-  }
-
 
 #ifdef DEBUG
   int pv = 0, counting = 0, prints = 0;
@@ -299,8 +281,11 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
     for (int ii = 0; ii < 80; ii++) {
       printf("%c", viewtile[tile_t][ii]);
     }
+    free(viewtile[tile_t]);
     printf("\n");
   }
+  free(viewtile);
+  free(counters);
 #endif
 
 }
@@ -817,6 +802,8 @@ main(int argc, char ** argv)
         free(jbi);
       }
     }
+
+    fclose(csv_file);
     #ifdef SEQ
           printf("WARNING : SEQ defined\n");
     #endif
