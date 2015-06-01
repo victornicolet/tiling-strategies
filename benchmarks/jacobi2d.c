@@ -75,13 +75,13 @@ djbi2d_half_diamonds(struct jbi2d_args args, struct benchscore * bsc)
 void
 djbi2d_seq(struct jbi2d_args args, struct benchscore * bsc)
 {
-  uint8_t x,y,t, iters;
+  uint8_t x, y, t;
 
   double ** temp = alloc_double_mx(args.X, args.Y);
 
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
   #pragma scop
-  for (t = 0; t < iters; t ++) {
+  for (t = 0; t < args.iters; t ++) {
     for (x = 1; x < args.X - 1; x ++) {
       for (y = 1; y < args.Y - 1; y ++) {
         temp[x][y] = JACOBI2D_T(args.input,x,y);

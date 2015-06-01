@@ -50,8 +50,8 @@ alloc_double_mx(int dim1, int dim2)
     return NULL;
   }
 
-  for (i = 0; i < dim2; i++){
-    mx[i] = malloc(dim1 * sizeof *mx[i]);
+  for (i = 0; i < dim1; i++){
+    mx[i] = malloc(dim2 * sizeof *mx[i]);
 
     if(mx[i] == NULL){
       fprintf(stderr, "Error while allocating matrix on line %i\n", i);
