@@ -70,7 +70,7 @@ jbi1d : $(SRC_DIR)/jacobi1d.c $(SRC_DIR)/jacobi1d.h
 	@echo $(WMSG)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRC_DIR)/jacobi1d.c utils.c
 
-jbi2d : $(SRC_DIR)/jacobi1d.c $(SRC_DIR)/jacobi1d.h
+jbi2d : $(SRC_DIR)/jacobi2d.c $(SRC_DIR)/jacobi2d.h
 	@echo $(WMSG)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRC_DIR)/jacobi2d.c utils.c
 

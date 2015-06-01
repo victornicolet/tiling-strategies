@@ -14,17 +14,28 @@
 static struct timespec tend;
 static struct timespec tbegin;
 
-
+/*
+ * WIP : need to adjust indexes in computations and load/store
+ */
 void
 djbi2d_half_diamonds(struct jbi2d_args args, struct benchscore * bsc)
 {
+  int iters = args.iters ;
+  int stepwidth = 2 * iters ;
+  int x_steps = (args.width / stepwidth );
+  int y_steps = (args.height / stepwidth );
 
-  int stepwidth = 2 * args.iters ;
-  int x_steps = (args.X / stepwidth );
-  int y_steps = (args.Y / stepwidth );
+  /* The tile is stored into temporary arrays : share them ! */
+  double ** tile0 = alloc_double_mx(stepwidth, stepwidth);
+  double ** tile1 = alloc_double_mx(stepwidth, stepwidth);
+  /* Store the layer btw the two stages */
+  double *** tmp_layer = malloc(2 * sizeof(*tmp_layer));
+  tmp_layer[1] = alloc_double_mx(args.width, args.height);
+  tmp_layer[0] = alloc_double_mx(args.width, args.height);
 
   int xx, yy, x, y, t;
 /* First loop : base-down pyramids */
+#pragma omp parallel for schedule(static) shared(tile0, tile1, tmp_layer)
   for (xx = 0; xx < x_steps; xx ++) {
     for (yy = 0; yy < y_steps; yy ++) {
 /* Tile base :
@@ -33,42 +44,77 @@ djbi2d_half_diamonds(struct jbi2d_args args, struct benchscore * bsc)
  *         |           |
  *       x0,y0 ---- x1,y0
  */
-      int x0, x1, y0, y1;
+      int x0, x1, y0, y1, x_orig, y_orig;
 
-      for (t = 0; t < args.iters; t++) {
+      x_orig = max(xx * stepwidth, 0);
+      y_orig = max(yy * stepwidth, 0);
+
+      for (t = 0; t < iters; t++) {
         x0 = max( xx * stepwidth + t, 0);
-        x1 = min((xx + 1) * stepwidth - t, args.X);
+        x1 = min((xx + 1) * stepwidth - t, args.width);
         y0 = max( yy * stepwidth + t, 0);
-        x1 = min((yy + 1) * stepwidth - t, args.Y);
+        y1 = min((yy + 1) * stepwidth - t, args.height);
 
+        /* Save results in layer */
+
+        tmp_layer[0][x0][y0] = tile0[x0 - x_orig][y0 - y_orig];
+        tmp_layer[0][x1][y1 - 1] = tile0[x1 - x_orig][y1 - y_orig] - 1;
+
+        for (y = y0 + 1; y < y1 - 1; y++){
+          tmp_layer[0][x0][y] = tile0[x0 - x_orig][y - y_orig];
+          tmp_layer[1][x0][y] = tile0[x0 - x_orig][y - y_orig];
+          tmp_layer[0][x1][y] = tile0[x1 - x_orig][y - y_orig];
+          tmp_layer[1][x1][y] = tile0[x1 - x_orig][y - y_orig];
+        }
+
+        tmp_layer[0][x0][y0] = tile0[x0 - x_orig][y0 - y_orig];
+        tmp_layer[0][x1 - 1][y0] = tile0[x0 - 1 - x_orig][y0 - y_orig];
+
+        for (x = x0 + 1; x < x1 - 1; x++){
+          tmp_layer[0][x][y0] = tile0[x - x_orig][y0 - y_orig];
+          tmp_layer[1][x][y0] = tile0[x - x_orig][y0 - y_orig];
+          tmp_layer[0][x][y1] = tile0[x - x_orig][y1 - y_orig];
+          tmp_layer[1][x][y1] = tile0[x - x_orig][y1 - y_orig];
+        }
+
+        /* Stencil computations */
         for (x = x0; x < x1; x++) {
           for (y = y0; y < y1; y++) {
-            // Do some jacobi
+            tile1[x][y] = JACOBI2D_T(tile0, x, y);
           }
+        }
+        /* Copy result array into source array */
+        for (x = x0; x < x1; x++){
+          memcpy(tile0[x], tile1[x], (y1 - y0) * sizeof(*tile0[x]));
         }
       }
     }
   }
-
 /* Second loop : tip-down pyramids */
+#pragma omp parallel for schedule(static) shared(tile0, tile1, tmp_layer)
   for (xx = 0; xx < x_steps; xx ++) {
     for (yy = 0; yy < y_steps; yy ++) {
-      int x0, x1, y0, y1;
+      int x0, x1, y0, y1, x_orig, y_orig;
 
-      for (t = 0; t < args.iters; t++) {
-        x0 = max( xx * stepwidth + t, 0);
-        x1 = min((xx + 1) * stepwidth - t, args.X);
-        y0 = max( yy * stepwidth + t, 0);
-        x1 = min((yy + 1) * stepwidth - t, args.Y);
+      x_orig = max(xx * stepwidth + stepwidth / 2, 0);
+      y_orig = max(yy * stepwidth + stepwidth / 2, 0);
+
+      for (t = 0; t < iters; t++) {
+        x0 = max(x_orig - t, 0);
+        x1 = min(x_orig + t, args.width);
+        y0 = max(y_orig - t, 0);
+        y1 = min(y_orig + t, args.height);
 
         for (x = x0; x < x1; x++) {
           for (y = y0; y < y1; y++) {
-            // Do some jacobi
+            tile1[x][y] = JACOBI2D_T(tile0, x, y);
           }
         }
       }
     }
   }
+  free(tile1);
+  free(tile0);
 }
 
 
@@ -77,26 +123,26 @@ djbi2d_seq(struct jbi2d_args args, struct benchscore * bsc)
 {
   uint8_t x, y, t;
 
-  double ** temp = alloc_double_mx(args.X, args.Y);
+  double ** temp = alloc_double_mx(args.width, args.height);
 
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
-  #pragma scop
+  //#pragma scop
   for (t = 0; t < args.iters; t ++) {
-    for (x = 1; x < args.X - 1; x ++) {
-      for (y = 1; y < args.Y - 1; y ++) {
+    for (x = 1; x < args.width - 1; x ++) {
+      for (y = 1; y < args.height - 1; y ++) {
         temp[x][y] = JACOBI2D_T(args.input,x,y);
       }
     }
 /* Copy back into the image */
-    for (x = 0; x < args.X; x++) {
-      memcpy(args.input[x], temp[x], args.Y * sizeof(double));
+    for (x = 0; x < args.width; x++) {
+      memcpy(args.input[x], temp[x], args.height * sizeof(double));
     }
   }
-  #pragma endscop
+  //#pragma endscop
 
   clock_gettime(CLOCK_MONOTONIC, &tend);
 
-  free_mx(temp, args.X);
+  free_mx(temp, args.width);
 }
 
 
@@ -106,8 +152,8 @@ djbi2d_(struct jbi2d_args input, double ** output)
   int i;
 
   djbi2d_seq(input, NULL);
-  for (i = 0; i < input.X; i ++) {
-    if (compare(input.input[i], output[i], input.Y) == 0) {
+  for (i = 0; i < input.width; i ++) {
+    if (compare(input.input[i], output[i], input.height) == 0) {
       return 0;
     }
   }
