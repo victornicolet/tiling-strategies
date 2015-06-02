@@ -14,9 +14,6 @@
  * All 'pragmas omp' are removed
  */
 
-/* Number of doubles displayed */
-#define DISPLAY_SIZE 8
-
 /* TILE DIMENSIONS
  * Iterations within a tile
  */
@@ -44,12 +41,18 @@
 /*-----------------------------------*/
 
 
-void djbi1d_omp_naive(int, int, double**, struct benchscore * );
-void djbi1d_omp_overlap(int, int, double**, struct benchscore * );
-void djbi1d_skewed_tiles_test(int, int, double **, struct benchscore * );
-void djbi1d_sk_full_tiles_test(int, int, double **,struct benchscore * );
-void djbi1d_half_diamonds_test(int, int, double **,struct benchscore * );
-void djbi1d_sequential(int, int, double **,struct benchscore *);
+void djbi1d_omp_naive(struct args_dimt, double *, double * output,
+                      struct benchscore * );
+void djbi1d_omp_overlap(struct args_dimt, double *, double * output,
+                        struct benchscore * );
+void djbi1d_skewed_tiles_test(struct args_dimt, double *,double * output,
+                              struct benchscore * );
+void djbi1d_sk_full_tiles_test(struct args_dimt, double *,double * output,
+                              struct benchscore * );
+void djbi1d_half_diamonds_test(struct args_dimt, double *,double * output,
+                              struct benchscore * );
+void djbi1d_sequential(struct args_dimt, double *,double * output,
+                      struct benchscore *);
 
 int check_low_iter(int, int);
 int check_tilable(int, int);

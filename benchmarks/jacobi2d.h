@@ -25,8 +25,9 @@
                           (t)[i+1][j] + (t)[i+1][j-1] + (t)[i+1][j-1] +       \
                           (t)[i-1][j-1] + (t)[i-1][j] + (t)[i-1][j+1]) / 9.0
 
-void djbi2d_seq(struct args_dimt, struct benchscore *, double **);
-void djbi2d_half_diamonds(struct args_dimt, struct benchscore *, double **);
+void djbi2d_seq(struct args_dimt, double **, struct benchscore *, double **);
+void djbi2d_half_diamonds(struct args_dimt, double **, struct benchscore *,
+                          double **);
 
 int check2d_default(int, int, int);
 

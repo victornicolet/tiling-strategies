@@ -18,8 +18,8 @@ static struct timespec tbegin;
  * WIP : need to adjust indexes in computations and load/store
  */
 void
-djbi2d_half_diamonds(struct args_dimt args, struct benchscore * bsc,
-  double ** data_out)
+djbi2d_half_diamonds(struct args_dimt args, double ** data_in,
+ struct benchscore * bsc, double ** data_out)
 {
   int iters = args.iters ;
   int stepwidth = 2 * iters ;
@@ -120,7 +120,8 @@ djbi2d_half_diamonds(struct args_dimt args, struct benchscore * bsc,
 
 
 void
-djbi2d_seq(struct args_dimt args, struct benchscore * bsc, double ** data_out)
+djbi2d_seq(struct args_dimt args, double ** data_in, struct benchscore * bsc,
+  double ** data_out)
 {
   uint8_t x, y, t;
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
@@ -128,12 +129,12 @@ djbi2d_seq(struct args_dimt args, struct benchscore * bsc, double ** data_out)
   for (t = 0; t < args.iters; t ++) {
     for (x = 1; x < args.width - 1; x ++) {
       for (y = 1; y < args.height - 1; y ++) {
-        data_out[x][y] = JACOBI2D_T(args.input,x,y);
+        data_out[x][y] = JACOBI2D_T(data_in,x,y);
       }
     }
 /* Copy back into the image */
     for (x = 0; x < args.width; x++) {
-      memcpy(args.input[x], data_out[x], args.height * sizeof(double));
+      memcpy(data_in[x], data_out[x], args.height * sizeof(double));
     }
   }
   //#pragma endscop
@@ -147,18 +148,18 @@ djbi2d_seq(struct args_dimt args, struct benchscore * bsc, double ** data_out)
 
 
 int
-djbi2d_(struct args_dimt input, double ** output)
+djbi2d_(struct args_dimt args, double ** input, double ** output)
 {
   int i;
-  double ** ref_output = alloc_double_mx(input.width, input.height);
-  djbi2d_seq(input, NULL, ref_output);
-  for (i = 0; i < input.width; i ++) {
-    if (compare(ref_output[i], output[i], input.height) == 0) {
-      free_mx(ref_output, input.width);
+  double ** ref_output = alloc_double_mx(args.width, args.height);
+  djbi2d_seq(args, input, NULL, ref_output);
+  for (i = 0; i < args.width; i ++) {
+    if (compare(ref_output[i], output[i], args.height) == 0) {
+      free_mx(ref_output, args.width);
       return 0;
     }
   }
-  free_mx(ref_output, input.width);
+  free_mx(ref_output, args.width);
   return 1;
 }
 

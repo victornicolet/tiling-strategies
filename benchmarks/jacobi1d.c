@@ -499,15 +499,16 @@ djbi1d_diamond_tiles(int n,int num_stencil_iters, double ** jbi,
 }
 
 void
-djbi1d_omp_naive(int n, int num_stencil_iters, double ** jbi,
+djbi1d_omp_naive(struct args_dimt args, double * jbi_in, double * jbi_out,
   struct benchscore * bsc)
 {
-
+  int n = args.width;
+  int num_stencil_iters = args.iters;
   clock_gettime( CLOCK_MONOTONIC, &tbegin);
   int t,i;
   double * l1 = (double *) aligned_alloc(CACHE_LINE_SIZE, sizeof(double) * n);
   double * l2 = (double *) aligned_alloc(CACHE_LINE_SIZE, sizeof(double) * n);
-  memcpy(l1, jbi[0], n * sizeof(double));
+  memcpy(l1, jbi_in, n * sizeof(double));
 
   clock_gettime( CLOCK_MONOTONIC, &tbegin);
 
@@ -524,7 +525,7 @@ djbi1d_omp_naive(int n, int num_stencil_iters, double ** jbi,
   clock_gettime( CLOCK_MONOTONIC, &tend);
 
   for (int i = 0; i < n; i++) {
-    jbi[1][i] = l1[i];
+    jbi_out[i] = l1[i];
   }
 
   free(l1);
@@ -534,9 +535,10 @@ djbi1d_omp_naive(int n, int num_stencil_iters, double ** jbi,
 }
 
 void
-djbi1d_omp_overlap(int pb_size, int num_stencil_iters, double ** jbi,
+djbi1d_omp_overlap(struct args_dimt args, double * jbi_in, double * jbi_out,
   struct benchscore * bsc)
 {
+  int pb_size = args.width, num_stencil_iters = args.iters;
   int tile_i, tile_t, t, i;
   int tile_base_sz = T_WIDTH_DBL_OVERLAP + T_ITERS * 2;
 
@@ -563,7 +565,7 @@ djbi1d_omp_overlap(int pb_size, int num_stencil_iters, double ** jbi,
       {
         /* Read tile base */
         for (i = l ; i < r ; i++ ) {
-          lvl0[i- l] = jbi[0][i];
+          lvl0[i- l] = jbi_in[i];
           lvl1[i- l] = 0.0;
         }
 
@@ -583,7 +585,7 @@ djbi1d_omp_overlap(int pb_size, int num_stencil_iters, double ** jbi,
           if (tile_i == 0) {
               fprintf(csv_file, "Left column ; %i ;%i", tile_t, t);
               for (i = 0; i < 8 ; i++) {
-                fprintf(csv_file, ";%10.3f", lvl1[i] - jbi[0][i + l]);
+                fprintf(csv_file, ";%10.3f", lvl1[i] - jbi_in[i + l]);
               }
               fprintf(csv_file, "\n");
           }
@@ -592,7 +594,7 @@ djbi1d_omp_overlap(int pb_size, int num_stencil_iters, double ** jbi,
 
         /* Write tile top */
         for (i = l0 ; i < r0 ; i++ ) {
-          jbi[1][i] = lvl0[i-l];
+          jbi_out[i] = lvl0[i-l];
         }
       }
       free(lvl1);
@@ -601,7 +603,7 @@ djbi1d_omp_overlap(int pb_size, int num_stencil_iters, double ** jbi,
 /* Implicit barrier here, when all chunks of the loops are finished,
  * we copy the resulting data in the "source"
  */
-    memcpy(jbi[0], jbi[1], pb_size * sizeof(double));
+    memcpy(jbi_in, jbi_out, pb_size * sizeof(double));
   }
 
   clock_gettime( CLOCK_MONOTONIC, &tend);
@@ -613,17 +615,19 @@ djbi1d_omp_overlap(int pb_size, int num_stencil_iters, double ** jbi,
 
 
 void
-djbi1d_sequential(int n, int jbi_iters, double ** jbi, struct benchscore * bsc)
+djbi1d_sequential(struct args_dimt args, double * jbi_in, double * jbi_out,
+ struct benchscore * bsc)
 {
+  int num_stencil_iters = args.iters, n = args.width;
   /* Boundaries initial condition */
   int t,i;
   double * l1 = (double *) aligned_alloc(CACHE_LINE_SIZE, sizeof(*l1) * n);
   double * l2 = (double *) aligned_alloc(CACHE_LINE_SIZE, sizeof(*l2) * n);
-  memcpy(l1, jbi[0], n * sizeof(*jbi[0]));
+  memcpy(l1, jbi_in, n * sizeof(*jbi_in));
 
   clock_gettime( CLOCK_MONOTONIC, &tbegin);
 
-  for (t = 0; t < jbi_iters; t++) {
+  for (t = 0; t < num_stencil_iters; t++) {
     for (i = 1; i < n - 1; i++) {
       JBI1D_STENCIL(l2, l1);
     }
@@ -634,7 +638,7 @@ djbi1d_sequential(int n, int jbi_iters, double ** jbi, struct benchscore * bsc)
 
   clock_gettime( CLOCK_MONOTONIC, &tend);
   for (int i = 0; i < n; i++) {
-    jbi[1][i] = l1[i];
+    jbi_out[i] = l1[i];
   }
 
   free(l1);
@@ -643,15 +647,15 @@ djbi1d_sequential(int n, int jbi_iters, double ** jbi, struct benchscore * bsc)
   bsc->wallclock = ELAPSED_TIME(tend, tbegin);
 }
 
-void jbi_init(double **jbi, int n) {
+void jbi_init(double *jbi_in, double * jbi_out, int n) {
   int j;
 
   for (j = 0; j < n; j++) {
-    jbi[0][j] = fabs(cos((double) j )) * (1 << 8);
-    jbi[1][j] = 0;
+    jbi_in[j] = fabs(cos((double) j )) * (1 << 8);
+    jbi_out[j] = 0;
   }
-  jbi[0][0] = 0.0;
-  jbi[0][n-1] = 0.0;
+  jbi_in[0] = 0.0;
+  jbi_in[n-1] = 0.0;
 }
 
 
@@ -660,21 +664,23 @@ void jbi_init(double **jbi, int n) {
 /* --------*/
 
 void
-djbi1d_half_diamonds_test(int pb_size, int num_stencil_iters, double ** jbi,
-  struct benchscore * bsc)
+djbi1d_half_diamonds_test(struct args_dimt args, double * jbi_in,
+  double * jbi_out, struct benchscore * bsc)
 {
+  int pb_size = args.width, num_stencil_iters = args.iters;
   clock_gettime( CLOCK_MONOTONIC, &tbegin);
-  djbi1d_half_diamonds(pb_size, num_stencil_iters, jbi[0]);
+  djbi1d_half_diamonds(pb_size, num_stencil_iters, jbi_in);
   clock_gettime( CLOCK_MONOTONIC, &tend);
   bsc->wallclock = ELAPSED_TIME(tend, tbegin);
-  memcpy(jbi[1], jbi[0], sizeof(double) * pb_size);
+  memcpy(jbi_out, jbi_in, sizeof(double) * pb_size);
 }
 
 
 void
-djbi1d_sk_full_tiles_test(int pb_size, int num_stencil_iters, double ** jbi, \
-  struct benchscore * bsc)
+djbi1d_sk_full_tiles_test(struct args_dimt args, double * jbi_in,
+  double * jbi_out, struct benchscore * bsc)
 {
+  int pb_size = args.width, num_stencil_iters = args.iters;
   int i;
   int num_steps = (num_stencil_iters / T_ITERS) + 1;
   int num_strips = (pb_size/(T_WIDTH_DBL)) + 1;
@@ -701,7 +707,7 @@ djbi1d_sk_full_tiles_test(int pb_size, int num_stencil_iters, double ** jbi, \
   }
 
   for (i = 0; i < pb_size; i ++) {
-    jbi_dashs[i] = jbi[0][i];
+    jbi_dashs[i] = jbi_in[i];
   }
 
   clock_gettime( CLOCK_MONOTONIC, &tbegin);
@@ -724,7 +730,7 @@ djbi1d_sk_full_tiles_test(int pb_size, int num_stencil_iters, double ** jbi, \
   #endif
   int start_stripe_top = num_steps * T_WIDTH_DBL;
   for (i = 0 ; i < pb_size; i ++) {
-    jbi[1][i] = jbi_dashs[i + start_stripe_top];
+    jbi_out[i] = jbi_dashs[i + start_stripe_top];
   }
 
   free(jbi_dashs);
@@ -732,9 +738,10 @@ djbi1d_sk_full_tiles_test(int pb_size, int num_stencil_iters, double ** jbi, \
 }
 
 void
-djbi1d_skewed_tiles_test(int pb_size, int num_stencil_iters, double ** jbi,
-  struct benchscore * bsc)
+djbi1d_skewed_tiles_test(struct args_dimt args, double * jbi_in,
+  double * jbi_out, struct benchscore * bsc)
 {
+  int pb_size = args.width, num_stencil_iters = args.iters;
   int i;
   int num_steps = (num_stencil_iters / T_ITERS) + 1;
   int num_strips = (pb_size/(T_WIDTH_DBL)) + 1;
@@ -755,7 +762,7 @@ djbi1d_skewed_tiles_test(int pb_size, int num_stencil_iters, double ** jbi,
   }
 
   for (i = 0; i < pb_size; i ++) {
-    jbi_dashs[i] = jbi[0][i];
+    jbi_dashs[i] = jbi_in[i];
   }
 
   clock_gettime( CLOCK_MONOTONIC, &tbegin);
@@ -766,7 +773,7 @@ djbi1d_skewed_tiles_test(int pb_size, int num_stencil_iters, double ** jbi,
 
   int start_stripe_top = num_steps * T_WIDTH_DBL;
   for (i = 0 ; i < pb_size; i ++) {
-    jbi[1][i] = jbi_dashs[i + start_stripe_top];
+    jbi_out[i] = jbi_dashs[i + start_stripe_top];
   }
 
   free(jbi_dashs);

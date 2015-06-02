@@ -17,6 +17,17 @@ compare(double * t1, double * t2, int n)
 }
 
 void
+init_data(int dimx, int dimy, double ** data)
+{
+  int i,j;
+  for(i = 0; i < dimx; i++) {
+    for(j = 0; j < dimy; j++) {
+      data[i][j] = cos((double) i + j) * (1 << 8);
+    }
+  }
+}
+
+void
 print_benchspecs(int n, struct benchspec * benchmarks)
 {
   int i;
@@ -28,6 +39,34 @@ print_benchspecs(int n, struct benchspec * benchmarks)
   }
 }
 
+void
+print_runscores(int nruns, struct benchscore * bsc)
+{
+  int i;
+  for (i = 0; i < nruns; i++){
+    printf("%s %s %s : Run %i ...", KBLU, bsc[i].name, KRESET, i + 1);
+    printf("\t\t %13f ms\n", bsc[i].wallclock * 1000.0 );
+  }
+}
+
+void
+print_test2d_summary(int nruns, double total_time, struct benchspec2d bs,
+  double **data_out)
+{
+  int i,j;
+  printf("\n------------- %s ---------\n", bs.name);
+  printf("Result snapshot: \n");
+  for (i = 0; i < DISPLAY_SIZE; i++) {
+    for (j = 0; j < DISPLAY_SIZE; j++) {
+      printf("%10.3f", data_out[i][j]);
+    }
+  }
+  printf("\n----------------------\n");
+  printf("Total time :\t %13f ms\n", (double) total_time * 1000.0);
+  printf("Average time :\t %13f ms\n\n",
+    (double) (total_time * 1000.0 / (nruns)));
+
+}
 
 void
 swap(void *a, void *b, size_t size)
