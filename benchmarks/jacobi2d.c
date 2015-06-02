@@ -18,7 +18,8 @@ static struct timespec tbegin;
  * WIP : need to adjust indexes in computations and load/store
  */
 void
-djbi2d_half_diamonds(struct jbi2d_args args, struct benchscore * bsc)
+djbi2d_half_diamonds(struct args_dimt args, struct benchscore * bsc,
+  double ** data_out)
 {
   int iters = args.iters ;
   int stepwidth = 2 * iters ;
@@ -119,48 +120,50 @@ djbi2d_half_diamonds(struct jbi2d_args args, struct benchscore * bsc)
 
 
 void
-djbi2d_seq(struct jbi2d_args args, struct benchscore * bsc)
+djbi2d_seq(struct args_dimt args, struct benchscore * bsc, double ** data_out)
 {
   uint8_t x, y, t;
-
-  double ** temp = alloc_double_mx(args.width, args.height);
-
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
   //#pragma scop
   for (t = 0; t < args.iters; t ++) {
     for (x = 1; x < args.width - 1; x ++) {
       for (y = 1; y < args.height - 1; y ++) {
-        temp[x][y] = JACOBI2D_T(args.input,x,y);
+        data_out[x][y] = JACOBI2D_T(args.input,x,y);
       }
     }
 /* Copy back into the image */
     for (x = 0; x < args.width; x++) {
-      memcpy(args.input[x], temp[x], args.height * sizeof(double));
+      memcpy(args.input[x], data_out[x], args.height * sizeof(double));
     }
   }
   //#pragma endscop
 
   clock_gettime(CLOCK_MONOTONIC, &tend);
 
-  free_mx(temp, args.width);
+  if(bsc != NULL){
+    bsc->wallclock = ELAPSED_TIME(tend, tbegin);
+  }
 }
 
 
 int
-djbi2d_(struct jbi2d_args input, double ** output)
+djbi2d_(struct args_dimt input, double ** output)
 {
   int i;
-
-  djbi2d_seq(input, NULL);
+  double ** ref_output = alloc_double_mx(input.width, input.height);
+  djbi2d_seq(input, NULL, ref_output);
   for (i = 0; i < input.width; i ++) {
-    if (compare(input.input[i], output[i], input.height) == 0) {
+    if (compare(ref_output[i], output[i], input.height) == 0) {
+      free_mx(ref_output, input.width);
       return 0;
     }
   }
+  free_mx(ref_output, input.width);
   return 1;
 }
 
-int main(int argc, char ** argv) {
-  printf("WIp\n");
+int
+check2d_default(int dimx, int dimy, int dimt)
+{
   return 0;
 }

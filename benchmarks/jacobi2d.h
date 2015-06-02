@@ -25,15 +25,9 @@
                           (t)[i+1][j] + (t)[i+1][j-1] + (t)[i+1][j-1] +       \
                           (t)[i-1][j-1] + (t)[i-1][j] + (t)[i-1][j+1]) / 9.0
 
-struct jbi2d_args {
-  int width;
-  int height;
-  int iters;
-  double ** input;
-};
+void djbi2d_seq(struct args_dimt, struct benchscore *, double **);
+void djbi2d_half_diamonds(struct args_dimt, struct benchscore *, double **);
 
-void djbi2d_seq(struct jbi2d_args, struct benchscore *);
-
-
+int check2d_default(int, int, int);
 
 #endif /* JACOBI1D */

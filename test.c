@@ -15,23 +15,37 @@
 #define MIN_POW 10
 #define MAX_POW 16
 
-void test1d(struct benchspec, int, int);
-void test2d(struct benchspec, int, int, int);
+
+double test1d(int, int, int, struct benchspec);
+double test2d(int, int, int, int, struct benchspec2d);
 
 int main(int argc, char ** argv){
 
-  int i,t;
+  int i;
 
   struct benchspec benchmarks[] = {
-    {"JACOBI1D_OMP_OVERLAP", djbi1d_omp_overlap, 1},
-    {"JACOBI1D_OMP_NAIVE", djbi1d_omp_naive, 1},
-    {"JACOBI1D_SKEWED_TILES", djbi1d_skewed_tiles_test, 1},
-    {"JACOBI1D_SK_FULL_TILES", djbi1d_sk_full_tiles_test, 1},
-    {"JACOBI1D_SWAP_SEQ", djbi1d_swap_seq, 1},
-    {"JACOBI2D_SEQ", djbi2d_seq, 2}
+    {"JACOBI1D_OMP_OVERLAP", djbi1d_omp_overlap, check_default,
+      1 >> 15, 1 >> 5, 1},
+    {"JACOBI1D_OMP_NAIVE", djbi1d_omp_naive, check_default,
+      1 >> 15, 1 >> 5, 1},
+    {"JACOBI1D_SKEWED_TILES", djbi1d_skewed_tiles_test, check_default,
+      1 >> 15, 1 >> 5, 1},
+    {"JACOBI1D_SWAP_SEQ", djbi1d_sequential, check_default,
+      1 >> 15, 1 >> 5, 1},
+    {"JACOBI1D_HALF_DIAMONDS", djbi1d_half_diamonds_test, check_low_iter,
+      1 >> 15, 1 >> 5, 1},
+  };
+
+  struct  benchspec2d benchmarks2d [] = {
+    {"JACOBI2D_HALF_DIAMONDS", djbi2d_half_diamonds, check2d_default,
+      1 >> 15, 1 >> 15, 1 >> 5},
+    {"JACOBI2D_SEQ ", djbi2d_seq, check2d_default,
+      1 >> 15, 1 >> 15, 1 >> 5},
+
   };
 
   int nbench = sizeof(benchmarks) / sizeof(struct benchspec);
+  int nbench2d = sizeof(benchmarks2d) /sizeof(struct benchspec2d);
 
   /*---------- Parameters section -----------*/
 
@@ -43,6 +57,9 @@ int main(int argc, char ** argv){
     for(i = 0; i < nbench; i++){
       printf("%i - %s\n", i, benchmarks[i].name);
     }
+    for(i = 0; i < nbench2d; i++){
+      printf("%i - %s\n", i, benchmarks2d[i].name);
+    }
 
     char * benchmask = argv[1];
     int nruns;
@@ -51,44 +68,66 @@ int main(int argc, char ** argv){
     if(argc == 3){
       nruns = atoi(argv[2]);
     }
-    if( maskl = strlen(benchmask) > nbench){
+    if((maskl = strlen(benchmask)) > nbench + nbench2d){
       printf("Error : not a valid mask ! Your mask must be %i bits long\n",
-        nbench);
+        nbench + nbench2d);
       return -1;
     }
 
     int dimx, dimy, dimt;
     if(argc == 4){
-      dimx = atoi(argv[3]);
+      dimt = atoi(argv[3]);
     }
     if(argc == 5){
-      dimy = atoi(argv[4])
+      dimx = atoi(argv[4]);
+    }
+    if(argc == 6){
+      dimy = atoi(argv[5]);
     }
 
     /* -------------------------------------- */
 
+    double exec_time;
     for(int bs = 0; bs < maskl; bs++){
-      if (benchmask[bs] == '1') {
-        int dim = benchmarks[bs].dim;
-        if(benchmarks[bs].dim == 1){
-          test1d(benchmarks[bs], dim1, dimt);
-        } else if(benchmarks[bs].dim == 2){
-          test2d(benchmarks[bs], dim1, dim2, dimt);
-        }
+      if (benchmask[bs] == '1' && bs < nbench) {
+        exec_time = 0.0;
+        exec_time = test1d(nruns, dimx, dimt, benchmarks[bs]);
+      } else if (benchmask[bs] == '1'){
+        exec_time = test2d(nruns, dimx, dimy, dimt, benchmarks2d[bs - nbench]);
       }
+      printf("TODO : exec_time stats %10.3f", exec_time);
     }
-
     return 0;
   }
 
 }
 
-void test2d(struct benchspec benchmarks, int dimx, int dimy, int dimt){
-  ALLOC_MX(data, double, dimx, dimy)
+double
+test2d(int nruns, int dimx, int dimy, int dimt, struct benchspec2d benchmark)
+{
+  int i;
+
+  double ** data_in = alloc_double_mx(dimx, dimy);
+  double ** data_out = alloc_double_mx(dimx, dimy);
+
+  struct args_dimt args = {dimx, dimy, dimt, data_in};
+  struct benchscore scores[nruns];
+
+  for (i = 0; i <= nruns; i ++) {
+    if (i == 0) {
+      benchmark.variant(args, scores, data_out);
+    }
+    benchmark.variant(args, scores, data_out);
+  }
+  // ! TODO
+  return 0.0;
 }
 
-void test1d(struct benchspec benchmarks, int dimx, int dimt){
+double
+test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
+{
   double * data = (double *) aligned_alloc(CACHE_LINE_SIZE, \
     sizeof(double) * dimx);
-
+  // !! TODO !!!
+  return 0.0;
 }

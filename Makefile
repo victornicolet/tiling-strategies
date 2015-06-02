@@ -64,7 +64,7 @@ endif
 all: $(PROGRAM)
 
 $(PROGRAM) : $(PROGRAM).c $(SOURCES.c) $(HEADERS)
-	$(CC) $(CFLAGS) -o $@ $(PROGRAM).c $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $@ $(PROGRAM).c $(LDFLAGS) $(SOURCES.c)
 
 jbi1d : $(SRC_DIR)/jacobi1d.c $(SRC_DIR)/jacobi1d.h
 	@echo $(WMSG)

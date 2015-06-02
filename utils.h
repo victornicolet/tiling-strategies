@@ -28,7 +28,8 @@
 #define KRESET "\033[0m"
 
 
-struct benchscore {
+struct benchscore
+{
   // Name of the benchmark
   char *name;
   //Elapsed wall-clock time
@@ -36,7 +37,16 @@ struct benchscore {
   int runs;
 };
 
-struct benchspec {
+struct args_dimt
+{
+  int width;
+  int height;
+  int iters;
+  double ** input;
+};
+
+struct benchspec
+{
   // Name of the benchmark
   char *name;
   // Function to call
@@ -47,6 +57,20 @@ struct benchspec {
   int dim;
   // Base size
   long size;
+  // Iterated stencil multiplier
+  int iters;
+};
+
+struct benchspec2d
+{
+  // Name of the benchmark
+  char *name;
+  // Function to call
+  void (*variant)(struct args_dimt, struct benchscore *, double **);
+  // Function to check alg. arguments
+  int (*checkfunc)(int, int, int);
+  // Base size : widht and height
+  long width, height;
   // Iterated stencil multiplier
   int iters;
 };
