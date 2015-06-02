@@ -12,7 +12,7 @@
 // Small dimensions for debugging
 #ifdef DEBUG
   #define DBG_SIZE 4096
-  #define DBG_ITER 4
+  #define DBG_ITER 16
 #endif
 
 /* SEQ -> compile sequential version of the algorithm

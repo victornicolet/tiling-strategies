@@ -38,7 +38,7 @@ struct benchspec benchmarks[] = {
   {"JACOBI1D_SWAP_SEQ", djbi1d_sequential, check_default,
         2, 1 << 13, 1 << 5},
   {"JACOBI1D_HALF_DIAMONDS", djbi1d_half_diamonds_test, check_low_iter,
-        2, 1 << 13, 1 << 4}
+        2, 1 << 13, 1 << 5}
 };
 
 /*
@@ -159,15 +159,19 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
       l = max(l0 + t, 1);
       r = min(l0 + tile_base_sz - t, pb_size);
 /* The border of the pyramids needs to be stored for further computation */
-      tmp[tmp_pos + tmp_stride - 2*t]     = li0[r - l0 + 1];
-      tmp[tmp_pos + tmp_stride - 2*t - 1] = li0[r - l0];
-      tmp[tmp_pos + 2*(t-1)]              = li0[l - l0 - 1];
-      tmp[tmp_pos + 2*(t-1) + 1]          = li0[l - l0];
+      tmp[tmp_pos + tmp_stride - 2 * t - 1]     = li0[r - l0];
+      tmp[tmp_pos + tmp_stride - 2 * t - 2]     = li0[r - l0 - 1];
+      tmp[tmp_pos + 2*(t-1)]                    = li0[l - l0 - 1];
+      tmp[tmp_pos + 2*(t-1) + 1]                = li0[l - l0];
 
       for (i = l; i < r; i ++) {
         li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
 #ifdef DEBUG
-          viewtile[t-1][i] = 'X';
+          if((i == r - 1) || (i == r - 2) || (i == l) || (i == l + 1)){
+            viewtile[t-1][i] = 'x';
+          } else {
+            viewtile[t-1][i] = 'X';
+          }
           counters[i] ++;
           if (i == track_cell) {
             printf("%i, %i : %10.3f\n", i, t, li0[i]);
@@ -179,19 +183,6 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
       }
     }
   }
-
-
-
-#ifdef DEBUG
-  int tile_t;
-  for (tile_t = num_iters - 1; tile_t >= 0; tile_t --) {
-    for (ii = 0; ii < 80; ii++) {
-      printf("%c", viewtile[tile_t][ii]);
-    }
-    printf("\n");
-  }
-#endif
-
 
 /* Second loop : tip down tiles */
 #ifndef SEQ
@@ -213,13 +204,13 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
       r = min(x0 + t, pb_size);
       /* Load from the border-storing array */
        li0[max(r - l0 - 1, 0)]  =
-        tmp[max(min(tmp_pos + 2 * (t - 1), tmp_stride * num_tiles - 1), 0)];
+        tmp[max(min(tmp_pos + 2 * t, tmp_stride * num_tiles - 1), 0)];
        li0[r - l0] =
-        tmp[max(min(tmp_pos + 2 * (t - 1) - 1, tmp_stride * num_tiles - 1), 0)];
+        tmp[max(min(tmp_pos + 2 * t + 1, tmp_stride * num_tiles - 1), 0)];
        li0[l - l0 - 1] =
-        tmp[min(max(tmp_pos - 2 * (t - 1), 0), tmp_stride * num_tiles - 1)];
+        tmp[min(max(tmp_pos - 2 * t - 1, 0), tmp_stride * num_tiles - 1)];
        li0[l - l0] =
-        tmp[min(max(tmp_pos - 2 * (t - 1) + 1, 0), tmp_stride * num_tiles - 1)];
+        tmp[min(max(tmp_pos - 2 * t - 2, 0), tmp_stride * num_tiles - 1)];
 
 
       for (i = l; i <= r; i ++) {
@@ -278,8 +269,13 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
   }
   printf("\n");
   for (int tile_t = num_iters - 1; tile_t >= 0; tile_t --) {
+    printf("%i \t- ", tile_t);
     for (int ii = 0; ii < 80; ii++) {
-      printf("%c", viewtile[tile_t][ii]);
+      if(viewtile[tile_t][ii] == 'x'){
+        printf("%s%c%s", KBLU, viewtile[tile_t][ii], KRESET);
+      } else {
+        printf("%c", viewtile[tile_t][ii]);
+      }
     }
     free(viewtile[tile_t]);
     printf("\n");
