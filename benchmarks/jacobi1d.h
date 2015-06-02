@@ -9,11 +9,6 @@
  * DEBUG_GDB
  */
 
-// Small dimensions for debugging
-#ifdef DEBUG
-  #define DBG_SIZE 4096
-  #define DBG_ITER 16
-#endif
 
 /* SEQ -> compile sequential version of the algorithm
  * All 'pragmas omp' are removed
@@ -59,16 +54,5 @@ void djbi1d_sequential(int, int, double **,struct benchscore *);
 int check_low_iter(int, int);
 int check_tilable(int, int);
 int check_default(int, int);
-
-double *
-alloc_line(int num_elements)
-{
-  double * line = aligned_alloc(CACHE_LINE_SIZE, num_elements * sizeof(*line));
-  if (line == NULL) {
-    fprintf(stderr, "Error while allocating line of %i doubles.\n",
-            num_elements);
-  }
-  return line;
-}
 
 #endif /* JACOBI1D_H */

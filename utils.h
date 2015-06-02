@@ -27,6 +27,10 @@
 #define KWHT  "\x1B[37m"
 #define KRESET "\033[0m"
 
+#ifdef DEBUG
+ #define DEBUG_SIZE 4096
+ #define DEBUG_ITER 16
+#endif
 
 struct benchscore
 {
@@ -108,6 +112,17 @@ free_mx(double ** mx, int dim1)
     free(mx[i]);
   }
   free(mx);
+}
+
+static inline double *
+alloc_line(int num_elements)
+{
+  double * line = aligned_alloc(CACHE_LINE_SIZE, num_elements * sizeof(*line));
+  if (line == NULL) {
+    fprintf(stderr, "Error while allocating line of %i doubles.\n",
+            num_elements);
+  }
+  return line;
 }
 
 int adjust_num(double);

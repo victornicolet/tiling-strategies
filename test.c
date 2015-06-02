@@ -16,8 +16,11 @@
 #define MAX_POW 16
 
 
+//static FILE * csv_file;
+
 double test1d(int, int, int, struct benchspec);
 double test2d(int, int, int, int, struct benchspec2d);
+struct args_dimt get2dargs(int, int, int, double **, struct benchspec2d);
 
 int main(int argc, char ** argv){
 
@@ -62,7 +65,7 @@ int main(int argc, char ** argv){
     }
 
     char * benchmask = argv[1];
-    int nruns;
+    int nruns = 0;
     int maskl;
 
     if(argc == 3){
@@ -74,21 +77,24 @@ int main(int argc, char ** argv){
       return -1;
     }
 
-    int dimx, dimy, dimt;
-    if(argc == 4){
-      dimt = atoi(argv[3]);
-    }
-    if(argc == 5){
-      dimx = atoi(argv[4]);
-    }
-    if(argc == 6){
-      dimy = atoi(argv[5]);
-    }
+    int dimx = 0, dimy = 0, dimt = 0;
 
+    #ifdef DEBUG
+      dimt = DEBUG_ITERS ;
+      dimx = DEBUG_SIZE;
+      dimy = DEBUG_SIZE;
+    #else
+      if(argc >= 6){
+        dimt = atoi(argv[3]);
+        dimx = atoi(argv[4]);
+        dimy = atoi(argv[5]);
+      }
+    #endif
     /* -------------------------------------- */
 
-    double exec_time;
+    double exec_time = 0.0;
     for(int bs = 0; bs < maskl; bs++){
+
       if (benchmask[bs] == '1' && bs < nbench) {
         exec_time = 0.0;
         exec_time = test1d(nruns, dimx, dimt, benchmarks[bs]);
@@ -110,7 +116,7 @@ test2d(int nruns, int dimx, int dimy, int dimt, struct benchspec2d benchmark)
   double ** data_in = alloc_double_mx(dimx, dimy);
   double ** data_out = alloc_double_mx(dimx, dimy);
 
-  struct args_dimt args = {dimx, dimy, dimt, data_in};
+  struct args_dimt args = get2dargs(dimx, dimy, dimt, data_in, benchmark);
   struct benchscore scores[nruns];
 
   for (i = 0; i <= nruns; i ++) {
@@ -130,4 +136,17 @@ test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
     sizeof(double) * dimx);
   // !! TODO !!!
   return 0.0;
+}
+
+struct args_dimt
+get2dargs(int dimx, int dimy, int dimt, double ** in_data,
+  struct benchspec2d bs)
+{
+  if(dimx == 0 && dimy == 0 && dimt == 0){
+    dimx = bs.width;
+    dimy = bs.height;
+    dimt = bs.iters;
+  }
+  struct args_dimt res = {dimx, dimy, dimt,in_data} ;
+  return res;
 }
