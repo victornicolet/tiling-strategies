@@ -17,7 +17,16 @@ compare(double * t1, double * t2, int n)
 }
 
 void
-init_data(int dimx, int dimy, double ** data)
+init_data_1d(int dimx, double * data)
+{
+  int i;
+  for(i = 0; i < dimx; i ++){
+    data[i] = cos(i) * (1 << 8);
+  }
+}
+
+void
+init_data_2d(int dimx, int dimy, double ** data)
 {
   int i,j;
   for(i = 0; i < dimx; i++) {

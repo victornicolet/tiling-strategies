@@ -127,7 +127,9 @@ int adjust_num(double);
 
 int compare(double *, double *, int);
 
-void init_data(int, int, double **);
+void init_data_1d(int, double *);
+
+void init_data_2d(int, int, double **);
 
 void print_benchspecs(int, struct benchspec *);
 

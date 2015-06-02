@@ -21,6 +21,7 @@
 double test1d(int, int, int, struct benchspec);
 double test2d(int, int, int, int, struct benchspec2d);
 struct args_dimt get2dargs(int, int, int, struct benchspec2d);
+struct args_dimt get1dargs(int, int, struct benchspec);
 void usage(int, int, char **, struct benchspec *, struct benchspec2d *);
 
 int main(int argc, char ** argv){
@@ -114,7 +115,7 @@ test2d(int nruns, int dimx, int dimy, int dimt, struct benchspec2d benchmark)
 
   data_in = alloc_double_mx(args.width, args.height);
   data_out = alloc_double_mx(args.width, args.height);
-  init_data(args.width, args.height, data_in);
+  init_data_2d(args.width, args.height, data_in);
 
   for (i = 0; i <= nruns; i ++) {
     printf("%i,", i);
@@ -137,10 +138,32 @@ test2d(int nruns, int dimx, int dimy, int dimt, struct benchspec2d benchmark)
 double
 test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
 {
-  double * data = (double *) aligned_alloc(CACHE_LINE_SIZE, \
-    sizeof(double) * dimx);
-  // !! TODO !!!
-  free(data);
+  int i;
+  double t_accu;
+  struct args_dimt args = get1dargs(dimx, dimt, benchmark);
+
+  double * data_in = (double *) aligned_alloc(CACHE_LINE_SIZE, \
+    sizeof(*data_in) * args.width);
+  double * data_out = (double *) aligned_alloc(CACHE_LINE_SIZE, \
+    sizeof(*data_out) * args.width);
+
+  init_data_1d(args.width, data_in);
+
+  struct benchscore scores[nruns];
+
+  t_accu = 0.0;
+  for (i = 0; i <= nruns; i ++) {
+    printf("%i,", i);
+    if (i == 0) {
+      benchmark.variant(args, data_in, data_out, &scores[0]);
+    } else {
+      benchmark.variant(args, data_in, data_out, &scores[i - 1]);
+      scores[i - 1].name = benchmark.name;
+      t_accu += scores[i - 1].wallclock;
+    }
+  }
+  free(data_in);
+  free(data_out);
   return 0.0;
 }
 
@@ -155,6 +178,20 @@ get2dargs(int dimx, int dimy, int dimt, struct benchspec2d bs)
   struct args_dimt res;
   res.width = dimx;
   res.height = dimy;
+  res.iters = dimt;
+  return res;
+}
+
+struct args_dimt
+get1dargs(int dimx, int dimt, struct benchspec bs)
+{
+  if(dimx == 0 || dimt == 0){
+    dimx = bs.size;
+    dimt = bs.iters;
+  }
+  struct args_dimt res;
+  res.width = dimx;
+  res.height = 0;
   res.iters = dimt;
   return res;
 }
