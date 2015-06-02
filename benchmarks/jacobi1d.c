@@ -105,7 +105,7 @@ check_default(int pb_size, int num_stencil_iters)
 
 void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
 
-  int tile_no, t, i, ii, tmp_pos;
+  int tile_no, t, i, ii;
   // Tile bounds
   int l, l0, r, r0, x0;
 
@@ -113,7 +113,7 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
   int num_tiles = (pb_size / tile_base_sz);
   // Store the border between base-down pyramids and base-up pyramids
   int tmp_stride = 4 * num_iters - 2;
-  double * tmp = malloc(tmp_stride * num_tiles * sizeof(*tmp));
+  double ** tmp = alloc_double_mx(2,tmp_stride * num_tiles * sizeof(*tmp));
 
 #ifdef DEBUG
   int * counters = calloc(pb_size, sizeof(*counters));
@@ -132,11 +132,9 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
 /* First loop : base down tiles */
 #ifndef SEQ
   #pragma omp parallel for schedule(static) shared(tmp) \
-   private(tmp_pos, l0, r0, l, r, x0)
+   private(l0, r0, l, r, x0)
 #endif
   for (tile_no = 0; tile_no < num_tiles; tile_no ++) {
-
-    tmp_pos = tmp_stride * tile_no;
 
     double * li1 = alloc_line(tile_base_sz + 2);
     double * li0 = alloc_line(tile_base_sz + 2);
@@ -157,10 +155,10 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
       l = max(l0 + t, 1);
       r = min(l0 + tile_base_sz - t, pb_size);
 /* The border of the pyramids needs to be stored for further computation */
-      tmp[tmp_pos + tmp_stride - 2 * t - 1]     = li0[r - l0];
-      tmp[tmp_pos + tmp_stride - 2 * t - 2]     = li0[r - l0 - 1];
-      tmp[tmp_pos + 2*(t-1)]                    = li0[l - l0 - 1];
-      tmp[tmp_pos + 2*(t-1) + 1]                = li0[l - l0];
+      tmp[0][r]  = li0[r - l0];
+      tmp[1][r]  = li0[r - l0 - 1];
+      tmp[0][l]  = li0[l - l0 - 1];
+      tmp[1][l]  = li0[l - l0];
 
       for (i = l; i < r; i ++) {
         li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
@@ -185,11 +183,9 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
 /* Second loop : tip down tiles */
 #ifndef SEQ
   #pragma omp parallel for schedule(static) shared(tmp) \
-  private(tmp_pos, l0, r0, l, r, x0)
+  private(l0, r0, l, r, x0)
 #endif
   for (tile_no = 0; tile_no < num_tiles + 1; tile_no ++) {
-
-    tmp_pos = tmp_stride * tile_no;
     x0 = tile_no * tile_base_sz;
     l0 = max(x0 - num_iters - 1, 0);
     r0 = min(x0 + num_iters, pb_size);
@@ -201,14 +197,10 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
       l = max(x0 - (t+1), 1);
       r = min(x0 + t, pb_size);
       /* Load from the border-storing array */
-       li0[max(r - l0 - 1, 0)]  =
-        tmp[max(min(tmp_pos + 2 * t, tmp_stride * num_tiles - 1), 0)];
-       li0[r - l0] =
-        tmp[max(min(tmp_pos + 2 * t + 1, tmp_stride * num_tiles - 1), 0)];
-       li0[l - l0 - 1] =
-        tmp[min(max(tmp_pos - 2 * t - 1, 0), tmp_stride * num_tiles - 1)];
-       li0[l - l0] =
-        tmp[min(max(tmp_pos - 2 * t - 2, 0), tmp_stride * num_tiles - 1)];
+       li0[r - l0 - 1]  = tmp[0][r];
+       li0[r - l0] = tmp[1][r];
+       li0[l - l0 - 1] = tmp[1][l];
+       li0[l - l0] = tmp[0][l];
 
 
       for (i = l; i <= r; i ++) {
