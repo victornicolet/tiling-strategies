@@ -41,17 +41,21 @@
 /*-----------------------------------*/
 
 
-void djbi1d_omp_naive(struct args_dimt, double *, double * output,
+void djbi1d_omp_naive(struct args_dimt, double *, double *,
                       struct benchscore * );
-void djbi1d_omp_overlap(struct args_dimt, double *, double * output,
+void djbi1d_omp_overlap(struct args_dimt, double *, double *,
                         struct benchscore * );
-void djbi1d_skewed_tiles_test(struct args_dimt, double *,double * output,
+void djbi1d_skewed_tiles_test(struct args_dimt, double *,double *,
                               struct benchscore * );
-void djbi1d_sk_full_tiles_test(struct args_dimt, double *,double * output,
+void djbi1d_sk_full_tiles_test(struct args_dimt, double *,double *,
                               struct benchscore * );
-void djbi1d_half_diamonds_test(struct args_dimt, double *,double * output,
+void djbi1d_half_diamonds_test(struct args_dimt, double *,double *,
                               struct benchscore * );
-void djbi1d_sequential(struct args_dimt, double *,double * output,
+void ljbi1d_half_diamonds_test(struct args_dimt, long *,long *,
+                              struct benchscore * );
+void djbi1d_sequential(struct args_dimt, double *,double *,
+                      struct benchscore *);
+void ljbi1d_sequential(struct args_dimt, long *,long *,
                       struct benchscore *);
 
 int check_low_iter(int, int);

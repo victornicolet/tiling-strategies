@@ -155,11 +155,11 @@ djbi2d_(struct args_dimt args, double ** input, double ** output)
   djbi2d_seq(args, input, NULL, ref_output);
   for (i = 0; i < args.width; i ++) {
     if (compare(ref_output[i], output[i], args.height) == 0) {
-      free_mx(ref_output, args.width);
+      free_mx((void **) ref_output, args.width);
       return 0;
     }
   }
-  free_mx(ref_output, args.width);
+  free_mx((void **) ref_output, args.width);
   return 1;
 }
 

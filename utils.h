@@ -4,6 +4,10 @@
 
 /* Number of doubles displayed */
 #define DISPLAY_SIZE 8
+
+#ifndef DISPLAY_OFFSET
+  #define DISPLAY_OFFSET 1200
+#endif
 /* Cache line size of 64 bytes on most x86 */
 #define  CACHE_LINE_SIZE 64
 #define  L1_CACHE_SIZE 6044
@@ -65,6 +69,22 @@ struct benchspec
   int dim;
 };
 
+struct benchspec1d_l
+{
+  /* Name of the benchmark */
+  char *name;
+  /*/ Function to call */
+  void (*variant)(struct args_dimt, long *, long *, struct benchscore *);
+  /* Function to check alg. arguments */
+  int (*checkfunc)(int, int);
+  /* Base size */
+  long size;
+  /* Iterated stencil multiplier */
+  int iters;
+  /* Spatial dimensions */
+  int dim;
+};
+
 struct benchspec2d
 {
   /* Name of the benchmark */
@@ -102,8 +122,31 @@ alloc_double_mx(int dim1, int dim2)
   return mx;
 }
 
+static inline long **
+alloc_long_mx(int dim1, int dim2)
+{
+  int i;
+  long ** mx = malloc(dim1 * sizeof ** mx);
+
+  if(mx == NULL){
+    fprintf(stderr, "Error while allocating matrix\n");
+    return NULL;
+  }
+
+  for (i = 0; i < dim1; i++){
+    mx[i] = malloc(dim2 * sizeof *mx[i]);
+
+    if(mx[i] == NULL){
+      fprintf(stderr, "Error while allocating matrix on line %i\n", i);
+      return NULL;
+    }
+  }
+
+  return mx;
+}
+
 static inline void
-free_mx(double ** mx, int dim1)
+free_mx(void ** mx, int dim1)
 {
   int i;
   for(i = 0; i < dim1; i++){
@@ -127,7 +170,11 @@ int adjust_num(double);
 
 long compare(double *, double *, int);
 
+long compare_l(long *, long *, int);
+
 void init_data_1d(int, double *);
+
+void init_data_1d_l(int, long *);
 
 void init_data_2d(int, int, double **);
 
@@ -136,6 +183,8 @@ void print_benchspecs(int, struct benchspec *);
 void print_runscores(int, struct benchscore *);
 
 void print_test1d_summary(int, double, struct benchspec, double *, double *);
+
+void print_test1d_l_summary(int, double, struct benchspec1d_l, long *, long *);
 
 void print_test2d_summary(int, double, struct benchspec2d, double **, double **);
 
