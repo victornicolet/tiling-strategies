@@ -17,6 +17,18 @@ compare(double * t1, double * t2, int n)
   return diffs;
 }
 
+long
+compare_l(long * t1, long * t2, int n)
+{
+  long diffs = 0L;
+  for(int i = 0; i < n; i++){
+    if(t1[i] != t2[i]){
+      diffs++;
+    }
+  }
+  return diffs;
+}
+
 void
 init_data_1d(int dimx, double * data)
 {
@@ -24,6 +36,17 @@ init_data_1d(int dimx, double * data)
   data[0] = 0.0;
   for(i = 1; i < dimx - 1; i ++){
     data[i] = fabs(cos(i) * (1 << 8));
+  }
+  data[dimx - 1]= 0.0;
+}
+
+void
+init_data_1d_l(int dimx, long * data)
+{
+  int i;
+  data[0] = 0.0;
+  for(i = 1; i < dimx - 1; i ++){
+    data[i] = floor(fabs(cos(i) * (1 << 8)));
   }
   data[dimx - 1]= 0.0;
 }
@@ -78,6 +101,28 @@ print_test1d_summary(int nruns, double total_time, struct benchspec bs,
   printf("Result snapshot: %s\n", KRED);
   for (i = 0; i < DISPLAY_SIZE; i++) {
     printf("%10.3f", data_out[i]);
+  }
+  printf("\n%s----------------------\n", KRESET);
+  printf("Total time :\t %13f ms\n", (double) total_time * 1000.0);
+  printf("Average time :\t %13f ms\n\n",
+    (double) (total_time * 1000.0 / (nruns)));
+
+}
+
+
+void
+print_test1d_l_summary(int nruns, double total_time, struct benchspec1d_l bs,
+ long * data_in, long * data_out)
+{
+  int i;
+  printf("\n------------- Input ---------\n");
+  for (i = 0; i < DISPLAY_SIZE; i++) {
+    printf(" %li ", data_in[i]);
+  }
+  printf("\n------------- %s ---------\n", bs.name);
+  printf("Result snapshot: %s\n", KRED);
+  for (i = 0; i < DISPLAY_SIZE; i++) {
+    printf(" %li ", data_out[i]);
   }
   printf("\n%s----------------------\n", KRESET);
   printf("Total time :\t %13f ms\n", (double) total_time * 1000.0);
