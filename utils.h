@@ -1,14 +1,17 @@
 #ifndef  _UTILS_H
 #define _UTILS_H
 
-// Cache line size of 64 bytes on most x86
+
+/* Number of doubles displayed */
+#define DISPLAY_SIZE 8
+/* Cache line size of 64 bytes on most x86 */
 #define  CACHE_LINE_SIZE 64
 #define  L1_CACHE_SIZE 6044
 
 
 #define BILLION 1000000000.0
 #define DOUBLE_COMPARISON_THRESHOLD 10e-7
-// a, b timespec structs -> returns difference btw a and b in secs
+/* a, b timespec structs -> returns difference btw a and b in secs */
 #define ELAPSED_TIME(a,b) (a.tv_sec - b.tv_sec) +                             \
                           ((a.tv_nsec - b.tv_nsec ) / BILLION)
 
@@ -27,55 +30,54 @@
 #define KWHT  "\x1B[37m"
 #define KRESET "\033[0m"
 
+#ifdef DEBUG
+ #define DEBUG_SIZE 4096
+ #define DEBUG_ITER 16
+#endif
 
 struct benchscore
 {
-  // Name of the benchmark
+  /* Name of the benchmark */
   char *name;
-  //Elapsed wall-clock time
+  /* Elapsed wall-clock time */
   double wallclock;
   int runs;
 };
 
 struct args_dimt
 {
-  int width;
-  int height;
-  int iters;
-  double ** input;
+  int width, height, iters;
 };
 
 struct benchspec
 {
-  // Name of the benchmark
+  /* Name of the benchmark */
   char *name;
-  // Function to call
-  void (*variant)(int, int, double**, struct benchscore *);
-  // Function to check alg. arguments
+  /*/ Function to call */
+  void (*variant)(struct args_dimt, double *, double *, struct benchscore *);
+  /* Function to check alg. arguments */
   int (*checkfunc)(int, int);
-  // Spatial dimensions
-  int dim;
-  // Base size
+  /* Base size */
   long size;
-  // Iterated stencil multiplier
+  /* Iterated stencil multiplier */
   int iters;
+  /* Spatial dimensions */
+  int dim;
 };
 
 struct benchspec2d
 {
-  // Name of the benchmark
+  /* Name of the benchmark */
   char *name;
-  // Function to call
-  void (*variant)(struct args_dimt, struct benchscore *, double **);
-  // Function to check alg. arguments
+  /* Function to call */
+  void (*variant)(struct args_dimt, double **, struct benchscore *, double **);
+  /* Function to check alg. arguments */
   int (*checkfunc)(int, int, int);
-  // Base size : widht and height
+  /* Base size : width and height */
   long width, height;
-  // Iterated stencil multiplier
+  /* Iterated stencil multiplier */
   int iters;
 };
-
-void print_benchspecs(int, struct benchspec *);
 
 static inline double **
 alloc_double_mx(int dim1, int dim2)
@@ -110,9 +112,32 @@ free_mx(double ** mx, int dim1)
   free(mx);
 }
 
+static inline double *
+alloc_line(int num_elements)
+{
+  double * line = aligned_alloc(CACHE_LINE_SIZE, num_elements * sizeof(*line));
+  if (line == NULL) {
+    fprintf(stderr, "Error while allocating line of %i doubles.\n",
+            num_elements);
+  }
+  return line;
+}
+
 int adjust_num(double);
 
-int compare(double *, double *, int);
+long compare(double *, double *, int);
+
+void init_data_1d(int, double *);
+
+void init_data_2d(int, int, double **);
+
+void print_benchspecs(int, struct benchspec *);
+
+void print_runscores(int, struct benchscore *);
+
+void print_test1d_summary(int, double, struct benchspec, double *, double *);
+
+void print_test2d_summary(int, double, struct benchspec2d, double **, double **);
 
 void swap(void *, void *, size_t);
 

@@ -13,8 +13,6 @@
 static struct timespec tend;
 static struct timespec tbegin;
 
-static FILE * csv_file;
-
 /* Functions describing different tasks in the computation
   Always inlined in the main body */
 void do_i_t(double *, double *, int , int)
@@ -25,21 +23,6 @@ void do_i0_t0(double *, double *, int, int)
     __attribute__((always_inline));
 void do_in_t(double *, double *, int, int)
     __attribute__((always_inline));
-
-struct benchspec benchmarks[] = {
-  {"JACOBI1D_OMP_OVERLAP", djbi1d_omp_overlap, check_tilable,
-        2, 1 << 13, 1 << 8},
-  {"JACOBI1D_OMP_NAIVE", djbi1d_omp_naive, check_default,
-        2, 1 << 13, 1 << 8},
-  {"JACOBI1D_SKEWED_TILES", djbi1d_skewed_tiles_test, check_tilable,
-        2, 1 << 13, 1 << 5},
-  {"JACOBI1D_SK_FULL_TILES", djbi1d_sk_full_tiles_test, check_tilable,
-        2, 1 << 13, 1 << 5},
-  {"JACOBI1D_SWAP_SEQ", djbi1d_sequential, check_default,
-        2, 1 << 13, 1 << 5},
-  {"JACOBI1D_HALF_DIAMONDS", djbi1d_half_diamonds_test, check_low_iter,
-        2, 1 << 13, 1 << 5}
-};
 
 /*
 * task[i][j] is set to 1 if the task on time step i and column j has been
@@ -105,19 +88,20 @@ check_default(int pb_size, int num_stencil_iters)
 *   - sequential with swapping
 */
 
-void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
+void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi,
+  double * jbi_out) {
 
-  int tile_no, t, i, ii, tmp_pos;
+  int tile_no, t, i;
   // Tile bounds
   int l, l0, r, r0, x0;
 
   int tile_base_sz = 2 * num_iters ;
   int num_tiles = (pb_size / tile_base_sz);
   // Store the border between base-down pyramids and base-up pyramids
-  int tmp_stride = 4 * num_iters - 2;
-  double * tmp = malloc(tmp_stride * num_tiles * sizeof(*tmp));
+  double ** tmp = alloc_double_mx(2, pb_size * sizeof(*tmp));
 
 #ifdef DEBUG
+  int ii;
   int * counters = calloc(pb_size, sizeof(*counters));
   char ** viewtile = malloc(num_iters * sizeof(*viewtile));
 
@@ -134,14 +118,11 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
 /* First loop : base down tiles */
 #ifndef SEQ
   #pragma omp parallel for schedule(static) shared(tmp) \
-   private(tmp_pos, l0, r0, l, r, x0)
+   private(l0, r0, l, r, x0)
 #endif
   for (tile_no = 0; tile_no < num_tiles; tile_no ++) {
 
-    tmp_pos = tmp_stride * tile_no;
-
-    double * li1 = alloc_line(tile_base_sz + 2);
-    double * li0 = alloc_line(tile_base_sz + 2);
+    double li1[tile_base_sz + 2], li0[tile_base_sz + 2];
 
     /* Initial values */
     l0 = max(tile_no * tile_base_sz, 0);
@@ -150,70 +131,72 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
       li0[i - l0] = jbi[i];
       li1[i - l0] = 0.0;
     }
-    for(i = r0 + 1; i < tile_base_sz + l0; i++){
+    for(i = r0 + 1; i < tile_base_sz + l0 + 2; i++){
       li0[i - l0] = 0.0;
       li1[i - l0] = 0.0;
     }
 
+    tmp[0][l0] = li0[0];
+    tmp[1][l0 + 1] = li0[1];
+    tmp[0][r0] = li0[r0 - l0];
+    tmp[1][r0 - 1] = li0[r0 - l0 - 1];
+
     for (t = 1; t < num_iters; t ++) {
       l = max(l0 + t, 1);
       r = min(l0 + tile_base_sz - t, pb_size);
-/* The border of the pyramids needs to be stored for further computation */
-      tmp[tmp_pos + tmp_stride - 2 * t - 1]     = li0[r - l0];
-      tmp[tmp_pos + tmp_stride - 2 * t - 2]     = li0[r - l0 - 1];
-      tmp[tmp_pos + 2*(t-1)]                    = li0[l - l0 - 1];
-      tmp[tmp_pos + 2*(t-1) + 1]                = li0[l - l0];
 
       for (i = l; i < r; i ++) {
         li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
 #ifdef DEBUG
-          if((i == r - 1) || (i == r - 2) || (i == l) || (i == l + 1)){
-            viewtile[t-1][i] = 'x';
-          } else {
-            viewtile[t-1][i] = 'X';
-          }
+          viewtile[t-1][i] = 'X';
           counters[i] ++;
           if (i == track_cell) {
             printf("%i, %i : %10.3f\n", i, t, li0[i]);
           }
+
+          /* The border of the pyramids needs to be stored for further computation */
 #endif
       }
       for (i = l; i < r; i ++) {
         li0[i - l0] = li1[i - l0];
       }
+      tmp[0][r - 1]  = li1[r - l0 - 1];
+      tmp[1][r - 2]  = li1[r - l0 - 2];
+      tmp[0][l]  = li1[l - l0];
+      tmp[1][l + 1]  = li1[l - l0 + 1];
+      #ifdef DEBUG
+        viewtile[t-1][r - 2] = 'x';
+        viewtile[t-1][r - 1] = 'x';
+        viewtile[t-1][l] = 'x';
+        viewtile[t-1][l + 1] = 'x';
+      #endif
     }
   }
+
 
 /* Second loop : tip down tiles */
 #ifndef SEQ
   #pragma omp parallel for schedule(static) shared(tmp) \
-  private(tmp_pos, l0, r0, l, r, x0)
+  private(l0, r0, l, r, x0)
 #endif
   for (tile_no = 0; tile_no < num_tiles + 1; tile_no ++) {
-
-    tmp_pos = tmp_stride * tile_no;
     x0 = tile_no * tile_base_sz;
     l0 = max(x0 - num_iters - 1, 0);
     r0 = min(x0 + num_iters, pb_size);
 
-    double * li1 = alloc_line(tile_base_sz + 2);
-    double * li0 = alloc_line(tile_base_sz + 2);
+    double li1[tile_base_sz + 2], li0[tile_base_sz + 2];
 
     for (t = 0; t < num_iters; t ++) {
       l = max(x0 - (t+1), 1);
-      r = min(x0 + t, pb_size);
+      r = min(x0 + t + 1, pb_size - 1);
       /* Load from the border-storing array */
-       li0[max(r - l0 - 1, 0)]  =
-        tmp[max(min(tmp_pos + 2 * t, tmp_stride * num_tiles - 1), 0)];
-       li0[r - l0] =
-        tmp[max(min(tmp_pos + 2 * t + 1, tmp_stride * num_tiles - 1), 0)];
-       li0[l - l0 - 1] =
-        tmp[min(max(tmp_pos - 2 * t - 1, 0), tmp_stride * num_tiles - 1)];
-       li0[l - l0] =
-        tmp[min(max(tmp_pos - 2 * t - 2, 0), tmp_stride * num_tiles - 1)];
+       li0[r - l0]  = tmp[1][r];
+       li0[r - l0 - 1] = tmp[0][r - 1];
+       li0[l - l0 - 1] = tmp[0][l - 1];
+       li0[l - l0] = tmp[1][l];
 
 
-      for (i = l; i <= r; i ++) {
+      for (i = l; i < r; i ++) {
         li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
 #ifdef DEBUG
           if (viewtile[t][i] == 's') {
@@ -227,19 +210,12 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
           }
 #endif
       }
-
-      for (ii = 0; ii < tile_base_sz + 2; ii ++) {
-        li0[ii] = li1[ii];
-      }
+      memcpy(li0, li1, (tile_base_sz + 2) * sizeof(*li1));
     }
     /* Copy back to memory */
     for (i = l0 + 1; i < r0; i++) {
-      jbi[i] = li0[i - l0];
+      jbi_out[i] = li0[i - l0];
     }
-    free(li0);
-    free(li1);
-
-
   }
   free(tmp);
 
@@ -283,7 +259,6 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi) {
   free(viewtile);
   free(counters);
 #endif
-
 }
 
 
@@ -501,15 +476,16 @@ djbi1d_diamond_tiles(int n,int num_stencil_iters, double ** jbi,
 }
 
 void
-djbi1d_omp_naive(int n, int num_stencil_iters, double ** jbi,
+djbi1d_omp_naive(struct args_dimt args, double * jbi_in, double * jbi_out,
   struct benchscore * bsc)
 {
-
+  int n = args.width;
+  int num_stencil_iters = args.iters;
   clock_gettime( CLOCK_MONOTONIC, &tbegin);
   int t,i;
   double * l1 = (double *) aligned_alloc(CACHE_LINE_SIZE, sizeof(double) * n);
   double * l2 = (double *) aligned_alloc(CACHE_LINE_SIZE, sizeof(double) * n);
-  memcpy(l1, jbi[0], n * sizeof(double));
+  memcpy(l1, jbi_in, n * sizeof(double));
 
   clock_gettime( CLOCK_MONOTONIC, &tbegin);
 
@@ -526,7 +502,7 @@ djbi1d_omp_naive(int n, int num_stencil_iters, double ** jbi,
   clock_gettime( CLOCK_MONOTONIC, &tend);
 
   for (int i = 0; i < n; i++) {
-    jbi[1][i] = l1[i];
+    jbi_out[i] = l1[i];
   }
 
   free(l1);
@@ -536,9 +512,10 @@ djbi1d_omp_naive(int n, int num_stencil_iters, double ** jbi,
 }
 
 void
-djbi1d_omp_overlap(int pb_size, int num_stencil_iters, double ** jbi,
+djbi1d_omp_overlap(struct args_dimt args, double * jbi_in, double * jbi_out,
   struct benchscore * bsc)
 {
+  int pb_size = args.width, num_stencil_iters = args.iters;
   int tile_i, tile_t, t, i;
   int tile_base_sz = T_WIDTH_DBL_OVERLAP + T_ITERS * 2;
 
@@ -565,7 +542,7 @@ djbi1d_omp_overlap(int pb_size, int num_stencil_iters, double ** jbi,
       {
         /* Read tile base */
         for (i = l ; i < r ; i++ ) {
-          lvl0[i- l] = jbi[0][i];
+          lvl0[i- l] = jbi_in[i];
           lvl1[i- l] = 0.0;
         }
 
@@ -580,21 +557,11 @@ djbi1d_omp_overlap(int pb_size, int num_stencil_iters, double ** jbi,
           }
           memcpy(lvl0, lvl1,
             (T_WIDTH_DBL_OVERLAP + T_ITERS * 2) * sizeof(double));
-
-#ifdef DEBUG
-          if (tile_i == 0) {
-              fprintf(csv_file, "Left column ; %i ;%i", tile_t, t);
-              for (i = 0; i < 8 ; i++) {
-                fprintf(csv_file, ";%10.3f", lvl1[i] - jbi[0][i + l]);
-              }
-              fprintf(csv_file, "\n");
-          }
-#endif
         }
 
         /* Write tile top */
         for (i = l0 ; i < r0 ; i++ ) {
-          jbi[1][i] = lvl0[i-l];
+          jbi_out[i] = lvl0[i-l];
         }
       }
       free(lvl1);
@@ -603,7 +570,7 @@ djbi1d_omp_overlap(int pb_size, int num_stencil_iters, double ** jbi,
 /* Implicit barrier here, when all chunks of the loops are finished,
  * we copy the resulting data in the "source"
  */
-    memcpy(jbi[0], jbi[1], pb_size * sizeof(double));
+    memcpy(jbi_in, jbi_out, pb_size * sizeof(double));
   }
 
   clock_gettime( CLOCK_MONOTONIC, &tend);
@@ -615,17 +582,19 @@ djbi1d_omp_overlap(int pb_size, int num_stencil_iters, double ** jbi,
 
 
 void
-djbi1d_sequential(int n, int jbi_iters, double ** jbi, struct benchscore * bsc)
+djbi1d_sequential(struct args_dimt args, double * jbi_in, double * jbi_out,
+ struct benchscore * bsc)
 {
+  int num_stencil_iters = args.iters, n = args.width;
   /* Boundaries initial condition */
   int t,i;
   double * l1 = (double *) aligned_alloc(CACHE_LINE_SIZE, sizeof(*l1) * n);
   double * l2 = (double *) aligned_alloc(CACHE_LINE_SIZE, sizeof(*l2) * n);
-  memcpy(l1, jbi[0], n * sizeof(*jbi[0]));
+  memcpy(l1, jbi_in, n * sizeof(*jbi_in));
 
   clock_gettime( CLOCK_MONOTONIC, &tbegin);
 
-  for (t = 0; t < jbi_iters; t++) {
+  for (t = 0; t < num_stencil_iters; t++) {
     for (i = 1; i < n - 1; i++) {
       JBI1D_STENCIL(l2, l1);
     }
@@ -636,202 +605,38 @@ djbi1d_sequential(int n, int jbi_iters, double ** jbi, struct benchscore * bsc)
 
   clock_gettime( CLOCK_MONOTONIC, &tend);
   for (int i = 0; i < n; i++) {
-    jbi[1][i] = l1[i];
+    jbi_out[i] = l1[i];
   }
 
   free(l1);
   free(l2);
-
-  bsc->wallclock = ELAPSED_TIME(tend, tbegin);
-}
-
-void jbi_init(double **jbi, int n) {
-  int j;
-
-  for (j = 0; j < n; j++) {
-    jbi[0][j] = fabs(cos((double) j )) * (1 << 8);
-    jbi[1][j] = 0;
+  if (bsc != NULL) {
+    bsc->wallclock = ELAPSED_TIME(tend, tbegin);
   }
-  jbi[0][0] = 0.0;
-  jbi[0][n-1] = 0.0;
 }
 
-int
-main(int argc, char ** argv)
-{
-
-    int nbench = sizeof(benchmarks) / sizeof(struct benchspec);
-
-    if (strcmp(argv[1], "help") == 0) {
-        printf("Usage: %s <Nruns> <Mask : %i> [ <Width> <tile_ime iterations>]\n",
-        argv[0], nbench);
-        printf("Build mask with : OVERLAP NAIVE SKEWED_TILES SEQUENTIAL \
-          HALF_DIAMONDS\n");
-        printf("Dimensions : \n");
-        printf("T_ITERS : \t\t%i\nT_WIDTH_DBL : \t\t %i\n", T_ITERS,
-          T_WIDTH_DBL);
-        printf("T_WIDTH_DBL_OVERLAP : \t%i\n", T_WIDTH_DBL_OVERLAP);
-        printf("T_WIDTH_DBL_DIAM : \t%i\n", T_WIDTH_DBL_DIAM );
-        print_benchspecs(nbench, benchmarks);
-        return 0;
-    }
-
-    if (argc < 3) {
-      printf("Usage: %s <Nruns> <Mask : %i> [ <Width> <time iterations>]\n",
-        argv[0], nbench);
-      return 0;
-    }
-
-    csv_file = fopen("jacobi1d.csv", "w");
-    if (csv_file == NULL) {
-      exit(1);
-    }
-
-
-    int i, iter;
-    int nruns = atoi(argv[1]);
-    int tab_size = 0, iterations = 0;
-    if (argc == 5) {
-      tab_size = atoi(argv[3]);
-      iterations = atoi(argv[4]);
-    } else {
-#ifdef DEBUG
-        tab_size = DBG_SIZE;
-        iterations = DBG_ITER;
-#endif
-    }
-
-#ifndef DEBUG
-      tab_size = ((tab_size - 1) / (2*T_ITERS - 1)) * (2*T_ITERS - 1);
-#endif
-
-    char *benchmask = argv[2];
-    if (strlen(benchmask) != nbench) {
-      printf("Error : not a valid mask ! Your mask must be %i bits long\n",
-        nbench);
-      return -1;
-    }
-
-#ifdef DEBUG
-      fprintf(csv_file, "Where ?; Data\n");
-      fprintf(csv_file, "Input;\n");
-#endif
-
-    printf("\n");
-    double accu;
-
-    for (int bs = 0; bs < nbench; bs++) {
-      if (benchmask[bs] == '1') {
-
-        struct benchscore score[nruns + 1];
-        accu = 0.0;
-
-#ifndef DEBUG
-          if (argc < 5) {
-              tab_size = benchmarks[bs].size;
-              iterations = benchmarks[bs].iters;
-          }
-#endif
-        if (benchmarks[bs].checkfunc(tab_size, iterations) < 0 && 0) {
-          fprintf(stderr, "%sWarning :%s argument incompatible with variant\n",
-            KRED, KRESET);
-          fprintf(stderr, "Iterations : %i \t Width : %i\n",
-            iterations, tab_size);
-          fprintf(stderr, "Variant : %s\n", benchmarks[bs].name);
-        }
-
-        double ** jbi = malloc(2 * sizeof(*jbi));
-        for (i = 0; i < 2; i++) {
-          jbi[i] = malloc(tab_size * sizeof(*jbi));
-        }
-
-
-        /* Get the correct result */
-        jbi_init(jbi, tab_size);
-        double * check_res = malloc(tab_size * sizeof(*check_res));
-        struct benchscore bsc;
-        djbi1d_sequential(tab_size, iterations, jbi, &bsc);
-        for (i = 0; i < tab_size; i++) check_res[i] = jbi[1][i];
-
-
-        jbi_init(jbi, tab_size);
-        printf("Input : \n");
-        for (i = 0; i < DISPLAY_SIZE; i++) {
-          printf("%10.3f", jbi[0][i]);
-        }
-        printf("\n");
-#ifdef DEBUG
-          for (i = 0; i < 1 << 8; i++) {
-            fprintf(csv_file, "%10.3f ;", jbi[0][i]);
-          }
-          fprintf(csv_file, "\n");
-#endif
-
-        for (iter = 0; iter < nruns + 1; iter++) {
-          jbi_init(jbi, tab_size);
-          score[iter].name = benchmarks[bs].name;
-          benchmarks[bs].variant(tab_size, iterations, jbi, &score[iter]);
-
-          if (iter > 0) {
-            printf("%s : Run %i ...", score[iter].name, iter );
-            printf("\t\t %13f ms\n", score[iter].wallclock * 1000.0 );
-            accu += score[iter].wallclock ;
-          }
-        }
-        printf("\n------------- %s ---------\n", benchmarks[bs].name);
-        printf("Result: \n");
-        for (i = 0; i < DISPLAY_SIZE; i++) {
-          printf("%10.3f", jbi[1][i]);
-        }
-
-        if (compare(jbi[1], check_res, tab_size) == 0) {
-          printf("\nThe result with this method is not correct ! ");
-          printf("This should be the correct result :\n");
-          for (i = 0; i < DISPLAY_SIZE; i++) {
-            printf("%10.3f", check_res[i]);
-          }
-        }
-        printf("\n----------------------\n");
-        printf("Total time :\t %13f ms\n", (double) accu * 1000.0);
-        printf("Average time :\t %13f ms\n\n",
-          (double) (accu * 1000.0 / (nruns)));
-
-        free(check_res);
-        free(jbi[1]);
-        free(jbi[0]);
-        free(jbi);
-      }
-    }
-
-    fclose(csv_file);
-    #ifdef SEQ
-          printf("WARNING : SEQ defined\n");
-    #endif
-    #ifdef DEBUG_PARALLEL
-          printf("WARNING : DEBUG_PARALLEL defined\n");
-    #endif
-}
 
 /* --------*/
 /*  Tests  */
 /* --------*/
 
 void
-djbi1d_half_diamonds_test(int pb_size, int num_stencil_iters, double ** jbi,
-  struct benchscore * bsc)
+djbi1d_half_diamonds_test(struct args_dimt args, double * jbi_in,
+  double * jbi_out, struct benchscore * bsc)
 {
+  int pb_size = args.width, num_stencil_iters = args.iters;
   clock_gettime( CLOCK_MONOTONIC, &tbegin);
-  djbi1d_half_diamonds(pb_size, num_stencil_iters, jbi[0]);
+  djbi1d_half_diamonds(pb_size, num_stencil_iters, jbi_in, jbi_out);
   clock_gettime( CLOCK_MONOTONIC, &tend);
   bsc->wallclock = ELAPSED_TIME(tend, tbegin);
-  memcpy(jbi[1], jbi[0], sizeof(double) * pb_size);
 }
 
 
 void
-djbi1d_sk_full_tiles_test(int pb_size, int num_stencil_iters, double ** jbi, \
-  struct benchscore * bsc)
+djbi1d_sk_full_tiles_test(struct args_dimt args, double * jbi_in,
+  double * jbi_out, struct benchscore * bsc)
 {
+  int pb_size = args.width, num_stencil_iters = args.iters;
   int i;
   int num_steps = (num_stencil_iters / T_ITERS) + 1;
   int num_strips = (pb_size/(T_WIDTH_DBL)) + 1;
@@ -858,7 +663,7 @@ djbi1d_sk_full_tiles_test(int pb_size, int num_stencil_iters, double ** jbi, \
   }
 
   for (i = 0; i < pb_size; i ++) {
-    jbi_dashs[i] = jbi[0][i];
+    jbi_dashs[i] = jbi_in[i];
   }
 
   clock_gettime( CLOCK_MONOTONIC, &tbegin);
@@ -881,7 +686,7 @@ djbi1d_sk_full_tiles_test(int pb_size, int num_stencil_iters, double ** jbi, \
   #endif
   int start_stripe_top = num_steps * T_WIDTH_DBL;
   for (i = 0 ; i < pb_size; i ++) {
-    jbi[1][i] = jbi_dashs[i + start_stripe_top];
+    jbi_out[i] = jbi_dashs[i + start_stripe_top];
   }
 
   free(jbi_dashs);
@@ -889,9 +694,10 @@ djbi1d_sk_full_tiles_test(int pb_size, int num_stencil_iters, double ** jbi, \
 }
 
 void
-djbi1d_skewed_tiles_test(int pb_size, int num_stencil_iters, double ** jbi,
-  struct benchscore * bsc)
+djbi1d_skewed_tiles_test(struct args_dimt args, double * jbi_in,
+  double * jbi_out, struct benchscore * bsc)
 {
+  int pb_size = args.width, num_stencil_iters = args.iters;
   int i;
   int num_steps = (num_stencil_iters / T_ITERS) + 1;
   int num_strips = (pb_size/(T_WIDTH_DBL)) + 1;
@@ -912,7 +718,7 @@ djbi1d_skewed_tiles_test(int pb_size, int num_stencil_iters, double ** jbi,
   }
 
   for (i = 0; i < pb_size; i ++) {
-    jbi_dashs[i] = jbi[0][i];
+    jbi_dashs[i] = jbi_in[i];
   }
 
   clock_gettime( CLOCK_MONOTONIC, &tbegin);
@@ -923,7 +729,7 @@ djbi1d_skewed_tiles_test(int pb_size, int num_stencil_iters, double ** jbi,
 
   int start_stripe_top = num_steps * T_WIDTH_DBL;
   for (i = 0 ; i < pb_size; i ++) {
-    jbi[1][i] = jbi_dashs[i + start_stripe_top];
+    jbi_out[i] = jbi_dashs[i + start_stripe_top];
   }
 
   free(jbi_dashs);
@@ -1024,7 +830,7 @@ inline void do_i_t(double * dashs, double * slashs, int strpno, int tile_t) {
   uint8_t t,i;
 
   #ifdef DEBUG
-    if (tile_t == ((DBG_ITER / T_ITERS ))) {
+    if (tile_t == ((DEBUG_ITER / T_ITERS ))) {
       printf("Final line, task %i %i\n", tile_t, strpno - tile_t);
     }
   #endif
@@ -1069,7 +875,7 @@ inline void do_in_t(double * dashs, double * slashs, int strpno, int tile_t) {
   uint8_t t,i;
 
   #ifdef DEBUG
-    if (tile_t == ((DBG_SIZE / T_WIDTH_DBL ))) {
+    if (tile_t == ((DEBUG_SIZE / T_WIDTH_DBL ))) {
       printf("Final task %i %i\n", tile_t, strpno - tile_t);
     } else {
       printf("Do do_in_t %i %i\n", tile_t, strpno - tile_t);
