@@ -57,12 +57,12 @@ struct benchspec
   void (*variant)(struct args_dimt, double *, double *, struct benchscore *);
   /* Function to check alg. arguments */
   int (*checkfunc)(int, int);
-  /* Spatial dimensions */
-  int dim;
   /* Base size */
   long size;
   /* Iterated stencil multiplier */
   int iters;
+  /* Spatial dimensions */
+  int dim;
 };
 
 struct benchspec2d
@@ -125,7 +125,7 @@ alloc_line(int num_elements)
 
 int adjust_num(double);
 
-int compare(double *, double *, int);
+long compare(double *, double *, int);
 
 void init_data_1d(int, double *);
 
@@ -135,7 +135,9 @@ void print_benchspecs(int, struct benchspec *);
 
 void print_runscores(int, struct benchscore *);
 
-void print_test2d_summary(int, double, struct benchspec2d, double **);
+void print_test1d_summary(int, double, struct benchspec, double *, double *);
+
+void print_test2d_summary(int, double, struct benchspec2d, double **, double **);
 
 void swap(void *, void *, size_t);
 

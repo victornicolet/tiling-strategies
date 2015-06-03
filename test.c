@@ -15,6 +15,22 @@
 #define MIN_POW 10
 #define MAX_POW 16
 
+/*
+*1-Dimension problem size :
+* L3 4096kB -> 512k = (1 << 9)k < (1<<19)  doubles (64 bits)  1 << 19
+* L2 256kB -> 32k = (1<<5)k > (1 << 15) doubles               1 << 15
+* L1 32 k -> 4k = (1<<2)k > (1<<12)                           1 << 12
+*/
+const static int Pbsize_1d = 1 << 24;
+const static int Num_iters_1d = 1 << 5;
+/*
+* 2-Dimension problem size :
+* L3 4096kB -> 512k = (1 << 9)k < (1<<19)  doubles (64 bits)  1 << 9
+* L2 256kB -> 32k = (1<<5)k > (1 << 15) doubles               1 << 7
+* L1 32 k -> 4k = (1<<2)k > (1<<12)                           1 << 6
+*/
+const static int Pbsize_2d = 1 << 8;
+const static int Num_iters_2d = 1 << 4;
 
 //static FILE * csv_file;
 
@@ -26,25 +42,25 @@ void usage(int, int, char **, struct benchspec *, struct benchspec2d *);
 
 int main(int argc, char ** argv){
 
+  /* 1-D benchmarks and misc benchmarks */
   struct benchspec benchmarks[] = {
     {"JACOBI1D_OMP_OVERLAP", djbi1d_omp_overlap, check_default,
-      1 >> 15, 1 >> 5, 1},
+      Pbsize_1d, Num_iters_1d, 1},
     {"JACOBI1D_OMP_NAIVE", djbi1d_omp_naive, check_default,
-      1 >> 15, 1 >> 5, 1},
+      Pbsize_1d, Num_iters_1d, 1},
     {"JACOBI1D_SKEWED_TILES", djbi1d_skewed_tiles_test, check_default,
-      1 >> 15, 1 >> 5, 1},
+      Pbsize_1d, Num_iters_1d, 1},
     {"JACOBI1D_SWAP_SEQ", djbi1d_sequential, check_default,
-      1 >> 15, 1 >> 5, 1},
+      Pbsize_1d, Num_iters_1d, 1},
     {"JACOBI1D_HALF_DIAMONDS", djbi1d_half_diamonds_test, check_low_iter,
-      1 >> 15, 1 >> 5, 1},
+      Pbsize_1d, Num_iters_1d, 1},
   };
-
+  /* 2-D benchmarks */
   struct  benchspec2d benchmarks2d [] = {
     {"JACOBI2D_HALF_DIAMONDS", djbi2d_half_diamonds, check2d_default,
-      1 >> 10, 1 >> 10, 1 >> 5},
+      Pbsize_2d, Pbsize_2d, Num_iters_2d},
     {"JACOBI2D_SEQ ", djbi2d_seq, check2d_default,
-      1 >> 10, 1 >> 10, 1 >> 5},
-
+      Pbsize_2d, Pbsize_2d, Num_iters_2d},
   };
 
   int nbench = sizeof(benchmarks) / sizeof(struct benchspec);
@@ -73,7 +89,7 @@ int main(int argc, char ** argv){
   int dimx = 0, dimy = 0, dimt = 0;
 
   #ifdef DEBUG
-    dimt = DEBUG_ITERS ;
+    dimt = DEBUG_ITER ;
     dimx = DEBUG_SIZE;
     dimy = DEBUG_SIZE;
   #else
@@ -129,7 +145,7 @@ test2d(int nruns, int dimx, int dimy, int dimt, struct benchspec2d benchmark)
   }
   printf("Done !\n");
   print_runscores(nruns, scores);
-  print_test2d_summary(nruns, t_accu, benchmark, data_out);
+  print_test2d_summary(nruns, t_accu, benchmark, data_in, data_out);
   free_mx(data_out, dimx);
   free_mx(data_in, dimx);
   return 0.0;
@@ -141,10 +157,11 @@ test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
   int i;
   double t_accu;
   struct args_dimt args = get1dargs(dimx, dimt, benchmark);
+  printf("%i\n", args.width);
 
-  double * data_in = (double *) aligned_alloc(CACHE_LINE_SIZE, \
+  double * data_in = aligned_alloc(CACHE_LINE_SIZE, \
     sizeof(*data_in) * args.width);
-  double * data_out = (double *) aligned_alloc(CACHE_LINE_SIZE, \
+  double * data_out = aligned_alloc(CACHE_LINE_SIZE, \
     sizeof(*data_out) * args.width);
 
   init_data_1d(args.width, data_in);
@@ -161,6 +178,17 @@ test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
       scores[i - 1].name = benchmark.name;
       t_accu += scores[i - 1].wallclock;
     }
+  }
+  printf("Done !\n");
+  print_runscores(nruns, scores);
+  print_test1d_summary(nruns, t_accu, benchmark, data_in, data_out);
+  /* TODO : benchmark -> specific reference */
+  double * ref_out = aligned_alloc(CACHE_LINE_SIZE, \
+    sizeof(*ref_out) * args.width);
+  djbi1d_sequential(args, data_in, ref_out, NULL);
+  long diffs;
+  if((diffs = compare(data_out, ref_out, args.width))>0){
+    printf("Differences : %li over %i\n", diffs, args.width);
   }
   free(data_in);
   free(data_out);
