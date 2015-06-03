@@ -291,6 +291,11 @@ void ljbi1d_half_diamonds(int pb_size, int num_iters, long * jbi,
   // Store the border between base-down pyramids and base-up pyramids
   long ** tmp = alloc_long_mx(2, pb_size * sizeof(*tmp));
 
+  for(i = 0; i < pb_size; i++){
+    tmp[1][i] = 9999;
+    tmp[0][i] = 9999;
+  }
+
 
 /* First loop : base down tiles */
 #ifndef SEQ

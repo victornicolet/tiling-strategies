@@ -66,7 +66,7 @@ int main(int argc, char ** argv){
     {"JACOBI2D_SEQ ", djbi2d_seq, check2d_default,
       Pbsize_2d, Pbsize_2d, Num_iters_2d},
   };
-  /* 1-D benchmarks with longs */
+  /* 1-D benchmarks with long integers */
   struct benchspec1d_l benchmarks_l [] ={
     {"JACOBI1D_SWAP_SEQ (LONG)", ljbi1d_sequential, check_default,
       Pbsize_1d >> 5, Num_iters_1d >> 2, 1},

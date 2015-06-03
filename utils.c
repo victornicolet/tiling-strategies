@@ -116,12 +116,12 @@ print_test1d_l_summary(int nruns, double total_time, struct benchspec1d_l bs,
 {
   int i;
   printf("\n------------- Input ---------\n");
-  for (i = 0; i < DISPLAY_SIZE; i++) {
+  for (i = 0; i < DISPLAY_SIZE + 8; i++) {
     printf(" %li ", data_in[i]);
   }
   printf("\n------------- %s ---------\n", bs.name);
   printf("Result snapshot: %s\n", KRED);
-  for (i = 0; i < DISPLAY_SIZE; i++) {
+  for (i = 0; i < DISPLAY_SIZE + 8; i++) {
     printf(" %li ", data_out[i]);
   }
   printf("\n%s----------------------\n", KRESET);
