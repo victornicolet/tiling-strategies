@@ -304,66 +304,64 @@ void ljbi1d_half_diamonds(int pb_size, int num_iters, long * jbi,
 #endif
   for (tile_no = 0; tile_no < num_tiles; tile_no ++) {
 
-    long li1[tile_base_sz + 2], li0[tile_base_sz + 2];
+    long li1[tile_base_sz], li0[tile_base_sz];
 
     /* Initial values */
     l0 = max(tile_no * tile_base_sz, 0);
     r0 = min(l0 + tile_base_sz, pb_size - 1);
-    for (i = l0; i <= r0; i ++) {
+    for (i = l0; i < r0; i ++) {
       li0[i - l0] = jbi[i];
-      li1[i - l0] = 0.0;
-    }
-    for(i = r0 + 1; i < tile_base_sz + l0 + 2; i++){
-      li0[i - l0] = 0.0;
       li1[i - l0] = 0.0;
     }
 
     tmp[0][l0] = li0[0];
     tmp[1][l0 + 1] = li0[1];
-    tmp[0][r0] = li0[r0 - l0];
-    tmp[1][r0 - 1] = li0[r0 - l0 - 1];
+    tmp[0][r0 - 1] = li0[r0 - l0 - 1];
+    tmp[1][r0 - 2] = li0[r0 - l0 - 2];
 
-    for (t = 1; t < num_iters; t ++) {
-      l = max(l0 + t, 1);
-      r = min(l0 + tile_base_sz - t, pb_size);
+    for (t = 0; t < num_iters - 1; t ++) {
+      l = max(l0 + t + 1, 1);
+      r = min(l0 + tile_base_sz - t - 1, pb_size);
 
       for (i = l; i < r; i ++) {
         li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
       }
-      for (i = l; i < r; i ++) {
-        li0[i - l0] = li1[i - l0];
-      }
+
       tmp[0][r - 1]  = li1[r - l0 - 1];
-      tmp[1][r - 2]  = li1[r - l0 - 2];
       tmp[0][l]  = li1[l - l0];
-      tmp[1][l + 1]  = li1[l - l0 + 1];
-      #ifdef DEBUG
-        viewtile[t-1][r - 2] = 'x';
-        viewtile[t-1][r - 1] = 'x';
-        viewtile[t-1][l] = 'x';
-        viewtile[t-1][l + 1] = 'x';
-      #endif
+      if(r - 2 != l){
+        tmp[1][r - 2]  = li1[r - l0 - 2];
+        tmp[1][l + 1]  = li1[l - l0 + 1];
+      }
+
+      memcpy(li0, li1, (tile_base_sz) * sizeof(*li1));
     }
   }
 
-/* Half-tile at beggining */
-long li1[tile_base_sz + 2], li0[tile_base_sz + 2];
-li1[0] = tmp[0][0];
-li0[0] = tmp[0][0];
-li0[1] = tmp[1][1];
-for (t = 0; t < num_iters; t ++) {
-  /* Load from the border-storing array */
-   li0[t + 1]  = tmp[1][t + 1];
-   li0[t] = tmp[0][t];
+  /* Half-tile at beggining */
+  long li1[tile_base_sz], li0[tile_base_sz];
 
-  for (i = 1; i < t + 1; i ++) {
-    li1[i] = (li0[i - 1] + li0[i] + li0[i + 1]) / 3.0;
+  for(i = 0; i< tile_base_sz; i++){
+    li1[i] = 999;
   }
-  memcpy(li0, li1, (tile_base_sz + 2) * sizeof(*li1));
-}
-for (i = 0; i < num_iters; i++) {
-  jbi_out[i] = li0[i];
-}
+
+  li1[0] = tmp[0][0];
+  li0[0] = tmp[0][0];
+  li0[1] = tmp[1][1];
+  for (t = 0; t < num_iters; t ++) {
+    /* Load from the border-storing array */
+     li0[t + 1]  = tmp[1][t + 1];
+     li0[t] = tmp[0][t];
+
+    for (i = 1; i < t + 1; i ++) {
+      li1[i] = (li0[i - 1] + li0[i] + li0[i + 1]) / 3;
+    }
+
+    memcpy(li0, li1, (tile_base_sz) * sizeof(*li1));
+  }
+  for (i = 0; i < num_iters + 1; i++) {
+    jbi_out[i] = li0[i];
+  }
 
 /* Second loop : tip down tiles */
 #ifndef SEQ
@@ -373,21 +371,21 @@ for (i = 0; i < num_iters; i++) {
   for (tile_no = 1; tile_no < num_tiles + 1; tile_no ++) {
     x0 = tile_no * tile_base_sz;
     l0 = max(x0 - num_iters - 1, 0);
-    r0 = min(x0 + num_iters, pb_size);
+    r0 = min(x0 + num_iters + 1, pb_size);
 
     long li1[tile_base_sz + 2], li0[tile_base_sz + 2];
 
     for (t = 0; t < num_iters; t ++) {
       l = max(x0 - (t+1), 1);
-      r = min(x0 + t + 1, pb_size - 1);
+      r = min(x0 + t, pb_size - 1);
       /* Load from the border-storing array */
-       li0[r - l0]  = tmp[1][r];
-       li0[r - l0 - 1] = tmp[0][r - 1];
-       li0[l - l0 - 1] = tmp[0][l - 1];
-       li0[l - l0] = tmp[1][l];
+      li0[l - l0 - 1] = tmp[1][l - 1];
+      li0[r - l0 + 1] = tmp[1][r + 1];
+      li0[r - l0]  = tmp[0][r];
+      li0[l - l0] = tmp[0][l];
 
 
-      for (i = l; i < r; i ++) {
+      for (i = l; i <= r; i ++) {
         li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
       }
       memcpy(li0, li1, (tile_base_sz + 2) * sizeof(*li1));

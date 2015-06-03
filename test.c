@@ -69,9 +69,9 @@ int main(int argc, char ** argv){
   /* 1-D benchmarks with long integers */
   struct benchspec1d_l benchmarks_l [] ={
     {"JACOBI1D_SWAP_SEQ (LONG)", ljbi1d_sequential, check_default,
-      Pbsize_1d >> 5, Num_iters_1d >> 2, 1},
+      Pbsize_1d, Num_iters_1d, 1},
     {"JACOBI1D_HALF_DIAMONDS (LONG)", ljbi1d_half_diamonds_test, check_low_iter,
-      Pbsize_1d >> 5, Num_iters_1d >> 2, 1}
+      Pbsize_1d, Num_iters_1d, 1}
   };
 
   int nbench = sizeof(benchmarks) / sizeof(struct benchspec);
