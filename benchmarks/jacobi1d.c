@@ -173,13 +173,31 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi,
     }
   }
 
+/* Half-tile at beggining */
+double li1[tile_base_sz + 2], li0[tile_base_sz + 2];
+li1[0] = tmp[0][0];
+li0[0] = tmp[0][0];
+li0[1] = tmp[1][1];
+for (t = 0; t < num_iters; t ++) {
+  /* Load from the border-storing array */
+   li0[t + 1]  = tmp[1][t + 1];
+   li0[t] = tmp[0][t];
+
+  for (i = 1; i < t + 1; i ++) {
+    li1[i] = (li0[i - 1] + li0[i] + li0[i + 1]) / 3.0;
+  }
+  memcpy(li0, li1, (tile_base_sz + 2) * sizeof(*li1));
+}
+for (i = 0; i < num_iters; i++) {
+  jbi_out[i] = li0[i];
+}
 
 /* Second loop : tip down tiles */
 #ifndef SEQ
   #pragma omp parallel for schedule(static) shared(tmp) \
   private(l0, r0, l, r, x0)
 #endif
-  for (tile_no = 0; tile_no < num_tiles + 1; tile_no ++) {
+  for (tile_no = 1; tile_no < num_tiles + 1; tile_no ++) {
     x0 = tile_no * tile_base_sz;
     l0 = max(x0 - num_iters - 1, 0);
     r0 = min(x0 + num_iters, pb_size);
@@ -323,13 +341,31 @@ void ljbi1d_half_diamonds(int pb_size, int num_iters, long * jbi,
     }
   }
 
+/* Half-tile at beggining */
+long li1[tile_base_sz + 2], li0[tile_base_sz + 2];
+li1[0] = tmp[0][0];
+li0[0] = tmp[0][0];
+li0[1] = tmp[1][1];
+for (t = 0; t < num_iters; t ++) {
+  /* Load from the border-storing array */
+   li0[t + 1]  = tmp[1][t + 1];
+   li0[t] = tmp[0][t];
+
+  for (i = 1; i < t + 1; i ++) {
+    li1[i] = (li0[i - 1] + li0[i] + li0[i + 1]) / 3.0;
+  }
+  memcpy(li0, li1, (tile_base_sz + 2) * sizeof(*li1));
+}
+for (i = 0; i < num_iters; i++) {
+  jbi_out[i] = li0[i];
+}
 
 /* Second loop : tip down tiles */
 #ifndef SEQ
   #pragma omp parallel for schedule(static) shared(tmp) \
   private(l0, r0, l, r, x0)
 #endif
-  for (tile_no = 0; tile_no < num_tiles + 1; tile_no ++) {
+  for (tile_no = 1; tile_no < num_tiles + 1; tile_no ++) {
     x0 = tile_no * tile_base_sz;
     l0 = max(x0 - num_iters - 1, 0);
     r0 = min(x0 + num_iters, pb_size);
