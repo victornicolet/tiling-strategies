@@ -99,7 +99,7 @@ print_test1d_summary(int nruns, double total_time, struct benchspec bs,
   }
   printf("\n------------- %s ---------\n", bs.name);
   printf("Result snapshot: %s\n", KRED);
-  for (i = 0; i < DISPLAY_SIZE; i++) {
+  for (i = DISPLAY_OFFSET; i < DISPLAY_OFFSET + DISPLAY_SIZE; i++) {
     printf("%10.3f", data_out[i]);
   }
   printf("\n%s----------------------\n", KRESET);
@@ -121,7 +121,7 @@ print_test1d_l_summary(int nruns, double total_time, struct benchspec1d_l bs,
   }
   printf("\n------------- %s ---------\n", bs.name);
   printf("Result snapshot: %s\n", KRED);
-  for (i = 0; i < DISPLAY_SIZE; i++) {
+  for (i = DISPLAY_OFFSET; i < DISPLAY_OFFSET + DISPLAY_SIZE; i++) {
     printf(" %4li ", data_out[i]);
   }
   printf("\n%s----------------------\n", KRESET);
@@ -137,16 +137,16 @@ print_test2d_summary(int nruns, double total_time, struct benchspec2d bs,
 {
   int i,j;
   printf("\n------------- Input ---------\n");
-  for (i = 0; i < DISPLAY_SIZE; i++) {
-    for (j = 0; j < DISPLAY_SIZE; j++) {
+  for (i = DISPLAY_OFFSET; i < DISPLAY_OFFSET + DISPLAY_SIZE; i++) {
+    for (j = DISPLAY_OFFSET; j < DISPLAY_OFFSET + DISPLAY_SIZE; j++) {
       printf("%10.3f", data_in[i][j]);
     }
     printf("\n");
   }
   printf("\n------------- %s ---------\n", bs.name);
   printf("Result snapshot: \n");
-  for (i = 0; i < DISPLAY_SIZE; i++) {
-    for (j = 0; j < DISPLAY_SIZE; j++) {
+  for (i = DISPLAY_OFFSET; i < DISPLAY_OFFSET + DISPLAY_SIZE; i++) {
+    for (j = DISPLAY_OFFSET; j < DISPLAY_OFFSET + DISPLAY_SIZE; j++) {
       printf("%10.3f", data_out[i][j]);
     }
     printf("\n");

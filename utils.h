@@ -4,6 +4,10 @@
 
 /* Number of doubles displayed */
 #define DISPLAY_SIZE 8
+
+#ifndef DISPLAY_OFFSET
+  #define DISPLAY_OFFSET 1200
+#endif
 /* Cache line size of 64 bytes on most x86 */
 #define  CACHE_LINE_SIZE 64
 #define  L1_CACHE_SIZE 6044
