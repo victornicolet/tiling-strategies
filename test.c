@@ -12,8 +12,9 @@
 #include "benchmarks/jacobi2d.h"
 
 /* Problem size (in space) between 2 ^ MIN_POW and 2 ^ MAX_POW */
-#define MIN_POW 10
-#define MAX_POW 16
+#define MIN_POW 15
+#define DEFAULT_RANGE 5
+#define DEFAULT_NRUNS 20
 /*
 *1-Dimension problem size :
 * L3 4096kB -> 512k = (1 << 9)k < (1<<19)  doubles (64 bits)  1 << 19
@@ -36,6 +37,7 @@ const static int Num_iters_2d = 1 << 4;
 double test1d(int, int, int, struct benchspec);
 double test2d(int, int, int, int, struct benchspec2d);
 double test1d_l(int, int, int, struct benchspec1d_l);
+void test_suite_hdiam1d(int, int, struct benchspec *);
 struct args_dimt get2dargs(int, int, int, struct benchspec2d);
 struct args_dimt get1dargs(int, int, struct benchspec);
 struct args_dimt get1dargs_l(int, int, struct benchspec1d_l);
@@ -75,6 +77,17 @@ int main(int argc, char ** argv) {
       Pbsize_1d, Num_iters_1d, 1}
   };
 
+  /* Only half-diamonds in 1d */
+  struct benchspec hdiam_benchmarks [] =
+  {
+    {"JACOBI1D_SEQUENTIAL (reference)", djbi1d_sequential, check_default,
+      Pbsize_1d, Num_iters_1d, 1},
+    {"JACOBI1D_HALF_DIAMONDS", djbi1d_half_diamonds_test, check_low_iter,
+      Pbsize_1d, Num_iters_1d, 1},
+    {"JACOBI1D_DIAM(GROUPED TILES)", djbi1d_hdiam_grouped_test, check_low_iter,
+      Pbsize_1d, Num_iters_1d, 1}
+  };
+
   int nbench = sizeof(benchmarks) / sizeof(struct benchspec);
   int nbench2d = sizeof(benchmarks2d) / sizeof(struct benchspec2d);
 
@@ -98,7 +111,17 @@ int main(int argc, char ** argv) {
     for (bs = 0; bs < nbench_l; bs++) {
       test1d_l(nruns, 0, 0, benchmarks_l[bs]);
     }
-  } else {
+  } else if (strcmp(argv[1], "hdiam") == 0){
+    /* test sute for half diamonds versions (basic/ grouped tiles/ omp tasks)*/
+    int num_benchs = sizeof(hdiam_benchmarks) / sizeof(struct benchspec) ;
+    int range = 0;
+    if (argc == 3) {
+      range = atoi(argv[2]);
+    } else {
+      range = DEFAULT_RANGE;
+    }
+    test_suite_hdiam1d(num_benchs, range, hdiam_benchmarks);
+  }else {
     if ((maskl = strlen(benchmask)) > nbench + nbench2d) {
       printf("Error : not a valid mask ! Your mask must be %i bits long\n",
         nbench + nbench2d);
@@ -221,7 +244,7 @@ test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
   }
   free(data_in);
   free(data_out);
-  return 0.0;
+  return t_accu;
 }
 
 double
@@ -268,7 +291,7 @@ test1d_l(int nruns, int dimx, int dimt, struct benchspec1d_l benchmark)
   }
   free(data_in);
   free(data_out);
-  return 0.0;
+  return t_accu;
 }
 
 double
@@ -304,7 +327,64 @@ test2d(int nruns, int dimx, int dimy, int dimt, struct benchspec2d benchmark)
     data_out);
   free_mx((void **) data_out, dimx);
   free_mx((void **) data_in, dimx);
-  return 0.0;
+  return t_accu;
+}
+
+void
+test_suite_hdiam1d(int num_benchs, int range,
+ struct benchspec * hdiam_benchmarks)
+{
+  int pow2, bm_no, run_no;
+  double t_accu, mean_t_ms;
+  double ** timelog = alloc_double_mx(num_benchs, range);
+
+  for(bm_no = 0; bm_no < num_benchs; bm_no ++) {
+
+    for (pow2 = MIN_POW; pow2 < MIN_POW + range; pow2 ++) {
+
+      struct args_dimt args = { 2 << pow2, 0 , 1 << 5};
+
+      double * data_in = malloc(CACHE_LINE_SIZE *
+        sizeof(*data_in) * args.width);
+      double * data_out = malloc(CACHE_LINE_SIZE *
+        sizeof(*data_out) * args.width);
+      init_data_1d(args.width, data_in);
+
+      struct benchscore scores[DEFAULT_NRUNS];
+      t_accu = 0.0;
+      hdiam_benchmarks[bm_no].variant(args, data_in, data_out, &scores[0]);
+      for (run_no = 0; run_no < DEFAULT_NRUNS; run_no ++) {
+          hdiam_benchmarks[bm_no].variant(args, data_in, data_out,
+            &scores[run_no]);
+          t_accu += scores[run_no].wallclock;
+      }
+      mean_t_ms = (t_accu / DEFAULT_NRUNS) * 1000.0 ;
+      /* Test output */
+      free(data_out);
+      free(data_in);
+      timelog[bm_no][pow2 - MIN_POW] = mean_t_ms;
+    }
+  }
+  /* Output */
+  int i,j;
+  printf("\n");
+  for (i = 0; i < num_benchs; i++) {
+    printf("%i : %s\n",i, hdiam_benchmarks[i].name);
+  }
+  printf("\n");
+  printf("%12s\t%18s\t%c%20s",
+    "Log2(size)","Sequential time (ms)",'%',
+    " of sequential time\n");
+  for (j = 0; j < range; j ++) {
+    printf("%i", j + MIN_POW);
+    printf("\t\t%8f\t", timelog[0][j]);
+    for(i = 1; i < num_benchs; i ++) {
+      printf("\t%5.3f",
+        (timelog[i][j] / timelog[0][j]) * 100.0);
+    }
+    printf("\n");
+  }
+  free_mx((void **) timelog, num_benchs);
 }
 
 void
@@ -325,6 +405,8 @@ usage(int nbs, int nbs2d, char ** argv, struct benchspec * bs,
   }
   printf("%sExample mask to test JACOBI1D_OMP_NAIVE and JACOBI2D_SEQ :%s\
           \n\t .\\test 01000001\n", KBLU, KRESET);
+  printf("%sTests for %s half-diamonds version %s of jacobi1d :%s\
+      \n\t .\\test hdiam\n", KBLU, KRED, KBLU, KRESET);
   printf("%sChecking correctness with long versions of algorithms : %s\
           \n\t .\\test l\n", KBLU, KRESET);
 }
