@@ -1,6 +1,9 @@
 ifndef CC
 	CC=gcc
 endif
+ifeq ($(CC),cc)
+	CC=gcc
+endif
 
 CFLAGS=-g -std=c11 -O3 -Wall
 CFLAGS+= -fdiagnostics-color=auto
@@ -9,10 +12,6 @@ ifeq ($(CC),icc)
 	CFLAGS+=-openmp
 else
 	CFLAGS+=-fopenmp
-endif
-
-ifeq ($(CC), cc)
-	WMSG="Warning : default compiler used, CC=cc"
 endif
 
 # Debuggging and sequential version testing
@@ -67,11 +66,9 @@ $(PROGRAM) : $(PROGRAM).c $(SOURCES.c) $(HEADERS)
 	$(CC) $(CFLAGS) -o $@ $(PROGRAM).c $(LDFLAGS) $(SOURCES.c)
 
 jbi1d : $(SRC_DIR)/jacobi1d.c $(SRC_DIR)/jacobi1d.h
-	@echo $(WMSG)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRC_DIR)/jacobi1d.c utils.c
 
 jbi2d : $(SRC_DIR)/jacobi2d.c $(SRC_DIR)/jacobi2d.h
-	@echo $(WMSG)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRC_DIR)/jacobi2d.c utils.c
 
 jbi1d_assembly : jbi1d.s

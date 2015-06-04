@@ -334,57 +334,59 @@ void
 test_suite_hdiam1d(int num_benchs, int range,
  struct benchspec * hdiam_benchmarks)
 {
-  int pow2, bm_no, run_no;
-  double t_accu, mean_t_ms;
-  double ** timelog = alloc_double_mx(num_benchs, range);
+  int pow2, bm_no, run_no, iters_pow;
+  for (iters_pow = 3; iters_pow < 6; iters_pow ++) {
+    printf("%s%i iterations :%s\n", KRED, 1 << iters_pow, KRESET);
+    double t_accu, mean_t_ms;
+    double ** timelog = alloc_double_mx(num_benchs, range);
+    for (bm_no = 0; bm_no < num_benchs; bm_no ++) {
 
-  for(bm_no = 0; bm_no < num_benchs; bm_no ++) {
+      for (pow2 = MIN_POW; pow2 < MIN_POW + range; pow2 ++) {
 
-    for (pow2 = MIN_POW; pow2 < MIN_POW + range; pow2 ++) {
+        struct args_dimt args = { 2 << pow2, 0 , 1 << iters_pow};
 
-      struct args_dimt args = { 2 << pow2, 0 , 1 << 5};
+        double * data_in = malloc(CACHE_LINE_SIZE *
+          sizeof(*data_in) * args.width);
+        double * data_out = malloc(CACHE_LINE_SIZE *
+          sizeof(*data_out) * args.width);
+        init_data_1d(args.width, data_in);
 
-      double * data_in = malloc(CACHE_LINE_SIZE *
-        sizeof(*data_in) * args.width);
-      double * data_out = malloc(CACHE_LINE_SIZE *
-        sizeof(*data_out) * args.width);
-      init_data_1d(args.width, data_in);
-
-      struct benchscore scores[DEFAULT_NRUNS];
-      t_accu = 0.0;
-      hdiam_benchmarks[bm_no].variant(args, data_in, data_out, &scores[0]);
-      for (run_no = 0; run_no < DEFAULT_NRUNS; run_no ++) {
-          hdiam_benchmarks[bm_no].variant(args, data_in, data_out,
-            &scores[run_no]);
-          t_accu += scores[run_no].wallclock;
+        struct benchscore scores[DEFAULT_NRUNS];
+        t_accu = 0.0;
+        hdiam_benchmarks[bm_no].variant(args, data_in, data_out, &scores[0]);
+        for (run_no = 0; run_no < DEFAULT_NRUNS; run_no ++) {
+            hdiam_benchmarks[bm_no].variant(args, data_in, data_out,
+              &scores[run_no]);
+            t_accu += scores[run_no].wallclock;
+        }
+        mean_t_ms = (t_accu / DEFAULT_NRUNS) * 1000.0 ;
+        /* Test output */
+        free(data_out);
+        free(data_in);
+        timelog[bm_no][pow2 - MIN_POW] = mean_t_ms;
       }
-      mean_t_ms = (t_accu / DEFAULT_NRUNS) * 1000.0 ;
-      /* Test output */
-      free(data_out);
-      free(data_in);
-      timelog[bm_no][pow2 - MIN_POW] = mean_t_ms;
     }
-  }
-  /* Output */
-  int i,j;
-  printf("\n");
-  for (i = 0; i < num_benchs; i++) {
-    printf("%i : %s\n",i, hdiam_benchmarks[i].name);
-  }
-  printf("\n");
-  printf("%12s\t%18s\t%c%20s",
-    "Log2(size)","Sequential time (ms)",'%',
-    " of sequential time\n");
-  for (j = 0; j < range; j ++) {
-    printf("%i", j + MIN_POW);
-    printf("\t\t%8f\t", timelog[0][j]);
-    for(i = 1; i < num_benchs; i ++) {
-      printf("\t%5.3f",
-        (timelog[i][j] / timelog[0][j]) * 100.0);
+    /* Output */
+    int i,j;
+    printf("\n");
+    for (i = 0; i < num_benchs; i++) {
+      printf("%i : %s\n",i, hdiam_benchmarks[i].name);
     }
     printf("\n");
+    printf("%12s\t%18s\t%c%20s",
+      "Log2(size)","Sequential time (ms)",'%',
+      " of sequential time\n");
+    for (j = 0; j < range; j ++) {
+      printf("%i", j + MIN_POW);
+      printf("\t\t%8f\t", timelog[0][j]);
+      for (i = 1; i < num_benchs; i ++) {
+        printf("\t%5.3f",
+          (timelog[i][j] / timelog[0][j]) * 100.0);
+      }
+      printf("\n");
+    }
+    free_mx((void **) timelog, num_benchs);
   }
-  free_mx((void **) timelog, num_benchs);
 }
 
 void
