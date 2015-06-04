@@ -31,62 +31,6 @@ static inline void do_base_hdiam(int, int, int, double *, double **)
 static inline void do_topleft_hdiam(int, double **, double *)
     __attribute__((always_inline));
 
-/*
-* task[i][j] is set to 1 if the task on time step i and column j has been
-* executed. This function checks if there is no task that has been executed
-* without its dependencies being statisfied.
-*/
-int
-task_index(uint8_t ** tasks, int num_strips, int num_steps)
-{
-  int i,t;
-
-  for (i = 1; i < num_strips; i++) {
-    if (tasks[0][i] == 0 && tasks[0][i + 1] == 1) return -1;
-  }
-
-  for (t = 1; t < num_steps; t++) {
-    for (i = 1; i < num_strips; i ++) {
-      if ((tasks[i + 1][t - 1] == 0 || tasks[i - 1][t] == 0) &&
-         tasks[i][t] == 1)
-            return -1;
-    }
-  }
-  return 1;
-}
-
-int
-check_low_iter(int pb_size, int num_stencil_iters)
-{
-  if ((num_stencil_iters >= 16) && (num_stencil_iters <= 64) &&
-    (pb_size > num_stencil_iters *(1 << 3))) {
-      return 1;
-  } else {
-      return -1;
-  }
-}
-
-int
-check_tilable(int pb_size, int num_stencil_iters)
-{
-  if (pb_size > (T_WIDTH_DBL << 2) &&
-    num_stencil_iters > 2*T_ITERS) {
-    return 1;
-  } else {
-    return -1;
-  }
-}
-
-int
-check_default(int pb_size, int num_stencil_iters)
-{
-  if ( pb_size > num_stencil_iters && num_stencil_iters > 2) {
-    return 1;
-  } else {
-    return -1;
-  }
-}
-
 /* Different versions of jacobi1d have been implemented here.
 *   - with half - diamonds : useful if we have few iterations, it allows
 *      parallelism an a concurrent start.
@@ -205,7 +149,7 @@ djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi, double * jbi_out)
       }
       tmp[0][r - 1]  = li1[r - l0 - 1];
       tmp[0][l]  = li1[l - l0];
-      if(r - 2 != l) {
+      if (r - 2 != l) {
         tmp[1][r - 2]  = li1[r - l0 - 2];
         tmp[1][l + 1]  = li1[l - l0 + 1];
       }
@@ -319,7 +263,7 @@ djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi, double * jbi_out)
   for (int tile_t = num_iters - 1; tile_t >= 0; tile_t --) {
     printf("%i \t- ", tile_t);
     for (int ii = 0; ii < 80; ii++) {
-      if(viewtile[tile_t][ii] == 'x') {
+      if (viewtile[tile_t][ii] == 'x') {
         printf("%s%c%s", KBLU, viewtile[tile_t][ii], KRESET);
       } else {
         printf("%c", viewtile[tile_t][ii]);
@@ -384,7 +328,7 @@ ljbi1d_half_diamonds(int pb_size, int num_iters, long * jbi, long * jbi_out)
 
       tmp[0][r - 1]  = li1[r - l0 - 1];
       tmp[0][l]  = li1[l - l0];
-      if(r - 2 != l) {
+      if (r - 2 != l) {
         tmp[1][r - 2]  = li1[r - l0 - 2];
         tmp[1][l + 1]  = li1[l - l0 + 1];
       }
@@ -995,6 +939,10 @@ djbi1d_skewed_tiles_test(struct args_dimt args, double * jbi_in,
  * do_i_t0 : first time iteration, botile_tom line
  * do_i_t : regular task
  * do_in_t : right column, triangular tile
+ For half-diamonds version :
+  * do_base_hdiam : base-down triangular tiles
+  * do_top_hdiam : tip-down triangular tiles
+  * do_topleft_hdiam : top-left half-tile
  */
 
 static inline void
@@ -1193,7 +1141,7 @@ do_base_hdiam(int tile_no, int num_iters, int pb_size, double * jbi,
     }
     tmp[0][r - 1]  = li1[r - l0 - 1];
     tmp[0][l]  = li1[l - l0];
-    if(r - 2 != l) {
+    if (r - 2 != l) {
       tmp[1][r - 2]  = li1[r - l0 - 2];
       tmp[1][l + 1]  = li1[l - l0 + 1];
     }
@@ -1202,8 +1150,9 @@ do_base_hdiam(int tile_no, int num_iters, int pb_size, double * jbi,
   }
 }
 
-static inline void do_top_hdiam(int tile_no, int num_iters, int pb_size,
-  double ** tmp, double * jbi_out)
+static inline void
+do_top_hdiam(int tile_no, int num_iters, int pb_size, double ** tmp,
+  double * jbi_out)
 {
   int t, i;
   int x0, l0, r0, l, r;
@@ -1235,8 +1184,8 @@ static inline void do_top_hdiam(int tile_no, int num_iters, int pb_size,
     jbi_out[i] = li0[i - l0];
   }
 }
-static inline void do_topleft_hdiam(int num_iters, double ** tmp,
-  double * jbi_out)
+static inline void
+do_topleft_hdiam(int num_iters, double ** tmp, double * jbi_out)
 {
   int i, t;
   int tile_base_sz = 2 * num_iters;
@@ -1259,5 +1208,63 @@ static inline void do_topleft_hdiam(int num_iters, double ** tmp,
   }
   for (i = 0; i < num_iters + 1; i++) {
     jbi_out[i] = li0[i];
+  }
+}
+
+
+/*
+* task[i][j] is set to 1 if the task on time step i and column j has been
+* executed. This function checks if there is no task that has been executed
+* without its dependencies being statisfied.
+*/
+int
+task_index(uint8_t ** tasks, int num_strips, int num_steps)
+{
+  int i,t;
+
+  for (i = 1; i < num_strips; i++) {
+    if (tasks[0][i] == 0 && tasks[0][i + 1] == 1)
+      return -1;
+  }
+
+  for (t = 1; t < num_steps; t++) {
+    for (i = 1; i < num_strips; i ++) {
+      if ((tasks[i + 1][t - 1] == 0 || tasks[i - 1][t] == 0) &&
+         tasks[i][t] == 1)
+            return -1;
+    }
+  }
+  return 1;
+}
+
+int
+check_low_iter(int pb_size, int num_stencil_iters)
+{
+  if ((num_stencil_iters >= 16) && (num_stencil_iters <= 64) &&
+    (pb_size > num_stencil_iters *(1 << 3))) {
+      return 1;
+  } else {
+      return -1;
+  }
+}
+
+int
+check_tilable(int pb_size, int num_stencil_iters)
+{
+  if (pb_size > (T_WIDTH_DBL << 2) &&
+    num_stencil_iters > 2*T_ITERS) {
+    return 1;
+  } else {
+    return -1;
+  }
+}
+
+int
+check_default(int pb_size, int num_stencil_iters)
+{
+  if ( pb_size > num_stencil_iters && num_stencil_iters > 2) {
+    return 1;
+  } else {
+    return -1;
   }
 }

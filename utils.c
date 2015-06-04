@@ -10,7 +10,7 @@ compare(double * t1, double * t2, int n)
 {
   long diffs = 0L;
   for(int i = 0; i < n; i++){
-    if(fabs(t1[i] - t2[i]) > DOUBLE_COMPARISON_THRESHOLD){
+    if (fabs(t1[i] - t2[i]) > DOUBLE_COMPARISON_THRESHOLD){
       diffs++;
     }
   }
@@ -22,7 +22,7 @@ compare_l(long * t1, long * t2, int n)
 {
   long diffs = 0L;
   for(int i = 0; i < n; i++){
-    if(t1[i] != t2[i]){
+    if (t1[i] != t2[i]){
       diffs++;
     }
   }

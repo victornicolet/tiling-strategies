@@ -8,7 +8,7 @@ CFLAGS+= -fdiagnostics-color=auto
 ifeq ($(CC),icc)
 	CFLAGS+=-openmp
 else
-	CFLAGS+=-fopenmp -Wopenmp-simd
+	CFLAGS+=-fopenmp
 endif
 
 ifeq ($(CC), cc)

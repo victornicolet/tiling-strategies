@@ -106,21 +106,23 @@ struct benchspec2d
   int iters;
 };
 
+/* Helpers for allocation of matrixes */
+
 static inline double **
 alloc_double_mx(int dim1, int dim2)
 {
   int i;
   double ** mx = malloc(dim1 * sizeof ** mx);
 
-  if(mx == NULL){
+  if (mx == NULL) {
     fprintf(stderr, "Error while allocating matrix\n");
     return NULL;
   }
 
-  for (i = 0; i < dim1; i++){
+  for (i = 0; i < dim1; i++) {
     mx[i] = malloc(dim2 * sizeof *mx[i]);
 
-    if(mx[i] == NULL){
+    if (mx[i] == NULL) {
       fprintf(stderr, "Error while allocating matrix on line %i\n", i);
       return NULL;
     }
@@ -135,15 +137,15 @@ alloc_long_mx(int dim1, int dim2)
   int i;
   long ** mx = malloc(dim1 * sizeof ** mx);
 
-  if(mx == NULL){
+  if (mx == NULL) {
     fprintf(stderr, "Error while allocating matrix\n");
     return NULL;
   }
 
-  for (i = 0; i < dim1; i++){
+  for (i = 0; i < dim1; i++) {
     mx[i] = malloc(dim2 * sizeof *mx[i]);
 
-    if(mx[i] == NULL){
+    if (mx[i] == NULL) {
       fprintf(stderr, "Error while allocating matrix on line %i\n", i);
       return NULL;
     }
@@ -156,7 +158,7 @@ static inline void
 free_mx(void ** mx, int dim1)
 {
   int i;
-  for(i = 0; i < dim1; i++){
+  for (i = 0; i < dim1; i++) {
     free(mx[i]);
   }
   free(mx);
@@ -172,6 +174,7 @@ alloc_line(int num_elements)
   }
   return line;
 }
+
 
 int adjust_num(double);
 

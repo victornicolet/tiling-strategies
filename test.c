@@ -80,7 +80,7 @@ int main(int argc, char ** argv) {
 
   /*---------- Parameters section -----------*/
 
-  if(argc < 2) {
+  if (argc < 2) {
     usage(nbench, nbench2d, argv, benchmarks, benchmarks2d);
     return  0;
   }
@@ -89,17 +89,17 @@ int main(int argc, char ** argv) {
   int nruns = 0;
   int maskl = 0;
 
-  if(argc == 3) {
+  if (argc == 3) {
     nruns = atoi(argv[2]);
   }
-  if(benchmask[0] == 'l') {
+  if (benchmask[0] == 'l') {
     // Tests with longs
     int nbench_l = sizeof(benchmarks_l) / sizeof(struct benchspec1d_l);
     for (bs = 0; bs < nbench_l; bs++) {
       test1d_l(nruns, 0, 0, benchmarks_l[bs]);
     }
   } else {
-    if((maskl = strlen(benchmask)) > nbench + nbench2d) {
+    if ((maskl = strlen(benchmask)) > nbench + nbench2d) {
       printf("Error : not a valid mask ! Your mask must be %i bits long\n",
         nbench + nbench2d);
       return -1;
@@ -113,7 +113,7 @@ int main(int argc, char ** argv) {
     dimx = DEBUG_SIZE;
     dimy = DEBUG_SIZE;
   #else
-    if(argc >= 6) {
+    if (argc >= 6) {
       dimt = atoi(argv[3]);
       dimx = atoi(argv[4]);
       dimy = atoi(argv[5]);
@@ -131,47 +131,50 @@ int main(int argc, char ** argv) {
       printf("Execute test for %s ...\n", benchmarks2d[bs - nbench].name);
       exec_time = test2d(nruns, dimx, dimy, dimt, benchmarks2d[bs - nbench]);
     }
-    if(exec_time < prev_xctime) {
+    if (exec_time < prev_xctime) {
       printf("%s %10.3f better !%s\n", KRED, exec_time, KRESET);
     }
   }
   return 0;
 }
 
-double
-test2d(int nruns, int dimx, int dimy, int dimt, struct benchspec2d benchmark)
+
+
+/* Get an arguments structure */
+struct args_dimt
+get2dargs(int dimx, int dimy, int dimt, struct benchspec2d bs)
 {
-  int i;
-  double t_accu = 0.0;
-
-  double **data_in, **data_out;
-
-  struct args_dimt args = get2dargs(dimx, dimy, dimt, benchmark);
-  struct benchscore scores[nruns];
-
-  data_in = alloc_double_mx(args.width, args.height);
-  data_out = alloc_double_mx(args.width, args.height);
-  init_data_2d(args.width, args.height, data_in);
-
-  for (i = 0; i <= nruns; i ++) {
-    printf("%i,", i);
-    if (i == 0) {
-      benchmark.variant(args, data_in, &scores[0], data_out);
-    } else {
-      benchmark.variant(args, data_in, &scores[i - 1], data_out);
-      scores[i - 1].name = benchmark.name;
-      t_accu += scores[i - 1].wallclock;
-    }
+  if (dimx == 0 || dimy == 0 || dimt == 0) {
+    dimx = bs.width;
+    dimy = bs.height;
+    dimt = bs.iters;
   }
-  printf("Done !\n");
-  if (DISPLAY_VERBOSE) {
-    print_runscores(nruns, scores);
+  struct args_dimt res;
+  res.width = dimx;
+  res.height = dimy;
+  res.iters = dimt;
+  return res;
+}
+
+struct args_dimt
+get1dargs(int dimx, int dimt, struct benchspec bs)
+{
+  if (dimx == 0 || dimt == 0) {
+    dimx = bs.size;
+    dimt = bs.iters;
   }
-  print_test2d_summary(nruns, DISPLAY_VERBOSE, t_accu, benchmark, data_in,
-    data_out);
-  free_mx((void **) data_out, dimx);
-  free_mx((void **) data_in, dimx);
-  return 0.0;
+  struct args_dimt res;
+  res.width = dimx;
+  res.height = 0;
+  res.iters = dimt;
+  return res;
+}
+
+struct args_dimt
+get1dargs_l(int dimx, int dimt, struct benchspec1d_l bs)
+{
+  struct benchspec bsc = {NULL, NULL, NULL, bs.size, bs.iters, 1};
+  return get1dargs(dimx, dimt, bsc);
 }
 
 double
@@ -213,7 +216,7 @@ test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
     sizeof(*ref_out) * args.width);
   djbi1d_sequential(args, data_in, ref_out, NULL);
   long diffs;
-  if((diffs = compare(data_out, ref_out, args.width))>0) {
+  if ((diffs = compare(data_out, ref_out, args.width))>0) {
     printf("Differences : %li over %i\n", diffs, args.width);
   }
   free(data_in);
@@ -260,7 +263,7 @@ test1d_l(int nruns, int dimx, int dimt, struct benchspec1d_l benchmark)
     sizeof(*ref_out) * args.width);
   ljbi1d_sequential(args, data_in, ref_out, NULL);
   long diffs;
-  if((diffs = compare_l(data_out, ref_out, args.width))>0) {
+  if ((diffs = compare_l(data_out, ref_out, args.width))>0) {
     printf("Differences : %li over %i\n", diffs, args.width);
   }
   free(data_in);
@@ -268,44 +271,41 @@ test1d_l(int nruns, int dimx, int dimt, struct benchspec1d_l benchmark)
   return 0.0;
 }
 
-
-/* Get an arguments structure */
-struct args_dimt
-get2dargs(int dimx, int dimy, int dimt, struct benchspec2d bs)
+double
+test2d(int nruns, int dimx, int dimy, int dimt, struct benchspec2d benchmark)
 {
-  if(dimx == 0 || dimy == 0 || dimt == 0) {
-    dimx = bs.width;
-    dimy = bs.height;
-    dimt = bs.iters;
+  int i;
+  double t_accu = 0.0;
+
+  double **data_in, **data_out;
+
+  struct args_dimt args = get2dargs(dimx, dimy, dimt, benchmark);
+  struct benchscore scores[nruns];
+
+  data_in = alloc_double_mx(args.width, args.height);
+  data_out = alloc_double_mx(args.width, args.height);
+  init_data_2d(args.width, args.height, data_in);
+
+  for (i = 0; i <= nruns; i ++) {
+    printf("%i,", i);
+    if (i == 0) {
+      benchmark.variant(args, data_in, &scores[0], data_out);
+    } else {
+      benchmark.variant(args, data_in, &scores[i - 1], data_out);
+      scores[i - 1].name = benchmark.name;
+      t_accu += scores[i - 1].wallclock;
+    }
   }
-  struct args_dimt res;
-  res.width = dimx;
-  res.height = dimy;
-  res.iters = dimt;
-  return res;
-}
-
-struct args_dimt
-get1dargs(int dimx, int dimt, struct benchspec bs)
-{
-  if(dimx == 0 || dimt == 0) {
-    dimx = bs.size;
-    dimt = bs.iters;
+  printf("Done !\n");
+  if (DISPLAY_VERBOSE) {
+    print_runscores(nruns, scores);
   }
-  struct args_dimt res;
-  res.width = dimx;
-  res.height = 0;
-  res.iters = dimt;
-  return res;
+  print_test2d_summary(nruns, DISPLAY_VERBOSE, t_accu, benchmark, data_in,
+    data_out);
+  free_mx((void **) data_out, dimx);
+  free_mx((void **) data_in, dimx);
+  return 0.0;
 }
-
-struct args_dimt
-get1dargs_l(int dimx, int dimt, struct benchspec1d_l bs)
-{
-  struct benchspec bsc = {NULL, NULL, NULL, bs.size, bs.iters, 1};
-  return get1dargs(dimx, dimt, bsc);
-}
-
 
 void
 usage(int nbs, int nbs2d, char ** argv, struct benchspec * bs,

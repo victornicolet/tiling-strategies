@@ -61,7 +61,7 @@ djbi2d_half_diamonds(struct args_dimt args, double ** data_in,
         tmp_layer[0][x0][y0] = tile0[x0 - x_orig][y0 - y_orig];
         tmp_layer[0][x1][y1 - 1] = tile0[x1 - x_orig][y1 - y_orig] - 1;
 
-        for (y = y0 + 1; y < y1 - 1; y++){
+        for (y = y0 + 1; y < y1 - 1; y++) {
           tmp_layer[0][x0][y] = tile0[x0 - x_orig][y - y_orig];
           tmp_layer[1][x0][y] = tile0[x0 - x_orig][y - y_orig];
           tmp_layer[0][x1][y] = tile0[x1 - x_orig][y - y_orig];
@@ -71,7 +71,7 @@ djbi2d_half_diamonds(struct args_dimt args, double ** data_in,
         tmp_layer[0][x0][y0] = tile0[x0 - x_orig][y0 - y_orig];
         tmp_layer[0][x1 - 1][y0] = tile0[x0 - 1 - x_orig][y0 - y_orig];
 
-        for (x = x0 + 1; x < x1 - 1; x++){
+        for (x = x0 + 1; x < x1 - 1; x++) {
           tmp_layer[0][x][y0] = tile0[x - x_orig][y0 - y_orig];
           tmp_layer[1][x][y0] = tile0[x - x_orig][y0 - y_orig];
           tmp_layer[0][x][y1] = tile0[x - x_orig][y1 - y_orig];
@@ -85,7 +85,7 @@ djbi2d_half_diamonds(struct args_dimt args, double ** data_in,
           }
         }
         /* Copy result array into source array */
-        for (x = x0; x < x1; x++){
+        for (x = x0; x < x1; x++) {
           memcpy(tile0[x], tile1[x], (y1 - y0) * sizeof(*tile0[x]));
         }
       }
@@ -141,7 +141,7 @@ djbi2d_seq(struct args_dimt args, double ** data_in, struct benchscore * bsc,
 
   clock_gettime(CLOCK_MONOTONIC, &tend);
 
-  if(bsc != NULL){
+  if (bsc != NULL) {
     bsc->wallclock = ELAPSED_TIME(tend, tbegin);
   }
 }
