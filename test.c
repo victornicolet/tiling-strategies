@@ -406,7 +406,9 @@ usage(int nbs, int nbs2d, char ** argv, struct benchspec * bs,
   printf("%sExample mask to test JACOBI1D_OMP_NAIVE and JACOBI2D_SEQ :%s\
           \n\t .\\test 01000001\n", KBLU, KRESET);
   printf("%sTests for %s half-diamonds version %s of jacobi1d :%s\
-      \n\t .\\test hdiam\n", KBLU, KRED, KBLU, KRESET);
+      \n\t .\\test hdiam [range]\n \
+      [range] : log2(size) of problem ranging from %i to %i + range\n",
+      KBLU, KRED, KBLU, KRESET, MIN_POW, MIN_POW);
   printf("%sChecking correctness with long versions of algorithms : %s\
           \n\t .\\test l\n", KBLU, KRESET);
 }
