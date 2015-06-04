@@ -89,20 +89,22 @@ print_runscores(int nruns, struct benchscore * bsc)
 }
 
 void
-print_test1d_summary(int nruns, double total_time, struct benchspec bs,
-  double * data_in, double * data_out)
+print_test1d_summary(int nruns, int verbose, double total_time,
+  struct benchspec bs, double * data_in, double * data_out)
 {
   int i;
-  printf("\n------------- Input ---------\n");
-  for (i = 0; i < DISPLAY_SIZE; i++) {
-    printf("%10.3f", data_in[i]);
+  if (verbose) {
+    printf("\n------------- Input ---------\n");
+    for (i = 0; i < DISPLAY_SIZE; i++) {
+      printf("%10.3f", data_in[i]);
+    }
+    printf("Result snapshot: %s\n", KRED);
+    for (i = DISPLAY_OFFSET; i < DISPLAY_OFFSET + DISPLAY_SIZE; i++) {
+      printf("%10.3f", data_out[i]);
+    }
+    printf("\n%s----------------------\n", KRESET);
   }
   printf("\n------------- %s ---------\n", bs.name);
-  printf("Result snapshot: %s\n", KRED);
-  for (i = DISPLAY_OFFSET; i < DISPLAY_OFFSET + DISPLAY_SIZE; i++) {
-    printf("%10.3f", data_out[i]);
-  }
-  printf("\n%s----------------------\n", KRESET);
   printf("Total time :\t %13f ms\n", (double) total_time * 1000.0);
   printf("Average time :\t %13f ms\n\n",
     (double) (total_time * 1000.0 / (nruns)));
@@ -111,18 +113,20 @@ print_test1d_summary(int nruns, double total_time, struct benchspec bs,
 
 
 void
-print_test1d_l_summary(int nruns, double total_time, struct benchspec1d_l bs,
- long * data_in, long * data_out)
+print_test1d_l_summary(int nruns, int verbose, double total_time,
+  struct benchspec1d_l bs, long * data_in, long * data_out)
 {
   int i;
-  printf("\n------------- Input ---------\n");
-  for (i = 0; i < DISPLAY_SIZE; i++) {
-    printf(" %4li ", data_in[i]);
-  }
-  printf("\n------------- %s ---------\n", bs.name);
-  printf("Result snapshot: %s\n", KRED);
-  for (i = DISPLAY_OFFSET; i < DISPLAY_OFFSET + DISPLAY_SIZE; i++) {
-    printf(" %4li ", data_out[i]);
+  if (verbose) {
+    printf("\n------------- Input ---------\n");
+    for (i = 0; i < DISPLAY_SIZE; i++) {
+      printf(" %4li ", data_in[i]);
+    }
+    printf("Result snapshot: %s\n", KRED);
+    for (i = DISPLAY_OFFSET; i < DISPLAY_OFFSET + DISPLAY_SIZE; i++) {
+      printf(" %4li ", data_out[i]);
+    }
+    printf("\n------------- %s ---------\n", bs.name);
   }
   printf("\n%s----------------------\n", KRESET);
   printf("Total time :\t %13f ms\n", (double) total_time * 1000.0);
@@ -132,26 +136,28 @@ print_test1d_l_summary(int nruns, double total_time, struct benchspec1d_l bs,
 }
 
 void
-print_test2d_summary(int nruns, double total_time, struct benchspec2d bs,
-  double ** data_in, double ** data_out)
+print_test2d_summary(int nruns, int verbose, double total_time,
+  struct benchspec2d bs, double ** data_in, double ** data_out)
 {
   int i,j;
-  printf("\n------------- Input ---------\n");
-  for (i = DISPLAY_OFFSET; i < DISPLAY_OFFSET + DISPLAY_SIZE; i++) {
-    for (j = DISPLAY_OFFSET; j < DISPLAY_OFFSET + DISPLAY_SIZE; j++) {
-      printf("%10.3f", data_in[i][j]);
+  if (verbose) {
+    printf("\n------------- Input ---------\n");
+    for (i = DISPLAY_OFFSET; i < DISPLAY_OFFSET + DISPLAY_SIZE; i++) {
+      for (j = DISPLAY_OFFSET; j < DISPLAY_OFFSET + DISPLAY_SIZE; j++) {
+        printf("%10.3f", data_in[i][j]);
+      }
+      printf("\n");
     }
-    printf("\n");
+    printf("Result snapshot: \n");
+    for (i = DISPLAY_OFFSET; i < DISPLAY_OFFSET + DISPLAY_SIZE; i++) {
+      for (j = DISPLAY_OFFSET; j < DISPLAY_OFFSET + DISPLAY_SIZE; j++) {
+        printf("%10.3f", data_out[i][j]);
+      }
+      printf("\n");
+    }
+    printf("\n----------------------\n");
   }
   printf("\n------------- %s ---------\n", bs.name);
-  printf("Result snapshot: \n");
-  for (i = DISPLAY_OFFSET; i < DISPLAY_OFFSET + DISPLAY_SIZE; i++) {
-    for (j = DISPLAY_OFFSET; j < DISPLAY_OFFSET + DISPLAY_SIZE; j++) {
-      printf("%10.3f", data_out[i][j]);
-    }
-    printf("\n");
-  }
-  printf("\n----------------------\n");
   printf("Total time :\t %13f ms\n", (double) total_time * 1000.0);
   printf("Average time :\t %13f ms\n\n",
     (double) (total_time * 1000.0 / (nruns)));

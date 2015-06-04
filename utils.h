@@ -7,6 +7,7 @@
 #ifndef DISPLAY_OFFSET
   #define DISPLAY_OFFSET 1200
 #endif
+#define DISPLAY_VERBOSE 0
 /*
  * A default number of cores, if nothing works when trying to get the number of
  *  online cores.
@@ -188,11 +189,14 @@ void print_benchspecs(int, struct benchspec *);
 
 void print_runscores(int, struct benchscore *);
 
-void print_test1d_summary(int, double, struct benchspec, double *, double *);
+void print_test1d_summary(int, int, double, struct benchspec, double *,
+                          double *);
 
-void print_test1d_l_summary(int, double, struct benchspec1d_l, long *, long *);
+void print_test1d_l_summary(int, int, double, struct benchspec1d_l, long *,
+                            long *);
 
-void print_test2d_summary(int, double, struct benchspec2d, double **, double **);
+void print_test2d_summary(int, int, double, struct benchspec2d, double **,
+                          double **);
 
 void swap(void *, void *, size_t);
 

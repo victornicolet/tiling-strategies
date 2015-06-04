@@ -100,7 +100,7 @@ djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs, double * jbi,
   double * jbi_out)
 {
 
-  int tile_no, grp_no, i;
+  int tile_no, grp_no;
   // Tile bounds
   int tile_max;
   int tile_base_sz = 2 * num_iters ;
@@ -109,11 +109,6 @@ djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs, double * jbi,
   int num_grps = (num_tiles - 1) / num_procs;
   // Store the border between base-down pyramids and base-up pyramids
   double ** tmp = alloc_double_mx(2, pb_size * sizeof(*tmp));
-
-  for (i = 0; i < pb_size; i++) {
-    tmp[1][i] = 9999;
-    tmp[0][i] = 9999;
-  }
 
 /* First execute first base-down tile and top-left corner */
   /* First base-down tile */
@@ -138,8 +133,8 @@ djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs, double * jbi,
       do_top_hdiam(tile_no, num_iters, pb_size, tmp, jbi_out);
     }
 
-    free_mx((void **) tmp, 2);
   }
+  free_mx((void **) tmp, 2);
 }
 
 void

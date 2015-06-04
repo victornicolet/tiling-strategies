@@ -14,7 +14,6 @@
 /* Problem size (in space) between 2 ^ MIN_POW and 2 ^ MAX_POW */
 #define MIN_POW 10
 #define MAX_POW 16
-
 /*
 *1-Dimension problem size :
 * L3 4096kB -> 512k = (1 << 9)k < (1<<19)  doubles (64 bits)  1 << 19
@@ -54,7 +53,7 @@ int main(int argc, char ** argv) {
       Pbsize_1d, Num_iters_1d, 1},
     {"JACOBI1D_SKEWED_TILES", djbi1d_skewed_tiles_test, check_default,
       Pbsize_1d, Num_iters_1d, 1},
-    {"JACOBI1D_SWAP_SEQ", djbi1d_sequential, check_default,
+    {"JACOBI1D_SEQUENTIAL (reference)", djbi1d_sequential, check_default,
       Pbsize_1d, Num_iters_1d, 1},
     {"JACOBI1D_HALF_DIAMONDS", djbi1d_half_diamonds_test, check_low_iter,
       Pbsize_1d, Num_iters_1d, 1},
@@ -165,8 +164,11 @@ test2d(int nruns, int dimx, int dimy, int dimt, struct benchspec2d benchmark)
     }
   }
   printf("Done !\n");
-  print_runscores(nruns, scores);
-  print_test2d_summary(nruns, t_accu, benchmark, data_in, data_out);
+  if (DISPLAY_VERBOSE) {
+    print_runscores(nruns, scores);
+  }
+  print_test2d_summary(nruns, DISPLAY_VERBOSE, t_accu, benchmark, data_in,
+    data_out);
   free_mx((void **) data_out, dimx);
   free_mx((void **) data_in, dimx);
   return 0.0;
@@ -201,8 +203,11 @@ test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
     }
   }
   printf("Done !\n");
-  print_runscores(nruns, scores);
-  print_test1d_summary(nruns, t_accu, benchmark, data_in, data_out);
+  if (DISPLAY_VERBOSE) {
+    print_runscores(nruns, scores);
+  }
+  print_test1d_summary(nruns, DISPLAY_VERBOSE, t_accu, benchmark, data_in,
+   data_out);
   /* TODO : benchmark -> specific reference */
   double * ref_out = aligned_alloc(CACHE_LINE_SIZE, \
     sizeof(*ref_out) * args.width);
@@ -245,8 +250,11 @@ test1d_l(int nruns, int dimx, int dimt, struct benchspec1d_l benchmark)
     }
   }
   printf("Done !\n");
-  print_runscores(nruns, scores);
-  print_test1d_l_summary(nruns, t_accu, benchmark, data_in, data_out);
+  if (DISPLAY_VERBOSE) {
+    print_runscores(nruns, scores);
+  }
+  print_test1d_l_summary(nruns, DISPLAY_VERBOSE, t_accu, benchmark, data_in,
+    data_out);
   /* TODO : benchmark -> specific reference */
   long * ref_out = aligned_alloc(CACHE_LINE_SIZE, \
     sizeof(*ref_out) * args.width);
