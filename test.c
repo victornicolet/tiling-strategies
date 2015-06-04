@@ -13,8 +13,10 @@
 
 /* Problem size (in space) between 2 ^ MIN_POW and 2 ^ MAX_POW */
 #define MIN_POW 15
+#define MIN_ITER_POW 3
 #define DEFAULT_RANGE 5
 #define DEFAULT_NRUNS 20
+#define DEFAULT_RANGE_ITER 3
 /*
 *1-Dimension problem size :
 * L3 4096kB -> 512k = (1 << 9)k < (1<<19)  doubles (64 bits)  1 << 19
@@ -37,7 +39,7 @@ const static int Num_iters_2d = 1 << 4;
 double test1d(int, int, int, struct benchspec);
 double test2d(int, int, int, int, struct benchspec2d);
 double test1d_l(int, int, int, struct benchspec1d_l);
-void test_suite_hdiam1d(int, int, struct benchspec *);
+void test_suite_hdiam1d(int, int, int, struct benchspec *);
 struct args_dimt get2dargs(int, int, int, struct benchspec2d);
 struct args_dimt get1dargs(int, int, struct benchspec);
 struct args_dimt get1dargs_l(int, int, struct benchspec1d_l);
@@ -114,14 +116,16 @@ int main(int argc, char ** argv) {
   } else if (strcmp(argv[1], "hdiam") == 0){
     /* test sute for half diamonds versions (basic/ grouped tiles/ omp tasks)*/
     int num_benchs = sizeof(hdiam_benchmarks) / sizeof(struct benchspec) ;
-    int range = 0;
-    if (argc == 3) {
+    int range = 0, range_iters = 0;
+    if (argc == 4) {
       range = atoi(argv[2]);
+      range_iters = atoi(argv[3]);
     } else {
       range = DEFAULT_RANGE;
+      range_iters = DEFAULT_RANGE_ITER;
     }
-    test_suite_hdiam1d(num_benchs, range, hdiam_benchmarks);
-  }else {
+    test_suite_hdiam1d(num_benchs, range, range_iters, hdiam_benchmarks);
+  } else {
     if ((maskl = strlen(benchmask)) > nbench + nbench2d) {
       printf("Error : not a valid mask ! Your mask must be %i bits long\n",
         nbench + nbench2d);
@@ -331,11 +335,11 @@ test2d(int nruns, int dimx, int dimy, int dimt, struct benchspec2d benchmark)
 }
 
 void
-test_suite_hdiam1d(int num_benchs, int range,
+test_suite_hdiam1d(int num_benchs, int range, int range_iters,
  struct benchspec * hdiam_benchmarks)
 {
   int pow2, bm_no, run_no, iters_pow;
-  for (iters_pow = 3; iters_pow < 6; iters_pow ++) {
+  for (iters_pow = MIN_ITER_POW; iters_pow < 3 + range_iters; iters_pow ++) {
     printf("%s%i iterations :%s\n", KRED, 1 << iters_pow, KRESET);
     double t_accu, mean_t_ms;
     double ** timelog = alloc_double_mx(num_benchs, range);
@@ -408,9 +412,10 @@ usage(int nbs, int nbs2d, char ** argv, struct benchspec * bs,
   printf("%sExample mask to test JACOBI1D_OMP_NAIVE and JACOBI2D_SEQ :%s\
           \n\t .\\test 01000001\n", KBLU, KRESET);
   printf("%sTests for %s half-diamonds version %s of jacobi1d :%s\
-      \n\t .\\test hdiam [range]\n \
-      [range] : log2(size) of problem ranging from %i to %i + range\n",
-      KBLU, KRED, KBLU, KRESET, MIN_POW, MIN_POW);
+      \n\t .\\test hdiam [range] [iters_range]\n \
+      [range] : log2(size) of problem ranging from %i to %i + range\n\
+      [range_iters] : log2(iterations) ranging from %i to %i + range_iters\n",
+      KBLU, KRED, KBLU, KRESET, MIN_POW, MIN_POW, MIN_ITER_POW, MIN_ITER_POW);
   printf("%sChecking correctness with long versions of algorithms : %s\
           \n\t .\\test l\n", KBLU, KRESET);
 }
