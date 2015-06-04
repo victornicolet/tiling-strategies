@@ -84,6 +84,8 @@ int main(int argc, char ** argv) {
   {
     {"JACOBI1D_SEQUENTIAL (reference)", djbi1d_sequential, check_default,
       Pbsize_1d, Num_iters_1d, 1},
+    {"JACOBI1D_OMP_NAIVE", djbi1d_omp_naive, check_default,
+      Pbsize_1d, Num_iters_1d, 1},
     {"JACOBI1D_HALF_DIAMONDS", djbi1d_half_diamonds_test, check_low_iter,
       Pbsize_1d, Num_iters_1d, 1},
     {"JACOBI1D_DIAM(GROUPED TILES)", djbi1d_hdiam_grouped_test, check_low_iter,
