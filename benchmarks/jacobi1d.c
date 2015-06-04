@@ -40,6 +40,51 @@ static inline void do_topleft_hdiam(int, double **, double *)
 */
 
 void
+djbi1d_hdiam_tasked(int pb_size, int num_iters, int num_procs, double * jbi,
+  double * jbi_out)
+{
+  /* Tile bounds */
+  int tile_max;
+  int tile_base_sz = 2 * num_iters ;
+  int num_tiles = (pb_size / tile_base_sz);
+
+  int num_grps = (num_tiles - 1) / num_procs;
+  /* Store the border between base-down pyramids and base-up pyramids */
+  double ** tmp = alloc_double_mx(2, pb_size * sizeof(*tmp));
+
+#ifndef SEQ
+  #pragma omp parallel
+  #pragma omp single
+#endif
+  {
+    /* Execute top-left task upfront */
+    do_topleft_hdiam(0, num_iters, pb_size, jbi, tmp);
+    /* Loop over all tasks */
+    for (tile_no = 0; tile_no < num_tiles; tile_no ++) {
+
+      /* Base down tile */
+#ifndef SEQ
+      #pragma omp task firstprivate(tile_no) shared(tmp) \
+       depend(out : )
+#endif
+       {
+        do_base_hdiam(tile_no, num_iters, pb_size, jbi, tmp);
+       }
+
+      /* Tip down tile */
+#ifndef SEQ
+       #pragma omp task firstprivate(tile_no) shared(tmp) \
+       depend(in : )
+#endif
+       {
+        do_top_hdiam(tile_no + 1, num_iters, pb_size, tmp, jbi_out);
+       }
+    }
+
+  }
+}
+
+void
 djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs, double * jbi,
   double * jbi_out)
 {
