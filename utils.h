@@ -4,9 +4,15 @@
 
 /* Number of doubles displayed */
 #define DISPLAY_SIZE 8
-
 #ifndef DISPLAY_OFFSET
   #define DISPLAY_OFFSET 1200
+#endif
+/*
+ * A default number of cores, if nothing works when trying to get the number of
+ *  online cores.
+ */
+#ifndef DEFAULT_PROC_NUM
+ #define DEFAULT_PROC_NUM 2
 #endif
 /* Cache line size of 64 bytes on most x86 */
 #define  CACHE_LINE_SIZE 64
