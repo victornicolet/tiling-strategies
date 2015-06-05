@@ -7,7 +7,7 @@
 #ifndef DISPLAY_OFFSET
   #define DISPLAY_OFFSET 1200
 #endif
-#define DISPLAY_VERBOSE 0
+#define DISPLAY_VERBOSE 1
 /*
  * A default number of cores, if nothing works when trying to get the number of
  *  online cores.
@@ -175,7 +175,6 @@ alloc_line(int num_elements)
   return line;
 }
 
-
 int adjust_num(double);
 
 long compare(double *, double *, int);
@@ -202,5 +201,7 @@ void print_test2d_summary(int, int, double, struct benchspec2d, double **,
                           double **);
 
 void swap(void *, void *, size_t);
+
+void why_fopen(int err_no);
 
 #endif

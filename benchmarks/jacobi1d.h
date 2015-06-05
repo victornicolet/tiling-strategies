@@ -59,6 +59,8 @@ void ljbi1d_sequential(struct args_dimt, long *,long *,
                       struct benchscore *);
 void djbi1d_hdiam_grouped_test(struct args_dimt, double *, double *,
                               struct benchscore *);
+void djbi1d_hdiam_tasked_test(struct args_dimt, double *, double *,
+                              struct benchscore *);
 
 int check_low_iter(int, int);
 int check_tilable(int, int);

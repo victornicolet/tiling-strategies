@@ -31,7 +31,8 @@ static inline void do_base_hdiam(int, int, int, double *, double **)
 static inline void do_topleft_hdiam(int, double **, double *)
     __attribute__((always_inline));
 
-/* Different versions of jacobi1d have been implemented here.
+/*
+* Different versions of jacobi1d have been implemented here.
 *   - with half - diamonds : useful if we have few iterations, it allows
 *      parallelism an a concurrent start.
 *   - skewed tiles, with tasks
@@ -40,8 +41,7 @@ static inline void do_topleft_hdiam(int, double **, double *)
 */
 
 void
-djbi1d_hdiam_tasked(int pb_size, int num_iters, int num_procs, double * jbi,
-  double * jbi_out)
+djbi1d_hdiam_tasked(int pb_size, int num_iters, double * jbi, double * jbi_out)
 {
   /* Tile bounds */
   int tile_no;
@@ -49,6 +49,8 @@ djbi1d_hdiam_tasked(int pb_size, int num_iters, int num_procs, double * jbi,
   int num_tiles = (pb_size / tile_base_sz);
   /* Store the border between base-down pyramids and base-up pyramids */
   double ** tmp = alloc_double_mx(2, pb_size * sizeof(*tmp));
+
+  uint8_t task_index[num_tiles]  __attribute__((unused));
 
 #ifndef SEQ
   #pragma omp parallel
@@ -62,8 +64,8 @@ djbi1d_hdiam_tasked(int pb_size, int num_iters, int num_procs, double * jbi,
 
       /* Base down tile */
 #ifndef SEQ
-      #pragma omp task firstprivate(tile_no) shared(tmp)
-      // depend(out : )
+      #pragma omp task firstprivate(tile_no) shared(tmp) \
+      depend(out : task_index[tile_no])
 #endif
        {
         do_base_hdiam(tile_no, num_iters, pb_size, jbi, tmp);
@@ -71,8 +73,8 @@ djbi1d_hdiam_tasked(int pb_size, int num_iters, int num_procs, double * jbi,
 
       /* Tip down tile */
 #ifndef SEQ
-       #pragma omp task firstprivate(tile_no) shared(tmp)
-      // depend(in : )
+       #pragma omp task firstprivate(tile_no) shared(tmp) \
+      depend(in : task_index[tile_no - 1], task_index[tile_no])
 #endif
        {
         do_top_hdiam(tile_no + 1, num_iters, pb_size, tmp, jbi_out);
@@ -81,6 +83,8 @@ djbi1d_hdiam_tasked(int pb_size, int num_iters, int num_procs, double * jbi,
 
   }
 }
+
+
 
 void
 djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs, double * jbi,
@@ -123,6 +127,8 @@ djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs, double * jbi,
   }
   free_mx((void **) tmp, 2);
 }
+
+
 
 void
 djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi, double * jbi_out)
@@ -654,6 +660,9 @@ djbi1d_diamond_tiles(int n,int num_stencil_iters, double ** jbi,
   }
 }
 
+
+
+
 void
 djbi1d_omp_naive(struct args_dimt args, double * jbi_in, double * jbi_out,
   struct benchscore * bsc)
@@ -689,6 +698,9 @@ djbi1d_omp_naive(struct args_dimt args, double * jbi_in, double * jbi_out,
 
   bsc->wallclock = ELAPSED_TIME(tend, tbegin);
 }
+
+
+
 
 void
 djbi1d_omp_overlap(struct args_dimt args, double * jbi_in, double * jbi_out,
@@ -760,6 +772,7 @@ djbi1d_omp_overlap(struct args_dimt args, double * jbi_in, double * jbi_out,
 }
 
 
+
 void
 djbi1d_sequential(struct args_dimt args, double * jbi_in, double * jbi_out,
  struct benchscore * bsc)
@@ -829,9 +842,22 @@ ljbi1d_sequential(struct args_dimt args, long * jbi_in, long * jbi_out,
 }
 
 
-/* --------*/
-/*  Tests  */
-/* --------*/
+/* ==========================================================================*/
+/*                               Tests                                       */
+/* ==========================================================================*/
+
+void
+djbi1d_hdiam_tasked_test(struct args_dimt args, double * jbi_in,
+    double * jbi_out, struct benchscore * bsc)
+{
+  clock_gettime(CLOCK_MONOTONIC, &tbegin);
+  djbi1d_hdiam_tasked(args.width, args.iters, jbi_in, jbi_out);
+  clock_gettime(CLOCK_MONOTONIC, &tend);
+
+  bsc->wallclock = ELAPSED_TIME(tend, tbegin);
+}
+
+
 
 void
 djbi1d_half_diamonds_test(struct args_dimt args, double * jbi_in,
@@ -843,6 +869,8 @@ djbi1d_half_diamonds_test(struct args_dimt args, double * jbi_in,
   clock_gettime( CLOCK_MONOTONIC, &tend);
   bsc->wallclock = ELAPSED_TIME(tend, tbegin);
 }
+
+
 
 void
 djbi1d_hdiam_grouped_test(struct args_dimt args, double * jbi_in,
@@ -859,6 +887,8 @@ djbi1d_hdiam_grouped_test(struct args_dimt args, double * jbi_in,
   bsc->wallclock = ELAPSED_TIME(tend, tbegin);
 }
 
+
+
 void
 ljbi1d_half_diamonds_test(struct args_dimt args, long * jbi_in,
   long * jbi_out, struct benchscore * bsc)
@@ -869,6 +899,7 @@ ljbi1d_half_diamonds_test(struct args_dimt args, long * jbi_in,
   clock_gettime( CLOCK_MONOTONIC, &tend);
   bsc->wallclock = ELAPSED_TIME(tend, tbegin);
 }
+
 
 
 void
@@ -932,6 +963,8 @@ djbi1d_sk_full_tiles_test(struct args_dimt args, double * jbi_in,
   free(jbi_slashs);
 }
 
+
+
 void
 djbi1d_skewed_tiles_test(struct args_dimt args, double * jbi_in,
   double * jbi_out, struct benchscore * bsc)
@@ -974,6 +1007,7 @@ djbi1d_skewed_tiles_test(struct args_dimt args, double * jbi_in,
   free(jbi_dashs);
   free(jbi_slashs);
 }
+
 
 
 /* Task functions :
@@ -1029,6 +1063,9 @@ do_i0_t0(double * dashs, double * slashs, int tile_t, int tile_i)
   free(l2);
 }
 
+
+
+
 static inline void
 do_i0_t(double * dashs, double * slashs, int strpno, int tile_t)
 {
@@ -1064,6 +1101,8 @@ do_i0_t(double * dashs, double * slashs, int strpno, int tile_t)
   free(l1);
   free(l2);
 }
+
+
 
 static inline void
 do_i_t(double * dashs, double * slashs, int strpno, int tile_t)
@@ -1112,6 +1151,7 @@ do_i_t(double * dashs, double * slashs, int strpno, int tile_t)
 }
 
 
+
 static inline void
 do_in_t(double * dashs, double * slashs, int strpno, int tile_t)
 {
@@ -1148,6 +1188,8 @@ do_in_t(double * dashs, double * slashs, int strpno, int tile_t)
   free(l1);
   free(l2);
 }
+
+
 
 /* Tasks for half-diamond version */
 

@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
@@ -43,13 +44,16 @@ struct args_dimt get1dargs(int, int, struct benchspec);
 struct args_dimt get1dargs_l(int, int, struct benchspec1d_l);
 void usage(int, int, char **, struct benchspec *, struct benchspec2d *);
 
-int main(int argc, char ** argv) {
+int
+main(int argc, char ** argv)
+{
   int bs;
   /* Hostname for saving records */
   char hostname[512];
   hostname[511] = '\0';
   gethostname(hostname, 511);
   printf("Host : %s\n", hostname);
+
   /* 1-D benchmarks and misc benchmarks */
   struct benchspec benchmarks[] = {
     {"JACOBI1D_OMP_OVERLAP", djbi1d_omp_overlap, check_default,
@@ -62,9 +66,12 @@ int main(int argc, char ** argv) {
       Pbsize_1d, Num_iters_1d, 1},
     {"JACOBI1D_HALF_DIAMONDS", djbi1d_half_diamonds_test, check_low_iter,
       Pbsize_1d, Num_iters_1d, 1},
-    {"JACOBI1D_DIAM(GROUPED TILES)", djbi1d_hdiam_grouped_test, check_low_iter,
+    {"JACOBI1D_HDIAM(GROUPED TILES)", djbi1d_hdiam_grouped_test, check_low_iter,
+      Pbsize_1d, Num_iters_1d, 1},
+    {"JACOBI1D_HDIAM (TASKS)", djbi1d_hdiam_tasked_test, check_low_iter,
       Pbsize_1d, Num_iters_1d, 1}
   };
+
   /* 2-D benchmarks */
   struct  benchspec2d benchmarks2d [] = {
     {"JACOBI2D_HALF_DIAMONDS", djbi2d_half_diamonds, check2d_default,
@@ -72,6 +79,7 @@ int main(int argc, char ** argv) {
     {"JACOBI2D_SEQ ", djbi2d_seq, check2d_default,
       Pbsize_2d, Pbsize_2d, Num_iters_2d},
   };
+
   /* 1-D benchmarks with long integers */
   struct benchspec1d_l benchmarks_l [] ={
     {"JACOBI1D_SWAP_SEQ (LONG)", ljbi1d_sequential, check_default,
@@ -84,13 +92,15 @@ int main(int argc, char ** argv) {
   struct benchspec hdiam_benchmarks [] =
   {
     {"JACOBI1D_SEQUENTIAL (reference)", djbi1d_sequential, check_default,
-      Pbsize_1d, Num_iters_1d, 1},
+      0, 0, 1},
     {"JACOBI1D_OMP_NAIVE", djbi1d_omp_naive, check_default,
-      Pbsize_1d, Num_iters_1d, 1},
+      0, 0, 1},
     {"JACOBI1D_HALF_DIAMONDS", djbi1d_half_diamonds_test, check_low_iter,
-      Pbsize_1d, Num_iters_1d, 1},
-    {"JACOBI1D_DIAM(GROUPED TILES)", djbi1d_hdiam_grouped_test, check_low_iter,
-      Pbsize_1d, Num_iters_1d, 1}
+      0, 0, 1},
+    {"JACOBI1D_HDIAM(GROUPED TILES)", djbi1d_hdiam_grouped_test, check_low_iter,
+      0, 0, 1},
+    {"JACOBI1D_HDIAM (TASKS)", djbi1d_hdiam_tasked_test, check_low_iter,
+      0, 0, 1}
   };
 
   int nbench = sizeof(benchmarks) / sizeof(struct benchspec);
@@ -133,6 +143,7 @@ int main(int argc, char ** argv) {
     csv_file = fopen(filename,"w");
 
     if(csv_file == NULL){
+      why_fopen(errno);
       fprintf(stderr, "Failed to open %s . Aborting ...\n", filename);
       return -1;
     }
@@ -273,7 +284,8 @@ test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
   djbi1d_sequential(args, data_in, ref_out, NULL);
   long diffs;
   if ((diffs = compare(data_out, ref_out, args.width))>0) {
-    printf("Differences : %li over %i\n", diffs, args.width);
+    printf("Differences : %li over %i ( %4.2f )\n", diffs, args.width,
+      (float) diffs / args.width);
   }
   free(data_in);
   free(data_out);
@@ -323,7 +335,8 @@ test1d_l(int nruns, int dimx, int dimt, struct benchspec1d_l benchmark)
   ljbi1d_sequential(args, data_in, ref_out, NULL);
   long diffs;
   if ((diffs = compare_l(data_out, ref_out, args.width))>0) {
-    printf("Differences : %li over %i\n", diffs, args.width);
+    printf("Differences : %li over %i ( %4.2f )\n", diffs, args.width,
+      (float) diffs / args.width);
   }
   free(data_in);
   free(data_out);

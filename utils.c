@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -98,7 +99,7 @@ print_test1d_summary(int nruns, int verbose, double total_time,
     for (i = 0; i < DISPLAY_SIZE; i++) {
       printf("%10.3f", data_in[i]);
     }
-    printf("Result snapshot: %s\n", KRED);
+    printf("\nResult snapshot: %s\n", KRED);
     for (i = DISPLAY_OFFSET; i < DISPLAY_OFFSET + DISPLAY_SIZE; i++) {
       printf("%10.3f", data_out[i]);
     }
@@ -122,7 +123,7 @@ print_test1d_l_summary(int nruns, int verbose, double total_time,
     for (i = 0; i < DISPLAY_SIZE; i++) {
       printf(" %4li ", data_in[i]);
     }
-    printf("Result snapshot: %s\n", KRED);
+    printf("\nResult snapshot: %s\n", KRED);
     for (i = DISPLAY_OFFSET; i < DISPLAY_OFFSET + DISPLAY_SIZE; i++) {
       printf(" %4li ", data_out[i]);
     }
@@ -148,7 +149,7 @@ print_test2d_summary(int nruns, int verbose, double total_time,
       }
       printf("\n");
     }
-    printf("Result snapshot: \n");
+    printf("\nResult snapshot: \n");
     for (i = DISPLAY_OFFSET; i < DISPLAY_OFFSET + DISPLAY_SIZE; i++) {
       for (j = DISPLAY_OFFSET; j < DISPLAY_OFFSET + DISPLAY_SIZE; j++) {
         printf("%10.3f", data_out[i][j]);
@@ -183,5 +184,25 @@ swap(void *a, void *b, size_t size)
     memcpy(a,    temp, size);
 
     free(temp);
+  }
+}
+
+void
+why_fopen(int err_no)
+{
+  switch(errno){
+    case EACCES:
+      fprintf(stderr, "You don't have access to this files\n");
+      break;
+    case EFAULT:
+      fprintf(stderr, "Pathname points outside your accessible address space\n");
+      break;
+    case ENOENT:
+      fprintf(stderr, "Pathname refers to a non-existent directory !\n");
+    case ENOMEM:
+      fprintf(stderr, "Insufficient kernel memory available.\n");
+      break;
+    default:
+      fprintf(stderr, "Errno not yet impl. here\n");
   }
 }
