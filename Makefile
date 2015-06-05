@@ -5,8 +5,8 @@ ifeq ($(CC),cc)
 	CC=gcc
 endif
 
-CFLAGS=-g -std=c11 -O3 -Wall
-CFLAGS+= -fdiagnostics-color=auto -D_GNU_SOURCE
+CFLAGS=-g 	-std=c11 -O3 -Wall
+CFLAGS+= 	-fdiagnostics-color=auto -D_GNU_SOURCE
 
 ifeq ($(CC),icc)
 	CFLAGS+=-openmp
@@ -24,26 +24,26 @@ endif
 
 LDFLAGS=-lrt -lm
 
-SRC_DIR=benchmarks
-PROGRAM=test
-PROGRAMS= $(PROGRAM) jbi1d jbi2d
-SOURCES.c=$(SRC_DIR)/jacobi1d.c $(SRC_DIR)/jacobi2d.c utils.c
-HEADERS=utils.h $(SRC_DIR)/jacobi1d.h $(SRC_DIR)/jacobi2d.h
-OBJECTS=$(SOURCES.c:.c=.o)
+SRC_DIR = 	benchmarks
+PROGRAM = 	test
+PROGRAMS = 	$(PROGRAM) jbi1d jbi2d
+SOURCES.c =	$(SRC_DIR)/jacobi1d.c $(SRC_DIR)/jacobi2d.c utils.c
+HEADERS=	utils.h $(SRC_DIR)/jacobi1d.h $(SRC_DIR)/jacobi2d.h
+OBJECTS =	$(SOURCES.c:.c=.o)
 
 # Profiling options ------------------------------------------------------------
 
-BENCH_RESULT=profile
+BENCH_RESULT=	profile
 BENCH_RESULT_DIR=$(BENCH_RESULT)/vtune/
 # VTune options
-VTUNE=amplxe-cl
-VTFLAGS=-collect general-exploration -analyze-system
-VT_R_DIR=--result-dir $(BENCH_RESULT_DIR)
+VTUNE=		amplxe-cl
+VTFLAGS=	-collect general-exploration -analyze-system
+VT_R_DIR=	--result-dir $(BENCH_RESULT_DIR)
 
 # Hardware counters for profiling
-REPORT_FREQ=99
-HW_COUNTERS=L1-dcache-loads,L1-dcache-load-misses,L1-dcache-stores
-HW_COUNTERS+=,cache-misses
+REPORT_FREQ =	99
+HW_COUNTERS =	L1-dcache-loads,L1-dcache-load-misses,L1-dcache-stores
+HW_COUNTERS+=	,cache-misses
 
 # Valgrind options
 VALGRIND_OPTS+= -q

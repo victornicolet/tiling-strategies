@@ -13,8 +13,8 @@
 #include "benchmarks/jacobi2d.h"
 
 /* Problem size (in space) between 2 ^ MIN_POW and 2 ^ MAX_POW */
-#define MIN_POW 4
-#define MIN_ITER_POW 3
+#define MIN_POW 5
+#define MIN_ITER_POW 4
 #define DEFAULT_RANGE 9
 #define DEFAULT_NRUNS 20
 #define DEFAULT_RANGE_ITER 3

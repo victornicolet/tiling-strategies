@@ -17,7 +17,7 @@
 #endif
 /* Cache line size of 64 bytes on most x86 */
 #define  CACHE_LINE_SIZE 64
-#define  L1_CACHE_SIZE 6044
+#define  L1_CACHE_SIZE 32000
 
 #define KB 125 // Store 125 double precision numbers in a kB
 #define BILLION 1000000000.0

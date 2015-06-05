@@ -87,12 +87,14 @@ void djbi1d_hdiam_tasked(int pb_size, int num_iters, double *jbi,
 void djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs,
                           double *jbi, double *jbi_out) {
   int tile_no, grp_no;
+
+  num_procs = 2 * num_procs;
   // Tile bounds
   int tile_max;
   int tile_base_sz = 2 * num_iters;
   int num_tiles = (pb_size / tile_base_sz);
-
-  int num_grps = (num_tiles - 1) / num_procs;
+  int group_size = (num_procs * L1_CACHE_SIZE) / (32 * num_iters) ;
+  int num_grps = (num_tiles - 1) / group_size;
   // Store the border between base-down pyramids and base-up pyramids
   double **tmp = alloc_double_mx(2, pb_size * sizeof(*tmp));
 
@@ -102,19 +104,19 @@ void djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs,
   do_topleft_hdiam(num_iters, tmp, jbi_out);
 
   for (grp_no = 0; grp_no < num_grps + 1; grp_no++) {
-    tile_max = min((grp_no + 1) * num_procs + 1, num_tiles);
+    tile_max = min((grp_no + 1) * group_size + 1, num_tiles);
 
 #pragma omp parallel for schedule(static) shared(tmp) private(tile_no) \
     firstprivate(grp_no)
 
-    for (tile_no = grp_no * num_procs + 1; tile_no < tile_max; tile_no++) {
+    for (tile_no = grp_no * group_size + 1; tile_no < tile_max; tile_no++) {
       do_base_hdiam(tile_no, num_iters, pb_size, jbi, tmp);
     }
 
 #pragma omp parallel for schedule(static) \
     shared(tmp, jbi_out) private(tile_no) firstprivate(grp_no)
 
-    for (tile_no = grp_no * num_procs + 1; tile_no < tile_max; tile_no++) {
+    for (tile_no = grp_no * group_size + 1; tile_no < tile_max; tile_no++) {
       do_top_hdiam(tile_no, num_iters, pb_size, tmp, jbi_out);
     }
   }
