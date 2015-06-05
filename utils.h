@@ -177,7 +177,9 @@ alloc_line(int num_elements)
 
 int adjust_num(double);
 
-long compare(double *, double *, int);
+long compare(int, double *, double *);
+
+long compare_fast(int, double *, double *);
 
 long compare_l(long *, long *, int);
 

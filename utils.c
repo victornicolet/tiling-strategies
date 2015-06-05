@@ -7,9 +7,22 @@
 #include "utils.h"
 
 long
-compare(double * t1, double * t2, int n)
+compare(int n, double * t1, double * t2)
 {
   long diffs = 0L;
+  for(int i = 0; i < n; i++){
+    if (fabs(t1[i] - t2[i]) > DOUBLE_COMPARISON_THRESHOLD){
+      diffs++;
+    }
+  }
+  return diffs;
+}
+
+long
+compare_fast(int n, double * t1, double * t2)
+{
+  long diffs = 0L;
+  #pragma omp parallel for reduction(+ : diffs)
   for(int i = 0; i < n; i++){
     if (fabs(t1[i] - t2[i]) > DOUBLE_COMPARISON_THRESHOLD){
       diffs++;

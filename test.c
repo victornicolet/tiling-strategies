@@ -294,7 +294,7 @@ test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
     sizeof(*ref_out) * args.width);
   djbi1d_sequential(args, data_in, ref_out, NULL);
   long diffs;
-  if ((diffs = compare(data_out, ref_out, args.width))>0) {
+  if ((diffs = compare_fast(args.width, data_out, ref_out))>0) {
     printf("Differences : %li over %i ( %4.2f )\n", diffs, args.width,
       (float) diffs / args.width);
   }
