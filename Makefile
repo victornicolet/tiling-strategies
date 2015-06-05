@@ -6,7 +6,7 @@ ifeq ($(CC),cc)
 endif
 
 CFLAGS=-g -std=c11 -O3 -Wall
-CFLAGS+= -fdiagnostics-color=auto
+CFLAGS+= -fdiagnostics-color=auto -D_GNU_SOURCE
 
 ifeq ($(CC),icc)
 	CFLAGS+=-openmp

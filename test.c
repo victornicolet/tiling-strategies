@@ -49,7 +49,7 @@ int main(int argc, char ** argv) {
   char hostname[512];
   hostname[511] = '\0';
   gethostname(hostname, 511);
-
+  printf("Host : %s\n", hostname);
   /* 1-D benchmarks and misc benchmarks */
   struct benchspec benchmarks[] = {
     {"JACOBI1D_OMP_OVERLAP", djbi1d_omp_overlap, check_default,
@@ -130,6 +130,12 @@ int main(int argc, char ** argv) {
     strcpy(filename, "./data/jacobi1D_hdiams_at_");
     strcat(filename, hostname);
     csv_file = fopen(filename,"w");
+
+    if(csv_file == NULL){
+      fprintf(stderr, "Failed to open %s . Aborting ...\n", filename);
+      return -1;
+    }
+
     if (argc == 4) {
       range = atoi(argv[2]);
       range_iters = atoi(argv[3]);
