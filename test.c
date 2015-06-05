@@ -24,17 +24,24 @@
 * L2 256kB -> 32k = (1<<5)k > (1 << 15) doubles               1 << 15
 * L1 32 k -> 4k = (1<<2)k > (1<<12)                           1 << 12
 */
-const static int Pbsize_1d = 1 << 24;
-const static int Num_iters_1d = 1 << 5;
+static const int Pbsize_1d = 1 << 24;
+static const int Num_iters_1d = 1 << 5;
 /*
 * 2-Dimension problem size :
 * L3 4096kB -> 512k = (1 << 9)k < (1<<19)  doubles (64 bits)  1 << 9
 * L2 256kB -> 32k = (1<<5)k > (1 << 15) doubles               1 << 7
 * L1 32 k -> 4k = (1<<2)k > (1<<12)                           1 << 6
 */
-const static int Pbsize_2d = 1 << 8;
-const static int Num_iters_2d = 1 << 4;
+static const int Pbsize_2d = 1 << 8;
+static const int Num_iters_2d = 1 << 4;
 
+/* Options parsing */
+int OptIndex = 1;       /* first option should be argv[1] */
+char *OptArg = NULL;    /* global option argument pointer */
+static const char SwitchChar = '-';
+static const char Unknown = '?';
+
+int options(int , char **, const char *);
 double test1d(int, int, int, struct benchspec);
 double test2d(int, int, int, int, struct benchspec2d);
 double test1d_l(int, int, int, struct benchspec1d_l);
@@ -42,12 +49,15 @@ void test_suite_hdiam1d(int, int, int, struct benchspec *,FILE *);
 struct args_dimt get2dargs(int, int, int, struct benchspec2d);
 struct args_dimt get1dargs(int, int, struct benchspec);
 struct args_dimt get1dargs_l(int, int, struct benchspec1d_l);
+
 void usage(int, int, char **, struct benchspec *, struct benchspec2d *);
 
 int
 main(int argc, char ** argv)
 {
   int bs;
+  /* Legal options list */
+  //const char * options = "";
   /* Hostname for saving records */
   char hostname[512];
   hostname[511] = '\0';
@@ -142,7 +152,7 @@ main(int argc, char ** argv)
     strcat(filename, ".csv");
     csv_file = fopen(filename,"w");
 
-    if(csv_file == NULL){
+    if (csv_file == NULL) {
       why_fopen(errno);
       fprintf(stderr, "Failed to open %s . Aborting ...\n", filename);
       return -1;
@@ -183,7 +193,7 @@ main(int argc, char ** argv)
   /* -------------------------------------- */
 
   double exec_time = 0.0, prev_xctime = -1.0;
-  for(bs = 0; bs < maskl; bs++) {
+  for (bs = 0; bs < maskl; bs++) {
     exec_time = 0.0;
     if (benchmask[bs] == '1' && bs < nbench) {
       printf("Execute test for %s ...\n", benchmarks[bs].name);
@@ -292,6 +302,53 @@ test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
   return t_accu;
 }
 
+
+int options(int argc, char *argv[], const char *legal)
+{
+  static char *posn = "";  /* position in argv[OptIndex] */
+  char *legal_index = NULL;
+  int letter = 0;
+
+    if (!*posn) {
+      /* no more args, no SwitchChar or no option letter ? */
+      if ((OptIndex >= argc) || (*(posn = argv[OptIndex]) != SwitchChar) ||
+          !*++posn)
+        return -1;
+                /* find double SwitchChar ? */
+      if (*posn == SwitchChar) {
+          OptIndex++;
+          return -1;
+        }
+    }
+    letter = *posn++;
+
+    if (!(legal_index = strchr(legal, letter))) {
+      if (!*posn)
+        OptIndex++;
+      return Unknown;
+    }
+
+    if (*++legal_index != ':') {
+      /* no option argument */
+      OptArg = NULL;
+      if (!*posn)
+        OptIndex++;
+    } else {
+      if (*posn)
+        /* no space between opt and opt arg */
+        OptArg = posn;
+      else
+        if (argc <= ++OptIndex) {
+            posn = "";
+            return Unknown;
+        } else {
+            OptArg = argv[OptIndex];
+        }
+      posn = "";
+      OptIndex++;
+    }
+        return letter;
+}
 
 
 
@@ -453,7 +510,7 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters,
       fprintf(csv_file, "%i;%i;%f",
         1 << iters_pow, 1 << (i + MIN_POW), timelog[0][i]);
 
-      for (j = 1; j < num_benchs; j++){
+      for (j = 1; j < num_benchs; j++) {
         fprintf(csv_file, ";%f", (timelog[j][i] / timelog[0][i]) * 100.0 );
       }
       fprintf(csv_file, "\n");
@@ -475,11 +532,11 @@ usage(int nbs, int nbs2d, char ** argv, struct benchspec * bs,
     nbs + nbs2d);
   printf("Available benchmarks  :\n");
   printf("%s 1D Benchmarks %s\n", KBLU, KRESET);
-  for(i = 0; i < nbs; i++) {
+  for (i = 0; i < nbs; i++) {
     printf("%i - %s\n", i, bs[i].name);
   }
   printf("%s 2D Benchmarks %s\n", KBLU, KRESET);
-  for(i = nbs; i < nbs2d + nbs; i++) {
+  for (i = nbs; i < nbs2d + nbs; i++) {
     printf("%i - %s\n", i, bs2d[i - nbs].name);
   }
   printf("%sExample mask to test JACOBI1D_OMP_NAIVE and JACOBI2D_SEQ :%s\
