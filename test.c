@@ -449,7 +449,7 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters,
 
   fprintf(csv_file, "%s%s\n",
     "iterations;size (kB);sequential time (ms); naive;half diamonds;",
-    "grouped half diamonds");
+    "grouped half diamonds; with tasks");
 
 
   for (iters_pow = MIN_ITER_POW; iters_pow < 3 + range_iters; iters_pow ++) {
