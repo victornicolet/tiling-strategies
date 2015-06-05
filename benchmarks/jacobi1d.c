@@ -73,9 +73,15 @@ void djbi1d_hdiam_tasked(int pb_size, int num_iters, double *jbi,
 /* Tip down tile */
 #pragma omp task firstprivate(tile_no) shared(tmp) \
     depend(in : task_index[tile_no - 1], task_index[tile_no])
-      { do_top_hdiam(tile_no + 1, num_iters, pb_size, tmp, jbi_out); }
+      { do_top_hdiam(tile_no, num_iters, pb_size, tmp, jbi_out); }
     }
+
+    /* Final task (top-right)*/
+
+    do_top_hdiam(num_tiles, num_iters, pb_size, tmp, jbi_out);
+
   }
+  /* End parallel - single region */
 }
 
 void djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs,
