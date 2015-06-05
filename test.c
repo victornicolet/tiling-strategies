@@ -1,10 +1,10 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <time.h>
-#include <math.h>
-#include <string.h>
 #include <inttypes.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "utils.h"
 
@@ -12,9 +12,9 @@
 #include "benchmarks/jacobi2d.h"
 
 /* Problem size (in space) between 2 ^ MIN_POW and 2 ^ MAX_POW */
-#define MIN_POW 15
+#define MIN_POW 4
 #define MIN_ITER_POW 3
-#define DEFAULT_RANGE 5
+#define DEFAULT_RANGE 9
 #define DEFAULT_NRUNS 20
 #define DEFAULT_RANGE_ITER 3
 /*
@@ -34,20 +34,21 @@ const static int Num_iters_1d = 1 << 5;
 const static int Pbsize_2d = 1 << 8;
 const static int Num_iters_2d = 1 << 4;
 
-//static FILE * csv_file;
-
 double test1d(int, int, int, struct benchspec);
 double test2d(int, int, int, int, struct benchspec2d);
 double test1d_l(int, int, int, struct benchspec1d_l);
-void test_suite_hdiam1d(int, int, int, struct benchspec *);
+void test_suite_hdiam1d(int, int, int, struct benchspec *,FILE *);
 struct args_dimt get2dargs(int, int, int, struct benchspec2d);
 struct args_dimt get1dargs(int, int, struct benchspec);
 struct args_dimt get1dargs_l(int, int, struct benchspec1d_l);
 void usage(int, int, char **, struct benchspec *, struct benchspec2d *);
 
 int main(int argc, char ** argv) {
-
   int bs;
+  /* Hostname for saving records */
+  char hostname[512];
+  hostname[511] = '\0';
+  gethostname(hostname, 511);
 
   /* 1-D benchmarks and misc benchmarks */
   struct benchspec benchmarks[] = {
@@ -95,6 +96,8 @@ int main(int argc, char ** argv) {
   int nbench = sizeof(benchmarks) / sizeof(struct benchspec);
   int nbench2d = sizeof(benchmarks2d) / sizeof(struct benchspec2d);
 
+
+
   /*---------- Parameters section -----------*/
 
   if (argc < 2) {
@@ -115,10 +118,18 @@ int main(int argc, char ** argv) {
     for (bs = 0; bs < nbench_l; bs++) {
       test1d_l(nruns, 0, 0, benchmarks_l[bs]);
     }
-  } else if (strcmp(argv[1], "hdiam") == 0){
+  } else if (strcmp(argv[1], "hdiam") == 0) {
+
     /* test sute for half diamonds versions (basic/ grouped tiles/ omp tasks)*/
     int num_benchs = sizeof(hdiam_benchmarks) / sizeof(struct benchspec) ;
     int range = 0, range_iters = 0;
+
+    /* Store results in a csv file */
+    FILE * csv_file;
+    char filename[1024];
+    strcpy(filename, "./data/jacobi1D_hdiams_at_");
+    strcat(filename, hostname);
+    csv_file = fopen(filename,"w");
     if (argc == 4) {
       range = atoi(argv[2]);
       range_iters = atoi(argv[3]);
@@ -126,7 +137,10 @@ int main(int argc, char ** argv) {
       range = DEFAULT_RANGE;
       range_iters = DEFAULT_RANGE_ITER;
     }
-    test_suite_hdiam1d(num_benchs, range, range_iters, hdiam_benchmarks);
+    test_suite_hdiam1d(num_benchs, range, range_iters, hdiam_benchmarks,
+      csv_file);
+    fclose(csv_file);
+
   } else {
     if ((maskl = strlen(benchmask)) > nbench + nbench2d) {
       printf("Error : not a valid mask ! Your mask must be %i bits long\n",
@@ -185,6 +199,8 @@ get2dargs(int dimx, int dimy, int dimt, struct benchspec2d bs)
   return res;
 }
 
+
+
 struct args_dimt
 get1dargs(int dimx, int dimt, struct benchspec bs)
 {
@@ -199,12 +215,16 @@ get1dargs(int dimx, int dimt, struct benchspec bs)
   return res;
 }
 
+
+
 struct args_dimt
 get1dargs_l(int dimx, int dimt, struct benchspec1d_l bs)
 {
   struct benchspec bsc = {NULL, NULL, NULL, bs.size, bs.iters, 1};
   return get1dargs(dimx, dimt, bsc);
 }
+
+
 
 double
 test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
@@ -253,6 +273,9 @@ test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
   return t_accu;
 }
 
+
+
+
 double
 test1d_l(int nruns, int dimx, int dimt, struct benchspec1d_l benchmark)
 {
@@ -300,6 +323,8 @@ test1d_l(int nruns, int dimx, int dimt, struct benchspec1d_l benchmark)
   return t_accu;
 }
 
+
+
 double
 test2d(int nruns, int dimx, int dimy, int dimt, struct benchspec2d benchmark)
 {
@@ -336,11 +361,19 @@ test2d(int nruns, int dimx, int dimy, int dimt, struct benchspec2d benchmark)
   return t_accu;
 }
 
+
+
 void
 test_suite_hdiam1d(int num_benchs, int range, int range_iters,
- struct benchspec * hdiam_benchmarks)
+ struct benchspec * hdiam_benchmarks, FILE * csv_file)
 {
   int pow2, bm_no, run_no, iters_pow;
+
+  fprintf(csv_file, "%s%s\n",
+    "iterations;size (kB);sequential time (ms); naive;half diamonds;",
+    "grouped half diamonds");
+
+
   for (iters_pow = MIN_ITER_POW; iters_pow < 3 + range_iters; iters_pow ++) {
     printf("%s%i iterations :%s\n", KRED, 1 << iters_pow, KRESET);
     double t_accu, mean_t_ms;
@@ -349,7 +382,7 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters,
 
       for (pow2 = MIN_POW; pow2 < MIN_POW + range; pow2 ++) {
 
-        struct args_dimt args = { 2 << pow2, 0 , 1 << iters_pow};
+        struct args_dimt args = { (2 << pow2) * KB, 0 , 1 << iters_pow};
 
         double * data_in = malloc(CACHE_LINE_SIZE *
           sizeof(*data_in) * args.width);
@@ -372,8 +405,10 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters,
         timelog[bm_no][pow2 - MIN_POW] = mean_t_ms;
       }
     }
-    /* Output */
+
     int i,j;
+
+    /* Standard output */
     printf("\n");
     for (i = 0; i < num_benchs; i++) {
       printf("%i : %s\n",i, hdiam_benchmarks[i].name);
@@ -383,17 +418,33 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters,
       "Log2(size)","Sequential time (ms)",'%',
       " of sequential time\n");
     for (j = 0; j < range; j ++) {
-      printf("%i", j + MIN_POW);
-      printf("\t\t%8f\t", timelog[0][j]);
+      printf("%i kB\t", 1 << (j + MIN_POW));
+      printf("\t%8f\t\t", timelog[0][j]);
       for (i = 1; i < num_benchs; i ++) {
         printf("\t%5.3f",
           (timelog[i][j] / timelog[0][j]) * 100.0);
       }
       printf("\n");
     }
+
+    /* Output in csv file */
+
+    for (i = 0; i < range; i++) {
+      fprintf(csv_file, "%i;%i;%f",
+        1 << iters_pow, 1 << (i + MIN_POW), timelog[0][i]);
+
+      for (j = 1; j < num_benchs; j++){
+        fprintf(csv_file, ";%f", (timelog[j][i] / timelog[0][i]) * 100.0 );
+      }
+      fprintf(csv_file, "\n");
+    }
+
+
     free_mx((void **) timelog, num_benchs);
   }
 }
+
+
 
 void
 usage(int nbs, int nbs2d, char ** argv, struct benchspec * bs,
@@ -415,7 +466,7 @@ usage(int nbs, int nbs2d, char ** argv, struct benchspec * bs,
           \n\t .\\test 01000001\n", KBLU, KRESET);
   printf("%sTests for %s half-diamonds version %s of jacobi1d :%s\
       \n\t .\\test hdiam [range] [iters_range]\n \
-      [range] : log2(size) of problem ranging from %i to %i + range\n\
+      [range] : log2(size) of problem ranging from %i kB to %i + range kB\n\
       [range_iters] : log2(iterations) ranging from %i to %i + range_iters\n",
       KBLU, KRED, KBLU, KRESET, MIN_POW, MIN_POW, MIN_ITER_POW, MIN_ITER_POW);
   printf("%sChecking correctness with long versions of algorithms : %s\
