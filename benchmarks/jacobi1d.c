@@ -58,9 +58,12 @@ djbi1d_hdiam_tasked(int pb_size, int num_iters, double * jbi, double * jbi_out)
 #endif
   {
     /* Execute top-left task upfront */
+    #pragma omp task depend(out : task_index[0])
+    do_base_hdiam(tile_no, num_iters, pb_size, jbi, tmp);
+
     do_topleft_hdiam(num_iters, tmp, jbi_out);
     /* Loop over all tasks */
-    for (tile_no = 0; tile_no < num_tiles; tile_no ++) {
+    for (tile_no = 1; tile_no < num_tiles; tile_no ++) {
 
       /* Base down tile */
 #ifndef SEQ
@@ -109,17 +112,17 @@ djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs, double * jbi,
   for (grp_no = 0; grp_no < num_grps + 1; grp_no ++) {
 
     tile_max = min((grp_no + 1) * num_procs + 1, num_tiles);
-#ifndef SEQ
+
     #pragma omp parallel  for schedule(static) shared(tmp) \
     private(tile_no) firstprivate(grp_no)
-#endif
+
     for (tile_no = grp_no * num_procs + 1; tile_no < tile_max; tile_no ++) {
       do_base_hdiam(tile_no, num_iters, pb_size, jbi, tmp);
     }
-#ifndef SEQ
+
     #pragma omp parallel  for schedule(static) shared(tmp, jbi_out) \
     private(tile_no) firstprivate(grp_no)
-#endif
+
     for (tile_no = grp_no * num_procs + 1; tile_no < tile_max; tile_no ++ ) {
       do_top_hdiam(tile_no, num_iters, pb_size, tmp, jbi_out);
     }
@@ -159,10 +162,10 @@ djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi, double * jbi_out)
 
 
 /* First loop : base down tiles */
-#ifndef SEQ
+
   #pragma omp parallel for schedule(static) shared(tmp) \
    private(l0, r0, l, r, x0)
-#endif
+
   for (tile_no = 0; tile_no < num_tiles; tile_no ++) {
 
     double li1[tile_base_sz], li0[tile_base_sz];
@@ -240,10 +243,10 @@ djbi1d_half_diamonds(int pb_size, int num_iters, double * jbi, double * jbi_out)
   }
 
 /* Second loop : tip down tiles */
-#ifndef SEQ
+
   #pragma omp parallel for schedule(static) shared(tmp) \
   private(l0, r0, l, r, x0)
-#endif
+
   for (tile_no = 1; tile_no < num_tiles + 1; tile_no ++) {
     x0 = tile_no * tile_base_sz;
     l0 = max(x0 - num_iters - 1, 0);
@@ -346,10 +349,10 @@ ljbi1d_half_diamonds(int pb_size, int num_iters, long * jbi, long * jbi_out)
 
 
 /* First loop : base down tiles */
-#ifndef SEQ
+
   #pragma omp parallel for schedule(static) shared(tmp) \
    private(l0, r0, l, r, x0)
-#endif
+
   for (tile_no = 0; tile_no < num_tiles; tile_no ++) {
 
     long li1[tile_base_sz], li0[tile_base_sz];
@@ -412,10 +415,10 @@ ljbi1d_half_diamonds(int pb_size, int num_iters, long * jbi, long * jbi_out)
   }
 
 /* Second loop : tip down tiles */
-#ifndef SEQ
+
   #pragma omp parallel for schedule(static) shared(tmp) \
   private(l0, r0, l, r, x0)
-#endif
+
   for (tile_no = 1; tile_no < num_tiles + 1; tile_no ++) {
     x0 = tile_no * tile_base_sz;
     l0 = max(x0 - num_iters - 1, 0);
