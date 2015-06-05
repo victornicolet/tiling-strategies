@@ -129,6 +129,7 @@ int main(int argc, char ** argv) {
     char filename[1024];
     strcpy(filename, "./data/jacobi1D_hdiams_at_");
     strcat(filename, hostname);
+    strcat(filename, ".csv");
     csv_file = fopen(filename,"w");
 
     if(csv_file == NULL){
