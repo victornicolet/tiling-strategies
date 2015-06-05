@@ -38,17 +38,18 @@ static const int Num_iters_2d = 1 << 4;
 /* Options parsing */
 int OptIndex = 1;       /* first option should be argv[1] */
 char *OptArg = NULL;    /* global option argument pointer */
+
 static const char SwitchChar = '-';
 static const char Unknown = '?';
 
 int options(int , char **, const char *);
+struct args_dimt get2dargs(int, int, int, struct benchspec2d);
+struct args_dimt get1dargs(int, int, struct benchspec);
+struct args_dimt get1dargs_l(int, int, struct benchspec1d_l);
 double test1d(int, int, int, struct benchspec);
 double test2d(int, int, int, int, struct benchspec2d);
 double test1d_l(int, int, int, struct benchspec1d_l);
 void test_suite_hdiam1d(int, int, int, struct benchspec *,FILE *);
-struct args_dimt get2dargs(int, int, int, struct benchspec2d);
-struct args_dimt get1dargs(int, int, struct benchspec);
-struct args_dimt get1dargs_l(int, int, struct benchspec1d_l);
 
 void usage(int, int, char **, struct benchspec *, struct benchspec2d *);
 

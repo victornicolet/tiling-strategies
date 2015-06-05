@@ -34,7 +34,7 @@ static inline void do_topleft_hdiam(int, double **, double *)
 /*
 * Different versions of jacobi1d have been implemented here.
 *   - with half - diamonds : useful if we have few iterations, it allows
-*      parallelism an a concurrent start.
+*      parallelism and a concurrent start.
 *   - skewed tiles, with tasks
 *   - with overlapping tiles
 *   - sequential with swapping
@@ -52,33 +52,34 @@ djbi1d_hdiam_tasked(int pb_size, int num_iters, double * jbi, double * jbi_out)
 
   uint8_t task_index[num_tiles]  __attribute__((unused));
 
-#ifndef SEQ
   #pragma omp parallel
   #pragma omp single
-#endif
   {
-    /* Execute top-left task upfront */
-    #pragma omp task depend(out : task_index[0])
-    do_base_hdiam(tile_no, num_iters, pb_size, jbi, tmp);
+    /*
+    * Execute top-left task upfront : here the use of task pragma is only meant
+    * to satisfy the dependency.
+    */
 
+    #pragma omp task depend(out : task_index[0])
+    {
+      do_base_hdiam(tile_no, num_iters, pb_size, jbi, tmp);
+    }
     do_topleft_hdiam(num_iters, tmp, jbi_out);
+
+
     /* Loop over all tasks */
     for (tile_no = 1; tile_no < num_tiles; tile_no ++) {
 
       /* Base down tile */
-#ifndef SEQ
       #pragma omp task firstprivate(tile_no) shared(tmp) \
       depend(out : task_index[tile_no])
-#endif
        {
         do_base_hdiam(tile_no, num_iters, pb_size, jbi, tmp);
        }
 
       /* Tip down tile */
-#ifndef SEQ
        #pragma omp task firstprivate(tile_no) shared(tmp) \
       depend(in : task_index[tile_no - 1], task_index[tile_no])
-#endif
        {
         do_top_hdiam(tile_no + 1, num_iters, pb_size, tmp, jbi_out);
        }
