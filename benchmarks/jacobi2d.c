@@ -23,7 +23,7 @@ djbi2d_half_diamonds(struct args_dimt args, double ** data_in,
 {
   int iters = args.iters ;
   int stepwidth = 2 * iters ;
-  int x_steps = (args.width / stepwidth );
+  int x_steps = (args.width / stepwidth);
   int y_steps = (args.height / stepwidth );
 
   /* The tile is stored into temporary arrays : share them ! */
