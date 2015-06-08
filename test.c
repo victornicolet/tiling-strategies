@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <getopt.h>
 #include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
@@ -13,7 +14,7 @@
 #include "benchmarks/jacobi2d.h"
 
 /* Problem size (in space) between 2 ^ MIN_POW and 2 ^ MAX_POW */
-#define MIN_POW 5
+#define MIN_POW 3
 #define MIN_ITER_POW 4
 #define DEFAULT_RANGE 9
 #define DEFAULT_NRUNS 20
@@ -24,7 +25,7 @@
 * L2 256kB -> 32k = (1<<5)k > (1 << 15) doubles               1 << 15
 * L1 32 k -> 4k = (1<<2)k > (1<<12)                           1 << 12
 */
-static const int Pbsize_1d = 1 << 24;
+static const int Pbsize_1d =  8 * 4096 * KB;
 static const int Num_iters_1d = 1 << 5;
 /*
 * 2-Dimension problem size :
@@ -35,17 +36,51 @@ static const int Num_iters_1d = 1 << 5;
 static const int Pbsize_2d = 1 << 8;
 static const int Num_iters_2d = 1 << 4;
 
-/* Options parsing */
-int OptIndex = 1;       /* first option should be argv[1] */
-char *OptArg = NULL;    /* global option argument pointer */
+/* Options */
+static int debug_use_defaults = 0;
+static int hdiam_flag = 0;
+static int test_with_long_flag = 0;
+static int verbose_flag = 0;
 
-static const char SwitchChar = '-';
-static const char Unknown = '?';
+static const struct option longopts[] = {
+  {"brief",         no_argument,            &verbose_flag,        0},
+  {"dimt",          required_argument,      NULL,               't'},
+  {"dimx",          required_argument,      NULL,               'x'},
+  {"dimy",          required_argument,      NULL,               'y'},
+  {"hdiam",         no_argument,            &hdiam_flag,          1},
+  {"help",          no_argument,            NULL,               'h'},
+  {"iters-range",   required_argument,      NULL,               'i'},
+  {"mask",          required_argument,      NULL,               'm'},
+  {"nruns",         required_argument,      NULL,               'n'},
+  {"range",         required_argument,      NULL,               'r'},
+  {"long",          no_argument,            &test_with_long_flag, 1},
+  {"use_defaults",  no_argument,            &debug_use_defaults,  1},
+  {"verbose",       no_argument,            &verbose_flag,        1},
+  {0, 0, 0, 0}
+};
 
-int options(int , char **, const char *);
+static const char * opts_msg[] = {
+  "no verbose.",
+  "number of iterations.",
+  "first space dimension size.",
+  "second space dimension size.",
+  "run benchmarks with half-diamonds",
+  "print options and other information.",
+  "= value with --hdiam, iteration space dimensions ranges \n\
+    from 2 ^ 3 to 2 ^(3 + value)",
+  "= value, mask as specified below",
+  "= value. Number of tests / benchmark.",
+  "= value with --hdiam, space dimension ranges from 2^5 to 2^(5+value)",
+  " run tests with longs for corectness checking",
+  " use default values when debugging (small values)",
+  "",
+  "/0"
+};
+
 struct args_dimt get2dargs(int, int, int, struct benchspec2d);
 struct args_dimt get1dargs(int, int, struct benchspec);
 struct args_dimt get1dargs_l(int, int, struct benchspec1d_l);
+void print_opts();
 double test1d(int, int, int, struct benchspec);
 double test2d(int, int, int, int, struct benchspec2d);
 double test1d_l(int, int, int, struct benchspec1d_l);
@@ -57,8 +92,6 @@ int
 main(int argc, char ** argv)
 {
   int bs;
-  /* Legal options list */
-  //const char * options = "";
   /* Hostname for saving records */
   char hostname[512];
   hostname[511] = '\0';
@@ -104,46 +137,83 @@ main(int argc, char ** argv)
   {
     {"JACOBI1D_SEQUENTIAL (reference)", djbi1d_sequential, check_default,
       0, 0, 1},
-    {"JACOBI1D_OMP_NAIVE", djbi1d_omp_naive, check_default,
-      0, 0, 1},
     {"JACOBI1D_HALF_DIAMONDS", djbi1d_half_diamonds_test, check_low_iter,
       0, 0, 1},
     {"JACOBI1D_HDIAM(GROUPED TILES)", djbi1d_hdiam_grouped_test, check_low_iter,
       0, 0, 1},
-    {"JACOBI1D_HDIAM (TASKS)", djbi1d_hdiam_tasked_test, check_low_iter,
-      0, 0, 1}
   };
 
   int nbench = sizeof(benchmarks) / sizeof(struct benchspec);
   int nbench2d = sizeof(benchmarks2d) / sizeof(struct benchspec2d);
 
-
-
-  /*---------- Parameters section -----------*/
-
-  if (argc < 2) {
-    usage(nbench, nbench2d, argv, benchmarks, benchmarks2d);
-    return  0;
-  }
-
-  char * benchmask = argv[1];
-  int nruns = 0;
+  int opt = -1, option_index = 0;
+  int dimx = 0, dimy = 0, dimt = 0;
+  int range = -1, range_iters = -1;
   int maskl = 0;
+  int nruns = 0;
+  char * benchmask;
 
-  if (argc == 3) {
-    nruns = atoi(argv[2]);
+  while ((opt =
+    getopt_long(argc, argv, "hi:m:r:t:vx:y:", longopts, &option_index)) != -1) {
+      switch (opt) {
+        case '0':
+        case 'h':
+          print_opts();
+          usage(nbench, nbench2d, argv, benchmarks, benchmarks2d);
+          break;
+        case 'i':
+          range_iters = atoi(optarg);
+          break;
+        case 'm':
+          benchmask = optarg;
+          if ((maskl = strlen(benchmask)) > nbench + nbench2d) {
+            printf("Error : not a valid mask ! Your mask must be %i bits long\n",
+            nbench + nbench2d);
+            return -1;
+          }
+          break;
+        case 'n':
+          nruns = atoi(optarg);
+        case 'r':
+          range = atoi(optarg);
+          break;
+        case 't':
+          dimt = atoi(optarg);
+          break;
+        case 'v':
+          verbose_flag++;
+          break;
+        case 'x':
+          dimx = atoi(optarg);
+          break;
+        case 'y':
+          dimy = atoi(optarg);
+          break;
+        case '?':
+          break;
+      }
   }
-  if (benchmask[0] == 'l') {
-    // Tests with longs
-    int nbench_l = sizeof(benchmarks_l) / sizeof(struct benchspec1d_l);
-    for (bs = 0; bs < nbench_l; bs++) {
-      test1d_l(nruns, 0, 0, benchmarks_l[bs]);
-    }
-  } else if (strcmp(argv[1], "hdiam") == 0) {
+
+  if(range_iters < 0){
+    range_iters = DEFAULT_RANGE_ITER;
+  }
+  if(range < 0){
+    range = DEFAULT_RANGE;
+  }
+/* If debugging can set default parameters */
+#ifdef DEBUG
+  if(debug_use_defaults >= 0){
+    dimt = DEBUG_ITER;
+    dimx = DEBUG_SIZE;
+    dimy = DEBUG_SIZE;
+  }
+#endif
+/* -------------------------------------- */
+/* If hdiam has been set execute the corresponding tests */
+  if (hdiam_flag) {
 
     /* test sute for half diamonds versions (basic/ grouped tiles/ omp tasks)*/
     int num_benchs = sizeof(hdiam_benchmarks) / sizeof(struct benchspec) ;
-    int range = 0, range_iters = 0;
 
     /* Store results in a csv file */
     FILE * csv_file;
@@ -158,40 +228,19 @@ main(int argc, char ** argv)
       fprintf(stderr, "Failed to open %s . Aborting ...\n", filename);
       return -1;
     }
-
-    if (argc == 4) {
-      range = atoi(argv[2]);
-      range_iters = atoi(argv[3]);
-    } else {
-      range = DEFAULT_RANGE;
-      range_iters = DEFAULT_RANGE_ITER;
-    }
     test_suite_hdiam1d(num_benchs, range, range_iters, hdiam_benchmarks,
       csv_file);
     fclose(csv_file);
-
-  } else {
-    if ((maskl = strlen(benchmask)) > nbench + nbench2d) {
-      printf("Error : not a valid mask ! Your mask must be %i bits long\n",
-        nbench + nbench2d);
-      return -1;
-    }
+    return 0;
   }
 
-  int dimx = 0, dimy = 0, dimt = 0;
-
-  #ifdef DEBUG
-    dimt = DEBUG_ITER ;
-    dimx = DEBUG_SIZE;
-    dimy = DEBUG_SIZE;
-  #else
-    if (argc >= 6) {
-      dimt = atoi(argv[3]);
-      dimx = atoi(argv[4]);
-      dimy = atoi(argv[5]);
+  if(test_with_long_flag > 0){
+    int nbench_l = sizeof(benchmarks_l) / sizeof(struct benchspec1d_l);
+    for (bs = 0; bs < nbench_l; bs++) {
+      test1d_l(nruns, 0, 0, benchmarks_l[bs]);
     }
-  #endif
-  /* -------------------------------------- */
+    return 0;
+  }
 
   double exec_time = 0.0, prev_xctime = -1.0;
   for (bs = 0; bs < maskl; bs++) {
@@ -253,6 +302,16 @@ get1dargs_l(int dimx, int dimt, struct benchspec1d_l bs)
   return get1dargs(dimx, dimt, bsc);
 }
 
+void
+print_opts()
+{
+  int i;
+  int nopts = sizeof(longopts) / sizeof(struct option) ;
+  for(i = 0; i < nopts - 1; i++){
+    printf("--%s %s\n", longopts[i].name, opts_msg[i]);
+  }
+}
+
 
 
 double
@@ -289,10 +348,11 @@ test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
   }
   print_test1d_summary(nruns, DISPLAY_VERBOSE, t_accu, benchmark, data_in,
    data_out);
-  /* TODO : benchmark -> specific reference */
+
   double * ref_out = aligned_alloc(CACHE_LINE_SIZE, \
     sizeof(*ref_out) * args.width);
   djbi1d_sequential(args, data_in, ref_out, NULL);
+
   long diffs;
   if ((diffs = compare_fast(args.width, data_out, ref_out))>0) {
     printf("Differences : %li over %i ( %4.2f )\n", diffs, args.width,
@@ -301,54 +361,6 @@ test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
   free(data_in);
   free(data_out);
   return t_accu;
-}
-
-
-int options(int argc, char *argv[], const char *legal)
-{
-  static char *posn = "";  /* position in argv[OptIndex] */
-  char *legal_index = NULL;
-  int letter = 0;
-
-    if (!*posn) {
-      /* no more args, no SwitchChar or no option letter ? */
-      if ((OptIndex >= argc) || (*(posn = argv[OptIndex]) != SwitchChar) ||
-          !*++posn)
-        return -1;
-                /* find double SwitchChar ? */
-      if (*posn == SwitchChar) {
-          OptIndex++;
-          return -1;
-        }
-    }
-    letter = *posn++;
-
-    if (!(legal_index = strchr(legal, letter))) {
-      if (!*posn)
-        OptIndex++;
-      return Unknown;
-    }
-
-    if (*++legal_index != ':') {
-      /* no option argument */
-      OptArg = NULL;
-      if (!*posn)
-        OptIndex++;
-    } else {
-      if (*posn)
-        /* no space between opt and opt arg */
-        OptArg = posn;
-      else
-        if (argc <= ++OptIndex) {
-            posn = "";
-            return Unknown;
-        } else {
-            OptArg = argv[OptIndex];
-        }
-      posn = "";
-      OptIndex++;
-    }
-        return letter;
 }
 
 
@@ -542,11 +554,6 @@ usage(int nbs, int nbs2d, char ** argv, struct benchspec * bs,
   }
   printf("%sExample mask to test JACOBI1D_OMP_NAIVE and JACOBI2D_SEQ :%s\
           \n\t .\\test 01000001\n", KBLU, KRESET);
-  printf("%sTests for %s half-diamonds version %s of jacobi1d :%s\
-      \n\t .\\test hdiam [range] [iters_range]\n \
-      [range] : log2(size) of problem ranging from %i kB to %i + range kB\n\
-      [range_iters] : log2(iterations) ranging from %i to %i + range_iters\n",
-      KBLU, KRED, KBLU, KRESET, MIN_POW, MIN_POW, MIN_ITER_POW, MIN_ITER_POW);
   printf("%sChecking correctness with long versions of algorithms : %s\
           \n\t .\\test l\n", KBLU, KRESET);
 }

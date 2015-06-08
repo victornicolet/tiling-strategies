@@ -7,7 +7,7 @@
 #ifndef DISPLAY_OFFSET
   #define DISPLAY_OFFSET 1200
 #endif
-#define DISPLAY_VERBOSE 1
+#define DISPLAY_VERBOSE verbose_flag
 /*
  * A default number of cores, if nothing works when trying to get the number of
  *  online cores.
