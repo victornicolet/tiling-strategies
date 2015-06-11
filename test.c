@@ -140,7 +140,7 @@ main(int argc, char ** argv)
     {"JACOBI1D_HALF_DIAMONDS", djbi1d_half_diamonds_test, check_low_iter,
       0, 0, 1},
     {"JACOBI1D_HDIAM(GROUPED TILES)", djbi1d_hdiam_grouped_test, check_low_iter,
-      0, 0, 1},
+      0, 0, 1}
   };
 
   int nbench = sizeof(benchmarks) / sizeof(struct benchspec);
