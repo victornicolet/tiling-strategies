@@ -29,6 +29,10 @@
 #define T_WIDTH_DBL_DIAM 8
 #define T_ITERS_DIAM 32
 
+#ifndef GROUP_FACTOR
+#define GROUP_FACTOR 1
+#endif
+
 /* ------------------------------- */
 /* Stencil macros */
 

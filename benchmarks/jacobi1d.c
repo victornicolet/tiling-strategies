@@ -89,13 +89,15 @@ void djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs,
   int tile_no, grp_no;
 
   num_procs = 2 * num_procs;
-  // Tile bounds
+  /* Tile bounds */
   int tile_max;
   int tile_base_sz = 2 * num_iters;
   int num_tiles = (pb_size / tile_base_sz);
-  int group_size = (num_procs * L1_CACHE_SIZE) / (32 * num_iters) ;
+  /* Gourp size */
+  int group_size = GROUP_FACTOR * (num_procs * L1_CACHE_SIZE) /
+    (num_iters * sizeof(double) * 4) ;
   int num_grps = (num_tiles - 1) / group_size;
-  // Store the border between base-down pyramids and base-up pyramids
+  /* Store the border between base-down pyramids and base-up pyramids */
   double **tmp = alloc_double_mx(2, pb_size * sizeof(*tmp));
 
   /* First execute first base-down tile and top-left corner */
