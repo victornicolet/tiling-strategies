@@ -644,7 +644,7 @@ void djbi1d_omp_naive(struct args_dimt args, double *jbi_in, double *jbi_out,
     for (i = 1; i < n - 1; i++) {
       JBI1D_STENCIL(l2, l1);
     }
-    memcpy(l1, l2, n * sizeof(double));
+    swap(&l1, &l2);
   }
 
   clock_gettime(CLOCK_MONOTONIC, &tend);
@@ -698,8 +698,7 @@ void djbi1d_omp_overlap(struct args_dimt args, double *jbi_in, double *jbi_out,
             lvl1[i - l] =
                 (lvl0[i - l - 1] + lvl0[i - l] + lvl0[i - l + 1]) / 3.0;
           }
-          memcpy(lvl0, lvl1,
-                 (T_WIDTH_DBL_OVERLAP + T_ITERS * 2) * sizeof(double));
+          swap(&lvl0, &lvl1);
         }
 
         /* Write tile top */
@@ -738,7 +737,7 @@ void djbi1d_sequential(struct args_dimt args, double *jbi_in, double *jbi_out,
     }
     l2[0] = l1[0];
     l2[n - 1] = l1[n - 1];
-    memcpy(l1, l2, n * sizeof(*l2));
+    swap(&l1, &l2);
   }
 
   clock_gettime(CLOCK_MONOTONIC, &tend);
@@ -966,7 +965,7 @@ static inline void do_i0_t0(double *dashs, double *slashs, int tile_t,
 
     slashs[t] = l1[right - 1];
     slashs[t + 1] = l1[right];
-    memcpy(l1, l2, (T_WIDTH_DBL + 1) * sizeof(*l1));
+   swap(&l1, &l2);
   }
 #ifdef DEBUG
   for (i = 0; i < DISPLAY_SIZE; i++) printf("%10.3f", dashs[i]);
@@ -1003,7 +1002,7 @@ static inline void do_i0_t(double *dashs, double *slashs, int strpno,
     slashs[tile_t * 2 * T_ITERS + t] = l1[right - 1];
     slashs[tile_t * 2 * T_ITERS + t + 1] = l1[right];
 
-    memcpy(l1, l2, (T_WIDTH_DBL + 1) * sizeof(*l1));
+    swap(&l1, &l2);
   }
 
   free(l1);
@@ -1042,7 +1041,7 @@ static inline void do_i_t(double *dashs, double *slashs, int strpno,
     slashs[tile_t * 2 * T_ITERS + t] = l1[T_WIDTH_DBL];
     slashs[tile_t * 2 * T_ITERS + t + 1] = l1[T_WIDTH_DBL + 1];
 
-    memcpy(l1, l2, (T_WIDTH_DBL + 2) * sizeof(*l1));
+    swap(&l1, &l2);
   }
   /* Write dash */
   for (i = 2; i < T_WIDTH_DBL; i++) {
@@ -1077,7 +1076,7 @@ static inline void do_in_t(double *dashs, double *slashs, int strpno,
     for (i = 2; i <= r; i++) {
       l2[i] = ((l1[i - 2] + l1[i - 1] + l1[i]) / 3.0);
     }
-    memcpy(l1, l2, (T_WIDTH_DBL + 2) * sizeof(*l1));
+    swap(&l1, &l2);
   }
   /* Write dash */
   for (i = 2; i < T_WIDTH_DBL; i++) {
@@ -1096,7 +1095,8 @@ static inline void do_base_hdiam(int tile_no, int num_iters, int pb_size,
   int r0, l0, r, l;
   int tile_base_sz = num_iters * 2;
 
-  double li1[tile_base_sz], li0[tile_base_sz];
+  double * li1 = aligned_alloc(CACHE_LINE_SIZE, tile_base_sz * sizeof *li1);
+  double * li0 = aligned_alloc(CACHE_LINE_SIZE, tile_base_sz * sizeof *li0);
 
   /* Initial values */
   l0 = max(tile_no * tile_base_sz, 0);
@@ -1125,7 +1125,7 @@ static inline void do_base_hdiam(int tile_no, int num_iters, int pb_size,
       tmp[1][l + 1] = li1[l - l0 + 1];
     }
 
-    memcpy(li0, li1, (tile_base_sz) * sizeof(*li1));
+    swap(&li0, &li1);
   }
 }
 
@@ -1139,7 +1139,10 @@ static inline void do_top_hdiam(int tile_no, int num_iters, int pb_size,
   l0 = max(x0 - num_iters - 1, 0);
   r0 = min(x0 + num_iters + 1, pb_size);
 
-  double li1[tile_base_sz + 2], li0[tile_base_sz + 2];
+  double * li1 = aligned_alloc(CACHE_LINE_SIZE, (tile_base_sz + 2) *
+    sizeof *li1);
+  double * li0 = aligned_alloc(CACHE_LINE_SIZE, (tile_base_sz + 2) *
+    sizeof *li0);
 
   for (t = 0; t < num_iters; t++) {
     l = max(x0 - (t + 1), 1);
@@ -1153,7 +1156,8 @@ static inline void do_top_hdiam(int tile_no, int num_iters, int pb_size,
     for (i = l; i <= r; i++) {
       li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
     }
-    memcpy(li0, li1, (tile_base_sz + 2) * sizeof(*li1));
+
+    swap(&li1, &li0);
   }
   /* Copy back to memory */
   for (i = l0 + 1; i < r0; i++) {
@@ -1164,7 +1168,9 @@ static inline void do_topleft_hdiam(int num_iters, double **tmp,
                                     double *jbi_out) {
   int i, t;
   int tile_base_sz = 2 * num_iters;
-  double li1[tile_base_sz], li0[tile_base_sz];
+
+  double * li1 = aligned_alloc(CACHE_LINE_SIZE, tile_base_sz * sizeof *li1);
+  double * li0 = aligned_alloc(CACHE_LINE_SIZE, tile_base_sz * sizeof *li0);
 
   li1[0] = tmp[0][0];
   li0[0] = tmp[0][0];
@@ -1179,7 +1185,7 @@ static inline void do_topleft_hdiam(int num_iters, double **tmp,
       li1[i] = (li0[i - 1] + li0[i] + li0[i + 1]) / 3;
     }
 
-    memcpy(li0, li1, (tile_base_sz) * sizeof(*li1));
+    swap(&li0, &li1);
   }
   for (i = 0; i < num_iters + 1; i++) {
     jbi_out[i] = li0[i];

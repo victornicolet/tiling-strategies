@@ -179,25 +179,11 @@ print_test2d_summary(int nruns, int verbose, double total_time,
 }
 
 void
-swap(void *a, void *b, size_t size)
+swap(double **a, double **b)
 {
-  enum { threshold = (1 << 7) };
-  if (size <= threshold) {
-    char temp[threshold];
-
-    memcpy(temp, b,    size);
-    memcpy(b,    a,    size);
-    memcpy(a,    temp, size);
-  }
-  else {
-    void* temp = aligned_alloc(CACHE_LINE_SIZE, size);
-
-    memcpy(temp, b,    size);
-    memcpy(b,    a,    size);
-    memcpy(a,    temp, size);
-
-    free(temp);
-  }
+    double *tmp = *a;
+    *a = *b;
+    *b = tmp;
 }
 
 void

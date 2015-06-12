@@ -202,7 +202,7 @@ void print_test1d_l_summary(int, int, double, struct benchspec1d_l, long *,
 void print_test2d_summary(int, int, double, struct benchspec2d, double **,
                           double **);
 
-void swap(void *, void *, size_t);
+void swap(double **, double **);
 
 void why_fopen(int err_no);
 
