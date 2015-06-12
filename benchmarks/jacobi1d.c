@@ -125,193 +125,30 @@ void djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs,
   free_mx((void **)tmp, 2);
 }
 
-void djbi1d_half_diamonds(int pb_size, int num_iters, double *jbi,
+void djbi1d_half_diamonds(int pb_size, int num_iters, double *jbi_in,
                           double *jbi_out) {
-  int tile_no, t, i;
-  // Tile bounds
-  int l, l0, r, r0, x0;
-
-  int tile_base_sz = 2 * num_iters;
-  int num_tiles = (pb_size / tile_base_sz);
-  // Store the border between base-down pyramids and base-up pyramids
+  int tile_no;
+  int num_tiles = (pb_size / (2 * num_iters));
+  /* Store the border between base-down pyramids and base-up pyramids */
   double **tmp = alloc_double_mx(2, pb_size * sizeof(*tmp));
 
-#ifdef DEBUG
-  int ii;
-  int *counters = calloc(pb_size, sizeof(*counters));
-  char **viewtile = malloc(num_iters * sizeof(*viewtile));
-
-  for (i = 0; i < num_iters; i++) {
-    viewtile[i] = malloc(pb_size * sizeof(*viewtile[i]));
-    for (ii = 0; ii < pb_size; ii++) {
-      viewtile[i][ii] = 's';
-    }
-  }
-  int track_cell = 2;
-#endif
-
-/* First loop : base down tiles */
-
-#pragma omp parallel for schedule(static) shared(tmp) private(l0, r0, l, r, x0)
-
+  /* First loop : base down tiles */
+#pragma omp parallel for schedule(static) shared(tmp) private(tile_no)
   for (tile_no = 0; tile_no < num_tiles; tile_no++) {
-    double li1[tile_base_sz], li0[tile_base_sz];
-
-    /* Initial values */
-    l0 = max(tile_no * tile_base_sz, 0);
-    r0 = min(l0 + tile_base_sz, pb_size - 1);
-    for (i = l0; i < r0; i++) {
-      li0[i - l0] = jbi[i];
-      li1[i - l0] = 0.0;
-    }
-
-    tmp[0][l0] = li0[0];
-    tmp[1][l0 + 1] = li0[1];
-    tmp[0][r0 - 1] = li0[r0 - l0 - 1];
-    tmp[1][r0 - 2] = li0[r0 - l0 - 2];
-
-    for (t = 0; t < num_iters - 1; t++) {
-      l = max(l0 + t + 1, 1);
-      r = min(l0 + tile_base_sz - t - 1, pb_size);
-
-      for (i = l; i < r; i++) {
-        li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
-#ifdef DEBUG
-        viewtile[t - 1][i] = 'X';
-        counters[i]++;
-        if (i == track_cell) {
-          printf("%i, %i : %10.3f\n", i, t, li0[i]);
-        }
-
-/* The border of the pyramids needs to be stored for further computation */
-#endif
-      }
-      tmp[0][r - 1] = li1[r - l0 - 1];
-      tmp[0][l] = li1[l - l0];
-      if (r - 2 != l) {
-        tmp[1][r - 2] = li1[r - l0 - 2];
-        tmp[1][l + 1] = li1[l - l0 + 1];
-      }
-
-      memcpy(li0, li1, (tile_base_sz) * sizeof(*li1));
-
-#ifdef DEBUG
-      viewtile[t][r - 2] = 'x';
-      viewtile[t][r - 1] = 'x';
-      viewtile[t][l] = 'x';
-      viewtile[t][l + 1] = 'x';
-#endif
-    }
+    do_base_hdiam(tile_no, num_iters, pb_size, jbi_in, tmp);
   }
 
   /* Half-tile at beggining, in front of parallel loop */
-  double li1[tile_base_sz], li0[tile_base_sz];
+ do_topleft_hdiam(num_iters, tmp, jbi_out);
 
-  for (i = 0; i < tile_base_sz; i++) {
-    li1[i] = 999;
-  }
 
-  li1[0] = tmp[0][0];
-  li0[0] = tmp[0][0];
-  li0[1] = tmp[1][1];
-  for (t = 0; t < num_iters; t++) {
-    /* Load from the border-storing array */
-    li0[t + 1] = tmp[1][t + 1];
-    li0[t] = tmp[0][t];
-
-    for (i = 1; i < t + 1; i++) {
-      li1[i] = (li0[i - 1] + li0[i] + li0[i + 1]) / 3;
-    }
-
-    memcpy(li0, li1, (tile_base_sz) * sizeof(*li1));
-  }
-  for (i = 0; i < num_iters + 1; i++) {
-    jbi_out[i] = li0[i];
-  }
-
-/* Second loop : tip down tiles */
-
-#pragma omp parallel for schedule(static) shared(tmp) private(l0, r0, l, r, x0)
-
+  /* Second loop : tip down tiles */
+#pragma omp parallel for schedule(static) shared(tmp) private(tile_no)
   for (tile_no = 1; tile_no < num_tiles + 1; tile_no++) {
-    x0 = tile_no * tile_base_sz;
-    l0 = max(x0 - num_iters - 1, 0);
-    r0 = min(x0 + num_iters + 1, pb_size);
-
-    double li1[tile_base_sz + 2], li0[tile_base_sz + 2];
-
-    for (t = 0; t < num_iters; t++) {
-      l = max(x0 - (t + 1), 1);
-      r = min(x0 + t, pb_size - 1);
-      /* Load from the border-storing array */
-      li0[l - l0 - 1] = tmp[1][l - 1];
-      li0[r - l0 + 1] = tmp[1][r + 1];
-      li0[r - l0] = tmp[0][r];
-      li0[l - l0] = tmp[0][l];
-
-      for (i = l; i <= r; i++) {
-        li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
-#ifdef DEBUG
-        if (viewtile[t][i] == 's') {
-          viewtile[t][i] = '.';
-        } else {
-          viewtile[t][i] = 'o';
-        }
-        counters[i]++;
-        if (i == track_cell) {
-          printf("%i, %i : %10.3f\n", i, t, li0[i - l0]);
-        }
-#endif
-      }
-      memcpy(li0, li1, (tile_base_sz + 2) * sizeof(*li1));
-    }
-    /* Copy back to memory */
-    for (i = l0 + 1; i < r0; i++) {
-      jbi_out[i] = li0[i - l0];
-    }
+    do_top_hdiam(tile_no, num_iters, pb_size, tmp, jbi_out);
   }
   free_mx((void **)tmp, 2);
 
-/* ---------------------------*/
-/* Only debug below this line */
-
-#ifdef DEBUG
-  int pv = 0, counting = 0, prints = 0;
-  for (i = 1; i < pb_size - 1; i++) {
-    if (counters[i] != num_iters) {
-      if (pv != i - 1) {
-        fprintf(stderr, "Error : bad operations count from cell %i ", i);
-        counting = 1;
-      }
-      pv = i;
-    }
-    if (i != pv && counting == 1) {
-      fprintf(stderr, "to cell %i. ", i);
-      fprintf(stderr, "[%i operations]\n", counters[pv]);
-      counting = 0;
-      prints++;
-    }
-    if (prints > 3) {
-      fprintf(stderr, "Too much cells with bad operation counts..\n");
-      break;
-    }
-  }
-  printf("\n");
-  for (int tile_t = num_iters - 1; tile_t >= 0; tile_t--) {
-    printf("%i \t- ", tile_t);
-    for (int ii = 0; ii < 80; ii++) {
-      if (viewtile[tile_t][ii] == 'x') {
-        printf("%s%c%s", KBLU, viewtile[tile_t][ii], KRESET);
-      } else {
-        printf("%c", viewtile[tile_t][ii]);
-      }
-    }
-    free(viewtile[tile_t]);
-    printf("\n");
-  }
-  free(viewtile);
-  free(counters);
-#endif
 }
 
 void ljbi1d_half_diamonds(int pb_size, int num_iters, long *jbi,
@@ -1142,7 +979,7 @@ static inline void do_top_hdiam(int tile_no, int num_iters, int pb_size,
 
   double li1[tile_base_sz + 2], li0[tile_base_sz + 2];
 
-  for (t = 0; t < num_iters; t++) {
+  for (t = 0; t < num_iters - 1; t++) {
     l = max(x0 - (t + 1), 1);
     r = min(x0 + t, pb_size - 1);
     /* Load from the border-storing array */
@@ -1157,9 +994,22 @@ static inline void do_top_hdiam(int tile_no, int num_iters, int pb_size,
 
     memcpy(li0, li1, (tile_base_sz + 2) * sizeof *li1);
   }
+  t = num_iters - 1;
+  l = max(x0 - (t + 1), 1);
+  r = min(x0 + t, pb_size - 1);
+  /* Load from the border-storing array */
+  li0[l - l0 - 1] = tmp[0][l - 1];
+  li0[r - l0 + 1] = tmp[0][r + 1];
+  li0[r - l0] = tmp[0][r];
+  li0[l - l0] = tmp[0][l];
+
+  for (i = l; i <= r; i++) {
+    li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
+  }
+
   /* Copy back to memory */
   for (i = l0 + 1; i < r0; i++) {
-    jbi_out[i] = li0[i - l0];
+    jbi_out[i] = li1[i - l0];
   }
 }
 static inline void do_topleft_hdiam(int num_iters, double **tmp,
@@ -1184,9 +1034,19 @@ static inline void do_topleft_hdiam(int num_iters, double **tmp,
 
     memcpy(li0, li1, (tile_base_sz) * sizeof *li1);
   }
-  for (i = 0; i < num_iters + 1; i++) {
-    jbi_out[i] = li0[i];
+
+  t = num_iters - 1;
+  li0[t + 1] = tmp[1][t + 1];
+  li0[t] = tmp[0][t];
+
+  for (i = 1; i < t + 1; i++) {
+    li1[i] = (li0[i - 1] + li0[i] + li0[i + 1]) / 3;
   }
+
+  for (i = 0; i < num_iters + 1; i++) {
+    jbi_out[i] = li1[i];
+  }
+
 }
 
 /*
