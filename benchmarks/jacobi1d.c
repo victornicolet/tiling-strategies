@@ -1097,8 +1097,7 @@ static inline void do_base_hdiam(int tile_no, int num_iters, int pb_size,
   int r0, l0, r, l;
   int tile_base_sz = num_iters * 2;
 
-  double * li1 = aligned_alloc(CACHE_LINE_SIZE, tile_base_sz * sizeof *li1);
-  double * li0 = aligned_alloc(CACHE_LINE_SIZE, tile_base_sz * sizeof *li0);
+  double li1[tile_base_sz], li0[tile_base_sz];
 
   /* Initial values */
   l0 = max(tile_no * tile_base_sz, 0);
@@ -1127,7 +1126,7 @@ static inline void do_base_hdiam(int tile_no, int num_iters, int pb_size,
       tmp[1][l + 1] = li1[l - l0 + 1];
     }
 
-    swap(&li0, &li1);
+    memcpy(li0, li1, (tile_base_sz) * sizeof *li1);
   }
 }
 
@@ -1141,10 +1140,7 @@ static inline void do_top_hdiam(int tile_no, int num_iters, int pb_size,
   l0 = max(x0 - num_iters - 1, 0);
   r0 = min(x0 + num_iters + 1, pb_size);
 
-  double * li1 = aligned_alloc(CACHE_LINE_SIZE, (tile_base_sz + 2) *
-    sizeof *li1);
-  double * li0 = aligned_alloc(CACHE_LINE_SIZE, (tile_base_sz + 2) *
-    sizeof *li0);
+  double li1[tile_base_sz + 2], li0[tile_base_sz + 2];
 
   for (t = 0; t < num_iters; t++) {
     l = max(x0 - (t + 1), 1);
@@ -1159,7 +1155,7 @@ static inline void do_top_hdiam(int tile_no, int num_iters, int pb_size,
       li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
     }
 
-    swap(&li1, &li0);
+    memcpy(li0, li1, (tile_base_sz + 2) * sizeof *li1);
   }
   /* Copy back to memory */
   for (i = l0 + 1; i < r0; i++) {
@@ -1171,8 +1167,7 @@ static inline void do_topleft_hdiam(int num_iters, double **tmp,
   int i, t;
   int tile_base_sz = 2 * num_iters;
 
-  double * li1 = aligned_alloc(CACHE_LINE_SIZE, tile_base_sz * sizeof *li1);
-  double * li0 = aligned_alloc(CACHE_LINE_SIZE, tile_base_sz * sizeof *li0);
+  double li1[tile_base_sz], li0[tile_base_sz];
 
   li1[0] = tmp[0][0];
   li0[0] = tmp[0][0];
@@ -1187,7 +1182,7 @@ static inline void do_topleft_hdiam(int num_iters, double **tmp,
       li1[i] = (li0[i - 1] + li0[i] + li0[i + 1]) / 3;
     }
 
-    swap(&li0, &li1);
+    memcpy(li0, li1, (tile_base_sz) * sizeof *li1);
   }
   for (i = 0; i < num_iters + 1; i++) {
     jbi_out[i] = li0[i];
