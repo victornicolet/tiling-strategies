@@ -1008,7 +1008,7 @@ static inline void do_top_hdiam(int tile_no, int num_iters, int pb_size,
   }
 
   /* Copy back to memory */
-  for (i = l0 + 1; i < r0; i++) {
+  for (i = l0 + 1; i < r0 - 1; i++) {
     jbi_out[i] = li1[i - l0];
   }
 }
@@ -1043,7 +1043,7 @@ static inline void do_topleft_hdiam(int num_iters, double **tmp,
     li1[i] = (li0[i - 1] + li0[i] + li0[i + 1]) / 3;
   }
 
-  for (i = 0; i < num_iters + 1; i++) {
+  for (i = 0; i < num_iters; i++) {
     jbi_out[i] = li1[i];
   }
 
