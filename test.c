@@ -48,6 +48,7 @@ static const struct option longopts[] = {
   {"dimx",          required_argument,      NULL,               'x'},
   {"dimy",          required_argument,      NULL,               'y'},
   {"hdiam",         no_argument,            &hdiam_flag,          1},
+  {"hdmask",       required_argument,      NULL,               'M'},
   {"help",          no_argument,            NULL,               'h'},
   {"iters-range",   required_argument,      NULL,               'i'},
   {"mask",          required_argument,      NULL,               'm'},
@@ -60,20 +61,21 @@ static const struct option longopts[] = {
 };
 
 static const char * opts_msg[] = {
-  "no verbose.",
-  "number of iterations.",
-  "first space dimension size.",
-  "second space dimension size.",
-  "run benchmarks with half-diamonds",
-  "print options and other information.",
-  "= value with --hdiam, iteration space dimensions ranges \n\
-    from 2 ^ 3 to 2 ^(3 + value)",
-  "= value, mask as specified below",
-  "= value. Number of tests / benchmark.",
-  "= value with --hdiam, space dimension ranges from 2^5 to 2^(5+value)",
-  " run tests with longs for corectness checking",
-  " use default values when debugging (small values)",
-  "",
+  "\tno verbose.",
+  "\t\tnumber of iterations.",
+  "\t\tfirst space dimension size.",
+  "\t\tsecond space dimension size.",
+  "\trun benchmarks with half-diamonds",
+  "\tspecify mask for half-diamond benchmarks",
+  "\t\tprint options and other information.",
+  "\t= value with --hdiam, iteration space dimensions ranges \n\
+    \t\tfrom 2 ^ 3 to 2 ^(3 + value)",
+  "\t\t= value, mask as specified below",
+  "\t= value. Number of tests / benchmark.",
+  "\t= value with --hdiam, space dimension ranges from 2^5 to 2^(5+value)",
+  "\t\t run tests with longs for corectness checking",
+  "\t use default values when debugging (small values)",
+  "\t",
   "/0"
 };
 
@@ -84,7 +86,7 @@ void print_opts();
 double test1d(int, int, int, struct benchspec);
 double test2d(int, int, int, int, struct benchspec2d);
 double test1d_l(int, int, int, struct benchspec1d_l);
-void test_suite_hdiam1d(int, int, int, struct benchspec *,FILE *);
+void test_suite_hdiam1d(int, int, int, char *, struct benchspec *,FILE *);
 
 void usage(int, int, char **, struct benchspec *, struct benchspec2d *);
 
@@ -140,21 +142,26 @@ main(int argc, char ** argv)
     {"JACOBI1D_HALF_DIAMONDS", djbi1d_half_diamonds_test, check_low_iter,
       0, 0, 1},
     {"JACOBI1D_HDIAM(GROUPED TILES)", djbi1d_hdiam_grouped_test, check_low_iter,
+      0, 0, 1},
+    {"JACOBI1D_HDIAM (USING TASKS", djbi1d_hdiam_tasked_test, check_low_iter,
       0, 0, 1}
   };
 
   int nbench = sizeof(benchmarks) / sizeof(struct benchspec);
   int nbench2d = sizeof(benchmarks2d) / sizeof(struct benchspec2d);
+  int nbench_hd = sizeof(hdiam_benchmarks) / sizeof(struct benchspec);
 
   int opt = -1, option_index = 0;
   int dimx = 0, dimy = 0, dimt = 0;
   int range = -1, range_iters = -1;
-  int maskl = 0;
+  int maskl = 0, hdmaskl = 0;
   int nruns = 0;
-  char * benchmask;
+  char *benchmask, *hdmask;
+
+  hdmask = NULL;
 
   while ((opt =
-    getopt_long(argc, argv, "hi:m:r:t:vx:y:", longopts, &option_index)) != -1) {
+    getopt_long(argc, argv, "hi:m:M:r:t:vx:y:", longopts, &option_index)) != -1) {
       switch (opt) {
         case '0':
         case 'h':
@@ -172,6 +179,12 @@ main(int argc, char ** argv)
             return -1;
           }
           break;
+        case 'M':
+          hdmask = optarg;
+          if ((hdmaskl = strlen(hdmask)) > nbench_hd) {
+            printf("Error : the hdiams mask you speicified is too long."
+              "Must be maximum %i bits long.\n", nbench_hd);
+          }
         case 'n':
           nruns = atoi(optarg);
         case 'r':
@@ -228,7 +241,10 @@ main(int argc, char ** argv)
       fprintf(stderr, "Failed to open %s . Aborting ...\n", filename);
       return -1;
     }
-    test_suite_hdiam1d(num_benchs, range, range_iters, hdiam_benchmarks,
+    if(hdmask == NULL){
+      hdmask = "0110";
+    }
+    test_suite_hdiam1d(num_benchs, range, range_iters, hdmask, hdiam_benchmarks,
       csv_file);
     fclose(csv_file);
     return 0;
@@ -454,7 +470,7 @@ test2d(int nruns, int dimx, int dimy, int dimt, struct benchspec2d benchmark)
 
 
 void
-test_suite_hdiam1d(int num_benchs, int range, int range_iters,
+test_suite_hdiam1d(int num_benchs, int range, int range_iters, char *hdmask,
  struct benchspec * hdiam_benchmarks, FILE * csv_file)
 {
   int pow2, bm_no, run_no, iters_pow;
@@ -469,30 +485,31 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters,
     double t_accu, mean_t_ms;
     double ** timelog = alloc_double_mx(num_benchs, range);
     for (bm_no = 0; bm_no < num_benchs; bm_no ++) {
+      if (hdmask[bm_no] == '1') {
+        for (pow2 = MIN_POW; pow2 < MIN_POW + range; pow2 ++) {
 
-      for (pow2 = MIN_POW; pow2 < MIN_POW + range; pow2 ++) {
+          struct args_dimt args = { (2 << pow2) * KB, 0 , 1 << iters_pow};
 
-        struct args_dimt args = { (2 << pow2) * KB, 0 , 1 << iters_pow};
+          double * data_in = malloc(CACHE_LINE_SIZE *
+            sizeof(*data_in) * args.width);
+          double * data_out = malloc(CACHE_LINE_SIZE *
+            sizeof(*data_out) * args.width);
+          init_data_1d(args.width, data_in);
 
-        double * data_in = malloc(CACHE_LINE_SIZE *
-          sizeof(*data_in) * args.width);
-        double * data_out = malloc(CACHE_LINE_SIZE *
-          sizeof(*data_out) * args.width);
-        init_data_1d(args.width, data_in);
-
-        struct benchscore scores[DEFAULT_NRUNS];
-        t_accu = 0.0;
-        hdiam_benchmarks[bm_no].variant(args, data_in, data_out, &scores[0]);
-        for (run_no = 0; run_no < DEFAULT_NRUNS; run_no ++) {
-            hdiam_benchmarks[bm_no].variant(args, data_in, data_out,
-              &scores[run_no]);
-            t_accu += scores[run_no].wallclock;
+          struct benchscore scores[DEFAULT_NRUNS];
+          t_accu = 0.0;
+          hdiam_benchmarks[bm_no].variant(args, data_in, data_out, &scores[0]);
+          for (run_no = 0; run_no < DEFAULT_NRUNS; run_no ++) {
+              hdiam_benchmarks[bm_no].variant(args, data_in, data_out,
+                &scores[run_no]);
+              t_accu += scores[run_no].wallclock;
+          }
+          mean_t_ms = (t_accu / DEFAULT_NRUNS) * 1000.0 ;
+          /* Test output */
+          free(data_out);
+          free(data_in);
+          timelog[bm_no][pow2 - MIN_POW] = mean_t_ms;
         }
-        mean_t_ms = (t_accu / DEFAULT_NRUNS) * 1000.0 ;
-        /* Test output */
-        free(data_out);
-        free(data_in);
-        timelog[bm_no][pow2 - MIN_POW] = mean_t_ms;
       }
     }
 
@@ -501,7 +518,9 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters,
     /* Standard output */
     printf("\n");
     for (i = 0; i < num_benchs; i++) {
-      printf("%i : %s\n",i, hdiam_benchmarks[i].name);
+      if (hdmask[i] == '1'){
+        printf("%i : %s\n",i, hdiam_benchmarks[i].name);
+      }
     }
     printf("\n");
     printf("%12s\t%18s\t%c%20s",
@@ -511,8 +530,9 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters,
       printf("%i kB\t", 1 << (j + MIN_POW));
       printf("\t%8f\t\t", timelog[0][j]);
       for (i = 1; i < num_benchs; i ++) {
-        printf("\t%5.3f",
-          (timelog[i][j] / timelog[0][j]) * 100.0);
+        if (hdmask[i] == '1') {
+          printf("\t%5.3f", (timelog[i][j] / timelog[0][j]) * 100.0);
+        }
       }
       printf("\n");
     }
