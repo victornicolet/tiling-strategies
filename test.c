@@ -158,7 +158,7 @@ main(int argc, char ** argv)
   int nruns = 0;
   char *benchmask, *hdmask;
 
-  hdmask = NULL;
+  hdmask = "1110";
 
   while ((opt =
     getopt_long(argc, argv, "hi:m:M:r:t:vx:y:", longopts, &option_index)) != -1) {
@@ -182,7 +182,7 @@ main(int argc, char ** argv)
         case 'M':
           hdmask = optarg;
           if ((hdmaskl = strlen(hdmask)) > nbench_hd) {
-            printf("Error : the hdiams mask you speicified is too long."
+            printf("Error : the hdiams mask you specified is too long."
               "Must be maximum %i bits long.\n", nbench_hd);
           }
         case 'n':
