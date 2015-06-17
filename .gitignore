@@ -6,4 +6,4 @@ jacobi1d
 jacobi1d.csv
 jbi1d
 test
-data/
+data/*.csv
