@@ -7,7 +7,7 @@ from numpy import genfromtxt
 from scipy.interpolate import griddata
 
 max_gain = 16
-watch_size = 32
+watch_size = 32768
 
 fig = plt.figure(figsize=plt.figaspect(0.5))
 ax1 = fig.add_subplot(2, 2, 1, projection='3d')
@@ -27,7 +27,7 @@ ax3.set_xlabel('Iterations');
 ax3.set_ylabel('log(size_kB)');
 ax3.set_zlabel('Speedup - starnk');
 
-ax4.set_xlabel('Iterations')
+ax4.set_xlabel('Iterations, size : 32768 kB')
 ax4.set_ylabel('Speedup - not grouped vs. grouped');
 # note this: you can skip rows!
 my_data = np.genfromtxt('jacobi1D_full.csv', delimiter=',',skiprows=1)
@@ -68,5 +68,5 @@ ax4.set_ylim([0, max_gain]);
 ax4.plot(Xb, Zb1, 'ro')
 ax4.plot(Xb, Zb2, 'ro', color='b')
 ax4.plot(Xb, Zb3, 'ro', color='g')
-
+ax4.axhline(1, color='r')
 plt.show()
