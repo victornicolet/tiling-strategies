@@ -17,9 +17,9 @@ static struct timespec tbegin;
 /*
  * WIP : need to adjust indexes in computations and load/store
  */
-void
+double
 djbi2d_half_diamonds(struct args_dimt args, double ** data_in,
- struct benchscore * bsc, double ** data_out)
+  double ** data_out)
 {
   int iters = args.iters ;
   int stepwidth = 2 * iters ;
@@ -116,12 +116,13 @@ djbi2d_half_diamonds(struct args_dimt args, double ** data_in,
   }
   free(tile1);
   free(tile0);
+
+  return 0.0;
 }
 
 
-void
-djbi2d_seq(struct args_dimt args, double ** data_in, struct benchscore * bsc,
-  double ** data_out)
+double
+djbi2d_seq(struct args_dimt args, double ** data_in, double ** data_out)
 {
   uint8_t x, y, t;
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
@@ -141,9 +142,7 @@ djbi2d_seq(struct args_dimt args, double ** data_in, struct benchscore * bsc,
 
   clock_gettime(CLOCK_MONOTONIC, &tend);
 
-  if (bsc != NULL) {
-    bsc->wallclock = ELAPSED_TIME(tend, tbegin);
-  }
+  return ELAPSED_TIME(tend, tbegin);
 }
 
 
@@ -152,7 +151,7 @@ djbi2d_(struct args_dimt args, double ** input, double ** output)
 {
   int i;
   double ** ref_output = alloc_double_mx(args.width, args.height);
-  djbi2d_seq(args, input, NULL, ref_output);
+  djbi2d_seq(args, input, ref_output);
   for (i = 0; i < args.width; i ++) {
     if (compare_fast(args.height, ref_output[i], output[i]) == 0) {
       free_mx((void **) ref_output, args.width);

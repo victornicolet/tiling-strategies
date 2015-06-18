@@ -46,15 +46,6 @@
  #define DEBUG_ITER 16
 #endif
 
-struct benchscore
-{
-  /* Name of the benchmark */
-  char *name;
-  /* Elapsed wall-clock time */
-  double wallclock;
-  int runs;
-};
-
 struct args_dimt
 {
   int width, height, iters;
@@ -65,7 +56,7 @@ struct benchspec
   /* Name of the benchmark */
   char *name;
   /*/ Function to call */
-  void (*variant)(struct args_dimt, double *, double *, struct benchscore *);
+  double (*variant)(struct args_dimt, double *, double *);
   /* Function to check alg. arguments */
   int (*checkfunc)(int, int);
   /* Base size */
@@ -81,7 +72,7 @@ struct benchspec1d_l
   /* Name of the benchmark */
   char *name;
   /*/ Function to call */
-  void (*variant)(struct args_dimt, long *, long *, struct benchscore *);
+  double (*variant)(struct args_dimt, long *, long *);
   /* Function to check alg. arguments */
   int (*checkfunc)(int, int);
   /* Base size */
@@ -97,7 +88,7 @@ struct benchspec2d
   /* Name of the benchmark */
   char *name;
   /* Function to call */
-  void (*variant)(struct args_dimt, double **, struct benchscore *, double **);
+  double (*variant)(struct args_dimt, double **, double **);
   /* Function to check alg. arguments */
   int (*checkfunc)(int, int, int);
   /* Base size : width and height */
@@ -190,8 +181,6 @@ void init_data_1d_l(int, long *);
 void init_data_2d(int, int, double **);
 
 void print_benchspecs(int, struct benchspec *);
-
-void print_runscores(int, struct benchscore *);
 
 void print_test1d_summary(int, int, double, struct benchspec, double *,
                           double *);

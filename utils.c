@@ -93,16 +93,6 @@ print_benchspecs(int n, struct benchspec * benchmarks)
 }
 
 void
-print_runscores(int nruns, struct benchscore * bsc)
-{
-  int i;
-  for (i = 0; i < nruns; i++){
-    printf("%s %s %s : Run %i ...", KBLU, bsc[i].name, KRESET, i + 1);
-    printf("\t\t %13f ms\n", bsc[i].wallclock * 1000.0 );
-  }
-}
-
-void
 print_test1d_summary(int nruns, int verbose, double total_time,
   struct benchspec bs, double * data_in, double * data_out)
 {

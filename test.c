@@ -152,7 +152,7 @@ main(int argc, char ** argv)
   int nbench_hd = sizeof(hdiam_benchmarks) / sizeof(struct benchspec);
 
   int opt = -1, option_index = 0;
-  int dimx = 0, dimy = 0, dimt = 0;
+  int dimx = -1, dimy = -1, dimt = -1;
   int range = -1, range_iters = -1;
   int maskl = 0, hdmaskl = 0;
   int nruns = 0;
@@ -345,29 +345,23 @@ test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
 
   init_data_1d(args.width, data_in);
 
-  struct benchscore scores[nruns];
-
   t_accu = 0.0;
   for (i = 0; i <= nruns; i ++) {
     printf("%i,", i);
     if (i == 0) {
-      benchmark.variant(args, data_in, data_out, &scores[0]);
+      benchmark.variant(args, data_in, data_out);
     } else {
-      benchmark.variant(args, data_in, data_out, &scores[i - 1]);
-      scores[i - 1].name = benchmark.name;
-      t_accu += scores[i - 1].wallclock;
+      t_accu += benchmark.variant(args, data_in, data_out);
     }
   }
   printf("Done !\n");
-  if (DISPLAY_VERBOSE) {
-    print_runscores(nruns, scores);
-  }
+
   print_test1d_summary(nruns, DISPLAY_VERBOSE, t_accu, benchmark, data_in,
    data_out);
 
   double * ref_out = aligned_alloc(CACHE_LINE_SIZE, \
     sizeof(*ref_out) * args.width);
-  djbi1d_sequential(args, data_in, ref_out, NULL);
+  djbi1d_sequential(args, data_in, ref_out);
 
   long diffs;
   if ((diffs = compare_fast(args.width, data_out, ref_out))>0) {
@@ -396,29 +390,23 @@ test1d_l(int nruns, int dimx, int dimt, struct benchspec1d_l benchmark)
 
   init_data_1d_l(args.width, data_in);
 
-  struct benchscore scores[nruns];
-
   t_accu = 0.0;
   for (i = 0; i <= nruns; i ++) {
     printf("%i,", i);
     if (i == 0) {
-      benchmark.variant(args, data_in, data_out, &scores[0]);
+      benchmark.variant(args, data_in, data_out);
     } else {
-      benchmark.variant(args, data_in, data_out, &scores[i - 1]);
-      scores[i - 1].name = benchmark.name;
-      t_accu += scores[i - 1].wallclock;
+      t_accu += benchmark.variant(args, data_in, data_out);
     }
   }
   printf("Done !\n");
-  if (DISPLAY_VERBOSE) {
-    print_runscores(nruns, scores);
-  }
+
   print_test1d_l_summary(nruns, DISPLAY_VERBOSE, t_accu, benchmark, data_in,
     data_out);
   /* TODO : benchmark -> specific reference */
   long * ref_out = aligned_alloc(CACHE_LINE_SIZE, \
     sizeof(*ref_out) * args.width);
-  ljbi1d_sequential(args, data_in, ref_out, NULL);
+  ljbi1d_sequential(args, data_in, ref_out);
   long diffs;
   if ((diffs = compare_l(data_out, ref_out, args.width))>0) {
     printf("Differences : %li over %i ( %4.2f )\n", diffs, args.width,
@@ -440,7 +428,6 @@ test2d(int nruns, int dimx, int dimy, int dimt, struct benchspec2d benchmark)
   double **data_in, **data_out;
 
   struct args_dimt args = get2dargs(dimx, dimy, dimt, benchmark);
-  struct benchscore scores[nruns];
 
   data_in = alloc_double_mx(args.width, args.height);
   data_out = alloc_double_mx(args.width, args.height);
@@ -449,17 +436,13 @@ test2d(int nruns, int dimx, int dimy, int dimt, struct benchspec2d benchmark)
   for (i = 0; i <= nruns; i ++) {
     printf("%i,", i);
     if (i == 0) {
-      benchmark.variant(args, data_in, &scores[0], data_out);
+      benchmark.variant(args, data_in, data_out);
     } else {
-      benchmark.variant(args, data_in, &scores[i - 1], data_out);
-      scores[i - 1].name = benchmark.name;
-      t_accu += scores[i - 1].wallclock;
+      t_accu += benchmark.variant(args, data_in, data_out);
     }
   }
   printf("Done !\n");
-  if (DISPLAY_VERBOSE) {
-    print_runscores(nruns, scores);
-  }
+
   print_test2d_summary(nruns, DISPLAY_VERBOSE, t_accu, benchmark, data_in,
     data_out);
   free_mx((void **) data_out, dimx);
@@ -496,13 +479,11 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters, char *hdmask,
             sizeof(*data_out) * args.width);
           init_data_1d(args.width, data_in);
 
-          struct benchscore scores[DEFAULT_NRUNS];
           t_accu = 0.0;
-          hdiam_benchmarks[bm_no].variant(args, data_in, data_out, &scores[0]);
+          hdiam_benchmarks[bm_no].variant(args, data_in, data_out);
           for (run_no = 0; run_no < DEFAULT_NRUNS; run_no ++) {
-              hdiam_benchmarks[bm_no].variant(args, data_in, data_out,
-                &scores[run_no]);
-              t_accu += scores[run_no].wallclock;
+              t_accu += hdiam_benchmarks[bm_no].variant(args, data_in,
+                data_out);
           }
           mean_t_ms = (t_accu / DEFAULT_NRUNS) * 1000.0 ;
           /* Test output */
@@ -540,11 +521,11 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters, char *hdmask,
     /* Output in csv file */
 
     for (i = 0; i < range; i++) {
-      fprintf(csv_file, "%i;%i;%f",
+      fprintf(csv_file, "%i,%i,%f",
         1 << iters_pow, 1 << (i + MIN_POW), timelog[0][i]);
 
       for (j = 1; j < num_benchs; j++) {
-        fprintf(csv_file, ";%f", (timelog[j][i] / timelog[0][i]) * 100.0 );
+        fprintf(csv_file, ",%f", (timelog[j][i] / timelog[0][i]) * 100.0 );
       }
       fprintf(csv_file, "\n");
     }

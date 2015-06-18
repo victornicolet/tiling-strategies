@@ -87,7 +87,6 @@ void djbi1d_hdiam_tasked(int pb_size, int num_iters, double *jbi,
 void djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs,
                           double *jbi, double *jbi_out) {
   int tile_no, grp_no;
-
   num_procs = 2 * num_procs;
   /* Tile bounds */
   int tile_max;
@@ -116,7 +115,7 @@ void djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs,
     }
 
 #pragma omp parallel for schedule(static) \
-    shared(tmp, jbi_out) private(tile_no) firstprivate(grp_no)
+    shared(tmp) private(tile_no) firstprivate(grp_no)
 
     for (tile_no = grp_no * group_size + 1; tile_no < tile_max; tile_no++) {
       do_top_hdiam(tile_no, num_iters, pb_size, tmp, jbi_out);
@@ -441,8 +440,7 @@ void djbi1d_skewed_tiles(int num_strips, int num_steps, double *dashs,
   }
 }
 
-void djbi1d_diamond_tiles(int n, int num_stencil_iters, double **jbi,
-                          struct benchscore *bsc) {
+double djbi1d_diamond_tiles(int n, int num_stencil_iters, double **jbi) {
   int r, l, bot, top;
 
   int stg = (num_stencil_iters / T_ITERS_DIAM) + 1;
@@ -462,12 +460,16 @@ void djbi1d_diamond_tiles(int n, int num_stencil_iters, double **jbi,
       }
     }
   }
+
+  /* Not implemented */
+  return -1.0;
 }
 
-void djbi1d_omp_naive(struct args_dimt args, double *jbi_in, double *jbi_out,
-                      struct benchscore *bsc) {
+double djbi1d_omp_naive(struct args_dimt args, double *jbi_in,
+	double *jbi_out) {
   int n = args.width;
   int num_stencil_iters = args.iters;
+  double elapsed;
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
   int t, i;
   double *l1 = (double *)aligned_alloc(CACHE_LINE_SIZE, sizeof(double) * n);
@@ -495,11 +497,13 @@ void djbi1d_omp_naive(struct args_dimt args, double *jbi_in, double *jbi_out,
   free(l1);
   free(l2);
 
-  bsc->wallclock = ELAPSED_TIME(tend, tbegin);
+  elapsed = ELAPSED_TIME(tend, tbegin);
+
+  return elapsed;
 }
 
-void djbi1d_omp_overlap(struct args_dimt args, double *jbi_in, double *jbi_out,
-                        struct benchscore *bsc) {
+double djbi1d_omp_overlap(struct args_dimt args, double *jbi_in,
+  double *jbi_out) {
   int pb_size = args.width, num_stencil_iters = args.iters;
   int tile_i, tile_t, t, i;
   int tile_base_sz = T_WIDTH_DBL_OVERLAP + T_ITERS * 2;
@@ -556,11 +560,11 @@ void djbi1d_omp_overlap(struct args_dimt args, double *jbi_in, double *jbi_out,
 
   clock_gettime(CLOCK_MONOTONIC, &tend);
 
-  bsc->wallclock = ELAPSED_TIME(tend, tbegin);
+  return ELAPSED_TIME(tend, tbegin);
 }
 
-void djbi1d_sequential(struct args_dimt args, double *jbi_in, double *jbi_out,
-                       struct benchscore *bsc) {
+double djbi1d_sequential(struct args_dimt args, double *jbi_in,
+  double *jbi_out) {
   int num_stencil_iters = args.iters, n = args.width;
   /* Boundaries initial condition */
   int t, i;
@@ -586,13 +590,12 @@ void djbi1d_sequential(struct args_dimt args, double *jbi_in, double *jbi_out,
 
   free(l1);
   free(l2);
-  if (bsc != NULL) {
-    bsc->wallclock = ELAPSED_TIME(tend, tbegin);
-  }
+
+  return ELAPSED_TIME(tend, tbegin);
+
 }
 
-void ljbi1d_sequential(struct args_dimt args, long *jbi_in, long *jbi_out,
-                       struct benchscore *bsc) {
+double ljbi1d_sequential(struct args_dimt args, long *jbi_in, long *jbi_out) {
   int num_stencil_iters = args.iters, n = args.width;
   /* Boundaries initial condition */
   int t, i;
@@ -618,35 +621,34 @@ void ljbi1d_sequential(struct args_dimt args, long *jbi_in, long *jbi_out,
 
   free(l1);
   free(l2);
-  if (bsc != NULL) {
-    bsc->wallclock = ELAPSED_TIME(tend, tbegin);
-  }
+
+  return ELAPSED_TIME(tend, tbegin);
 }
 
 /* ==========================================================================*/
 /*                               Tests                                       */
 /* ==========================================================================*/
 
-void djbi1d_hdiam_tasked_test(struct args_dimt args, double *jbi_in,
-                              double *jbi_out, struct benchscore *bsc) {
+double djbi1d_hdiam_tasked_test(struct args_dimt args, double *jbi_in,
+  double *jbi_out) {
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
   djbi1d_hdiam_tasked(args.width, args.iters, jbi_in, jbi_out);
   clock_gettime(CLOCK_MONOTONIC, &tend);
 
-  bsc->wallclock = ELAPSED_TIME(tend, tbegin);
+  return ELAPSED_TIME(tend, tbegin);
 }
 
-void djbi1d_half_diamonds_test(struct args_dimt args, double *jbi_in,
-                               double *jbi_out, struct benchscore *bsc) {
+double djbi1d_half_diamonds_test(struct args_dimt args, double *jbi_in,
+  double *jbi_out) {
   int pb_size = args.width, num_stencil_iters = args.iters;
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
   djbi1d_half_diamonds(pb_size, num_stencil_iters, jbi_in, jbi_out);
   clock_gettime(CLOCK_MONOTONIC, &tend);
-  bsc->wallclock = ELAPSED_TIME(tend, tbegin);
+  return ELAPSED_TIME(tend, tbegin);
 }
 
-void djbi1d_hdiam_grouped_test(struct args_dimt args, double *jbi_in,
-                               double *jbi_out, struct benchscore *bsc) {
+double djbi1d_hdiam_grouped_test(struct args_dimt args, double *jbi_in,
+  double *jbi_out) {
   int pb_size = args.width, num_stencil_iters = args.iters;
   int num_procs = DEFAULT_PROC_NUM;
 #ifdef _SC_NPROCESSORS_ONLN
@@ -655,20 +657,20 @@ void djbi1d_hdiam_grouped_test(struct args_dimt args, double *jbi_in,
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
   djbi1d_hdiam_grouped(pb_size, num_stencil_iters, num_procs, jbi_in, jbi_out);
   clock_gettime(CLOCK_MONOTONIC, &tend);
-  bsc->wallclock = ELAPSED_TIME(tend, tbegin);
+  return ELAPSED_TIME(tend, tbegin);
 }
 
-void ljbi1d_half_diamonds_test(struct args_dimt args, long *jbi_in,
-                               long *jbi_out, struct benchscore *bsc) {
+double ljbi1d_half_diamonds_test(struct args_dimt args, long *jbi_in,
+  long *jbi_out) {
   int pb_size = args.width, num_stencil_iters = args.iters;
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
   ljbi1d_half_diamonds(pb_size, num_stencil_iters, jbi_in, jbi_out);
   clock_gettime(CLOCK_MONOTONIC, &tend);
-  bsc->wallclock = ELAPSED_TIME(tend, tbegin);
+  return ELAPSED_TIME(tend, tbegin);
 }
 
-void djbi1d_sk_full_tiles_test(struct args_dimt args, double *jbi_in,
-                               double *jbi_out, struct benchscore *bsc) {
+double djbi1d_sk_full_tiles_test(struct args_dimt args, double *jbi_in,
+                               double *jbi_out) {
   int pb_size = args.width, num_stencil_iters = args.iters;
   int i;
   int num_steps = (num_stencil_iters / T_ITERS) + 1;
@@ -691,7 +693,7 @@ void djbi1d_sk_full_tiles_test(struct args_dimt args, double *jbi_in,
 
   if (jbi_dashs == NULL || jbi_slashs == NULL) {
     fprintf(stderr, "Error while allocating 2D arrays for skewed_tiles\n");
-    return;
+    return -1.0;
   }
 
   for (i = 0; i < pb_size; i++) {
@@ -702,7 +704,6 @@ void djbi1d_sk_full_tiles_test(struct args_dimt args, double *jbi_in,
   tasks = djbi1d_sk_full_tiles(num_strips, num_steps, jbi_dashs, jbi_slashs);
   clock_gettime(CLOCK_MONOTONIC, &tend);
 
-  bsc->wallclock = ELAPSED_TIME(tend, tbegin);
 
 #ifdef DEBUG
   int t;
@@ -723,10 +724,13 @@ void djbi1d_sk_full_tiles_test(struct args_dimt args, double *jbi_in,
 
   free(jbi_dashs);
   free(jbi_slashs);
+
+
+  return ELAPSED_TIME(tend, tbegin);
 }
 
-void djbi1d_skewed_tiles_test(struct args_dimt args, double *jbi_in,
-                              double *jbi_out, struct benchscore *bsc) {
+double djbi1d_skewed_tiles_test(struct args_dimt args, double *jbi_in,
+  double *jbi_out) {
   int pb_size = args.width, num_stencil_iters = args.iters;
   int i;
   int num_steps = (num_stencil_iters / T_ITERS) + 1;
@@ -744,7 +748,7 @@ void djbi1d_skewed_tiles_test(struct args_dimt args, double *jbi_in,
 
   if (jbi_dashs == NULL || jbi_slashs == NULL) {
     fprintf(stderr, "Error while allocating 2D arrays for skewed_tiles\n");
-    return;
+    return -1.0;
   }
 
   for (i = 0; i < pb_size; i++) {
@@ -755,7 +759,6 @@ void djbi1d_skewed_tiles_test(struct args_dimt args, double *jbi_in,
   djbi1d_skewed_tiles(num_strips, num_steps, jbi_dashs, jbi_slashs);
   clock_gettime(CLOCK_MONOTONIC, &tend);
 
-  bsc->wallclock = ELAPSED_TIME(tend, tbegin);
 
   int start_stripe_top = num_steps * T_WIDTH_DBL;
   for (i = 0; i < pb_size; i++) {
@@ -764,6 +767,8 @@ void djbi1d_skewed_tiles_test(struct args_dimt args, double *jbi_in,
 
   free(jbi_dashs);
   free(jbi_slashs);
+
+  return ELAPSED_TIME(tend, tbegin);
 }
 
 /* Task functions :
