@@ -10,6 +10,7 @@ max_gain = 16
 watch_size = 32768
 
 fig = plt.figure(figsize=plt.figaspect(0.5))
+fig.text(1, 1, "Benchmark : jacobi1d on 12 cores", fontdict=None)
 ax1 = fig.add_subplot(2, 2, 1, projection='3d')
 ax2 = fig.add_subplot(2, 2, 2, projection='3d')
 ax3 = fig.add_subplot(2, 2, 3, projection='3d')
@@ -58,15 +59,15 @@ ax2.set_zlim([0, max_gain]);
 ax3.set_zlim([0, max_gain]);
 
 surf1 = ax1.plot_surface(xig, yig, zi1,
-        linewidth=0)
+        linewidth=0, color='b')
 surf2 = ax2.plot_surface(xig, yig, zi2,
         linewidth=0, color='r')
 surf3 = ax3.plot_surface(xig, yig, zi3,
         linewidth=0, color='g')
 
 ax4.set_ylim([0, max_gain]);
-ax4.plot(Xb, Zb1, 'ro')
-ax4.plot(Xb, Zb2, 'ro', color='b')
+ax4.plot(Xb, Zb1, 'ro', color='b')
+ax4.plot(Xb, Zb2, 'ro', color='r')
 ax4.plot(Xb, Zb3, 'ro', color='g')
 ax4.axhline(1, color='r')
 plt.show()

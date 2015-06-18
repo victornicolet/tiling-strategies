@@ -50,10 +50,10 @@ VALGRIND_OPTS+= -q
 
 # Profiling target and application arguments
 ifndef P_TARGET
-	P_TARGET=jbi1d
+	P_TARGET=test
 endif
 ifndef P_ARGS
-	P_ARGS=10 000010
+	P_ARGS=--hdiam
 endif
 
 #-------------------------------------------------------------------------------

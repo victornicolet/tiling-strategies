@@ -9,7 +9,7 @@ from scipy.interpolate import griddata
 
 KB=150
 
-raw_dat = np.genfromtxt('jacobi1D_starnk_raw.csv', delimiter=',')
+raw_dat = np.genfromtxt('jacobi1D_starnk_raw.csv', delimiter=';')
 
 rawdf = pan.DataFrame(raw_dat, columns=['i','s','t'])
 
@@ -31,9 +31,9 @@ for i in range(0, range_i):
         resulting_data[i * range_s + s][2] = calculated_means.get_group((i+min_i,s+min_s))['t']._get_numeric_data().mean()
 
 resdf = pan.DataFrame(resulting_data, columns=['i','s','t'])
-omp_dat = np.genfromtxt('jacobi1D_viz.csv', delimiter=',', skip_header=1)
-ompdf = pan.DataFrame(omp_dat, columns=['i','s','seq_t','spdup','spdup_groups'])
-
+omp_dat = np.genfromtxt('jacobi1D_viz.csv', delimiter=';', skip_header=1)
+ompdf = pan.DataFrame(omp_dat, columns=['i','s','seq_t','spdup','spdup_groups','ignore'])
+ompdf.drop('ignore', axis=1, inplace=True)
 df = pan.merge(ompdf, resdf, how='inner', on=['i','s'])
 
 df[['i', 's']] = df[['i', 's']].astype(int)

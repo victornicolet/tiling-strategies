@@ -114,13 +114,15 @@ void djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs,
       do_base_hdiam(tile_no, num_iters, pb_size, jbi, tmp);
     }
 
-#pragma omp parallel for schedule(static) \
-    shared(tmp) private(tile_no) firstprivate(grp_no)
+#pragma omp parallel for schedule(static) shared(tmp) \
+    private(tile_no) firstprivate(grp_no)
 
     for (tile_no = grp_no * group_size + 1; tile_no < tile_max; tile_no++) {
       do_top_hdiam(tile_no, num_iters, pb_size, tmp, jbi_out);
     }
   }
+
+
   free_mx((void **)tmp, 2);
 }
 
