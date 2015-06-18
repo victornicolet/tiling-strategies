@@ -1053,21 +1053,20 @@ static inline void do_base_hdiam(int tile_no, int num_iters, int pb_size,
   int i, t;
   int r0, l0, r, l;
   int tile_base_sz = num_iters * 2;
+  double *li1, *li0;
 
-  double li1[tile_base_sz], li0[tile_base_sz];
 
   /* Initial values */
   l0 = max(tile_no * tile_base_sz, 0);
   r0 = min(l0 + tile_base_sz, pb_size - 1);
+
+  li1 = tmp[0] + l0;
+  li0 = tmp[1] + l0;
+
   for (i = l0; i < r0; i++) {
     li0[i - l0] = jbi[i];
     li1[i - l0] = 0.0;
   }
-
-  tmp[0][l0] = li0[0];
-  tmp[1][l0 + 1] = li0[1];
-  tmp[0][r0 - 1] = li0[r0 - l0 - 1];
-  tmp[1][r0 - 2] = li0[r0 - l0 - 2];
 
   for (t = 0; t < num_iters - 1; t++) {
     l = max(l0 + t + 1, 1);
@@ -1076,14 +1075,8 @@ static inline void do_base_hdiam(int tile_no, int num_iters, int pb_size,
     for (i = l; i < r; i++) {
       li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
     }
-    tmp[0][r - 1] = li1[r - l0 - 1];
-    tmp[0][l] = li1[l - l0];
-    if (r - 2 != l) {
-      tmp[1][r - 2] = li1[r - l0 - 2];
-      tmp[1][l + 1] = li1[l - l0 + 1];
-    }
 
-    memcpy(li0, li1, (tile_base_sz) * sizeof *li1);
+    swap(&li0, &li1);
   }
 }
 
@@ -1097,31 +1090,26 @@ static inline void do_top_hdiam(int tile_no, int num_iters, int pb_size,
   l0 = max(x0 - num_iters - 1, 0);
   r0 = min(x0 + num_iters + 1, pb_size);
 
-  double li1[tile_base_sz + 2], li0[tile_base_sz + 2];
+  double *li1, *li0;
+
+  li1 = tmp[0] + l0;
+  li0 = tmp[1] + l0;
 
   for (t = 0; t < num_iters - 1; t++) {
     l = max(x0 - (t + 1), 1);
     r = min(x0 + t, pb_size - 1);
     /* Load from the border-storing array */
-    li0[l - l0 - 1] = tmp[1][l - 1];
-    li0[r - l0 + 1] = tmp[1][r + 1];
-    li0[r - l0] = tmp[0][r];
-    li0[l - l0] = tmp[0][l];
 
     for (i = l; i <= r; i++) {
       li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
     }
 
-    memcpy(li0, li1, (tile_base_sz + 2) * sizeof *li1);
+    swap(&li0, &li1);
   }
   t = num_iters - 1;
   l = max(x0 - (t + 1), 1);
   r = min(x0 + t, pb_size - 1);
   /* Load from the border-storing array */
-  li0[l - l0 - 1] = tmp[0][l - 1];
-  li0[r - l0 + 1] = tmp[0][r + 1];
-  li0[r - l0] = tmp[0][r];
-  li0[l - l0] = tmp[0][l];
 
   for (i = l; i <= r; i++) {
     li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
