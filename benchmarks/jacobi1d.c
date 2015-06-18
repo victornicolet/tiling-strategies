@@ -599,8 +599,10 @@ double ljbi1d_sequential(struct args_dimt args, long *jbi_in, long *jbi_out) {
   int num_stencil_iters = args.iters, n = args.width;
   /* Boundaries initial condition */
   int t, i;
-  long *l1 = aligned_alloc(CACHE_LINE_SIZE, sizeof(*l1) * n);
-  long *l2 = aligned_alloc(CACHE_LINE_SIZE, sizeof(*l2) * n);
+  long *l1, *l2;
+
+  l1 = aligned_alloc(CACHE_LINE_SIZE, sizeof(*l1) * n);
+  l2 = aligned_alloc(CACHE_LINE_SIZE, sizeof(*l2) * n);
   memcpy(l1, jbi_in, n * sizeof(*jbi_in));
 
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
@@ -621,6 +623,117 @@ double ljbi1d_sequential(struct args_dimt args, long *jbi_in, long *jbi_out) {
 
   free(l1);
   free(l2);
+
+  return ELAPSED_TIME(tend, tbegin);
+}
+
+double djbi1d_from_pluto(struct args_dimt args, double *jbi_in,
+  double *jbi_out) {
+
+  int N,T;
+  int c1, c2, c3, c4, c5;
+  int i, j, k, l, t;
+  (void)i;
+  (void)j;
+  (void)k;
+  (void)l;
+  (void)t;
+  register int lb, ub;
+
+  N = args.width;
+  T = args.iters;
+
+  double *a, *b;
+  a = jbi_in;
+  b = jbi_out;
+
+  clock_gettime(CLOCK_MONOTONIC, &tbegin);
+  /* Generated from jacobi-imper.sched.cloog by CLooG v0.14.1 64 bits in 0.01s. */
+ for (c1=-1;c1<=floord(N+3*T-4,2048);c1++) {
+     lb = max(max(ceild(2048*c1-T+1,2048),ceild(4096*c1-2045,6144)),0);
+     ub = min(min(floord(2048*c1+2047,2048),floord(4096*c1+N+4093,6144)),floord(N+2*T-3,2048));
+
+#pragma omp parallel for shared(c1,lb,ub,a,b) private(c2,c3,c4,c5,i,j,k,l)
+   for (c2=lb;c2<=ub;c2++) {
+     if (c1 >= max(c2,ceild(6144*c2-N+2,4096))) {
+       c3 = 4096*c1-4096*c2 ;
+        for (c4=max(4096*c1-4096*c2+2,2048*c2);c4<=min(4096*c1-4096*c2+N-2,2048*c2+2047);c4++) {
+          c5 = 0 ;
+          if ((c1-c2)%2 == 0) {
+            i = (c1-c2)/2 ;
+            j = -c1+2*c2 ;
+            k = 2048*c1-2048*c2 ;
+            l = -4096*c1+4096*c2+c4 ;
+            S1((c1-c2)/2,-c1+2*c2,2048*c1-2048*c2,-4096*c1+4096*c2+c4) ;
+          }
+        }
+      }
+      if ((c1 <= floord(4096*c2-1,4096)) && (c2 <= floord(N-2,2048))) {
+        c3 = 0 ;
+        for (c4=max(2048*c2,2);c4<=min(2048*c2+2047,N-2);c4++) {
+          c5 = 0 ;
+          if ((c1-c2)%2 == 0) {
+            i = (c1-c2)/2 ;
+            j = -c1+2*c2 ;
+            k = 0 ;
+            l = c4 ;
+            S1((c1-c2)/2,-c1+2*c2,0,c4) ;
+          }
+        }
+      }
+      for (c3=max(max(1,2048*c2-N+2),4096*c1-4096*c2+1);c3<=min(min(4096*c1-4096*c2+4094,2048*c2+2045),2*T-2);c3++) {
+        for (c4=max(2048*c2,c3+2);c4<=min(c3+N-2,2048*c2+2047);c4++) {
+          c5 = 0 ;
+          if ((c1-c2)%2 == 0) {
+            i = (c1-c2)/2 ;
+            j = -c1+2*c2 ;
+            if (c3%2 == 0) {
+              k = c3/2 ;
+              l = -c3+c4 ;
+              S1((c1-c2)/2,-c1+2*c2,c3/2,-c3+c4) ;
+            }
+          }
+          c5 = 1 ;
+          if ((c1-c2)%2 == 0) {
+            i = (c1-c2)/2 ;
+            j = -c1+2*c2 ;
+            if ((c3-1)%2 == 0) {
+              k = (c3-1)/2 ;
+              l = -c3+c4 ;
+              S2((c1-c2)/2,-c1+2*c2,(c3-1)/2,-c3+c4) ;
+            }
+          }
+        }
+      }
+      if (c1 <= min(floord(3072*c2-1025,2048),floord(2048*c2+T-2048,2048))) {
+        c3 = 4096*c1-4096*c2+4095 ;
+        for (c4=max(4096*c1-4096*c2+4097,2048*c2);c4<=min(4096*c1-4096*c2+N+4093,2048*c2+2047);c4++) {
+          c5 = 1 ;
+          if ((c1-c2)%2 == 0) {
+            i = (c1-c2)/2 ;
+            j = -c1+2*c2 ;
+            k = 2048*c1-2048*c2+2047 ;
+            l = -4096*c1+4096*c2+c4-4095 ;
+            S2((c1-c2)/2,-c1+2*c2,2048*c1-2048*c2+2047,-4096*c1+4096*c2+c4-4095) ;
+          }
+        }
+      }
+      if ((c1 >= ceild(4096*c2+2*T-4095,4096)) && (c2 >= ceild(T-1023,1024))) {
+        c3 = 2*T-1 ;
+        for (c4=max(2*T+1,2048*c2);c4<=min(2048*c2+2047,N+2*T-3);c4++) {
+          c5 = 1 ;
+          if ((c1-c2)%2 == 0) {
+            i = (c1-c2)/2 ;
+            j = -c1+2*c2 ;
+            k = T-1 ;
+            l = c4-2*T+1 ;
+            S2((c1-c2)/2,-c1+2*c2,T-1,c4-2*T+1) ;
+          }
+        }
+      }
+    }
+  }
+  clock_gettime(CLOCK_MONOTONIC, &tend);
 
   return ELAPSED_TIME(tend, tbegin);
 }
@@ -1028,7 +1141,7 @@ static inline void do_topleft_hdiam(int num_iters, double **tmp,
   li0[0] = tmp[0][0];
   li0[1] = tmp[1][1];
 
-  for (t = 0; t < num_iters; t++) {
+  for (t = 0; t < num_iters - 1; t++) {
     /* Load from the border-storing array */
     li0[t + 1] = tmp[1][t + 1];
     li0[t] = tmp[0][t];

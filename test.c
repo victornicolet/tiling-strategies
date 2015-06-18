@@ -115,6 +115,8 @@ main(int argc, char ** argv)
     {"JACOBI1D_HDIAM(GROUPED TILES)", djbi1d_hdiam_grouped_test, check_low_iter,
       Pbsize_1d, Num_iters_1d, 1},
     {"JACOBI1D_HDIAM (TASKS)", djbi1d_hdiam_tasked_test, check_low_iter,
+      Pbsize_1d, Num_iters_1d, 1},
+    {"JACOBI1D_FROM_PLUTO", djbi1d_from_pluto, check_default,
       Pbsize_1d, Num_iters_1d, 1}
   };
 
@@ -143,7 +145,9 @@ main(int argc, char ** argv)
       0, 0, 1},
     {"JACOBI1D_HDIAM(GROUPED TILES)", djbi1d_hdiam_grouped_test, check_low_iter,
       0, 0, 1},
-    {"JACOBI1D_HDIAM (USING TASKS", djbi1d_hdiam_tasked_test, check_low_iter,
+    {"JACOBI1D_HDIAM (USING TASKS)", djbi1d_hdiam_tasked_test, check_low_iter,
+      0, 0, 1},
+    {"JACOBI1D_PLUTO (reference)", djbi1d_from_pluto, check_low_iter,
       0, 0, 1}
   };
 
@@ -158,7 +162,7 @@ main(int argc, char ** argv)
   int nruns = 0;
   char *benchmask, *hdmask;
 
-  hdmask = "1110";
+  hdmask = "11101";
 
   while ((opt =
     getopt_long(argc, argv, "hi:m:M:r:t:vx:y:", longopts, &option_index)) != -1) {
@@ -191,16 +195,16 @@ main(int argc, char ** argv)
           range = atoi(optarg);
           break;
         case 't':
-          dimt = atoi(optarg);
+          dimt = 2 << atoi(optarg);
           break;
         case 'v':
           verbose_flag++;
           break;
         case 'x':
-          dimx = atoi(optarg);
+          dimx = (2 << atoi(optarg)) * KB;
           break;
         case 'y':
-          dimy = atoi(optarg);
+          dimy = (2 << atoi(optarg)) * KB;
           break;
         case '?':
           break;
@@ -242,7 +246,7 @@ main(int argc, char ** argv)
       return -1;
     }
     if(hdmask == NULL){
-      hdmask = "0110";
+      hdmask = "11101";
     }
     test_suite_hdiam1d(num_benchs, range, range_iters, hdmask, hdiam_benchmarks,
       csv_file);
@@ -456,7 +460,10 @@ void
 test_suite_hdiam1d(int num_benchs, int range, int range_iters, char *hdmask,
  struct benchspec * hdiam_benchmarks, FILE * csv_file)
 {
-  int pow2, bm_no, run_no, iters_pow;
+  int bm_no, iters_pow, pow2, run_no;
+  double t_accu, mean_t_ms;
+  double **timelog;
+  double *data_in, *data_out;
 
   fprintf(csv_file, "%s%s\n",
     "iterations;size (kB);sequential time (ms); naive;half diamonds;",
@@ -465,22 +472,32 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters, char *hdmask,
 
   for (iters_pow = MIN_ITER_POW; iters_pow < 3 + range_iters; iters_pow ++) {
     printf("%s%i iterations :%s\n", KRED, 1 << iters_pow, KRESET);
-    double t_accu, mean_t_ms;
-    double ** timelog = alloc_double_mx(num_benchs, range);
+
+    timelog = alloc_double_mx(num_benchs, range);
+
     for (bm_no = 0; bm_no < num_benchs; bm_no ++) {
       if (hdmask[bm_no] == '1') {
         for (pow2 = MIN_POW; pow2 < MIN_POW + range; pow2 ++) {
 
           struct args_dimt args = { (2 << pow2) * KB, 0 , 1 << iters_pow};
 
-          double * data_in = malloc(CACHE_LINE_SIZE *
-            sizeof(*data_in) * args.width);
-          double * data_out = malloc(CACHE_LINE_SIZE *
-            sizeof(*data_out) * args.width);
+          data_in = malloc(CACHE_LINE_SIZE * sizeof(*data_in) * args.width);
+          if (data_in == NULL) {
+            printf("Allocation of %i failed, aborting...\n", args.width);
+            return;
+          }
+          data_out = malloc(CACHE_LINE_SIZE * sizeof(*data_out) * args.width);
+          if (data_out == NULL) {
+            free(data_in);
+            printf("Allocation of %i failed, aborting...\n", args.width);
+            return;
+          }
+
           init_data_1d(args.width, data_in);
 
           t_accu = 0.0;
           hdiam_benchmarks[bm_no].variant(args, data_in, data_out);
+
           for (run_no = 0; run_no < DEFAULT_NRUNS; run_no ++) {
               t_accu += hdiam_benchmarks[bm_no].variant(args, data_in,
                 data_out);

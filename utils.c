@@ -7,7 +7,7 @@
 #include "utils.h"
 
 long
-compare(int n, double * t1, double * t2)
+compare(int n, double *t1, double *t2)
 {
   long diffs = 0L;
   for(int i = 0; i < n; i++){
@@ -19,7 +19,7 @@ compare(int n, double * t1, double * t2)
 }
 
 long
-compare_fast(int n, double * t1, double * t2)
+compare_fast(int n, double *t1, double *t2)
 {
   long diffs = 0L;
   #pragma omp parallel for reduction(+ : diffs)
@@ -32,7 +32,7 @@ compare_fast(int n, double * t1, double * t2)
 }
 
 long
-compare_l(long * t1, long * t2, int n)
+compare_l(long *t1, long *t2, int n)
 {
   long diffs = 0L;
   for(int i = 0; i < n; i++){
@@ -44,7 +44,7 @@ compare_l(long * t1, long * t2, int n)
 }
 
 void
-init_data_1d(int dimx, double * data)
+init_data_1d(int dimx, double *data)
 {
   int i;
   data[0] = 0.0;
@@ -55,7 +55,7 @@ init_data_1d(int dimx, double * data)
 }
 
 void
-init_data_1d_l(int dimx, long * data)
+init_data_1d_l(int dimx, long *data)
 {
   int i;
   data[0] = 0.0;
