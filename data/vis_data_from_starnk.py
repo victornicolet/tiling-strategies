@@ -56,6 +56,7 @@ df.insert(6,'GFLOPS_omp', 0, allow_duplicates=False)
 df.insert(7,'GFLOPS_grps', 0, allow_duplicates=False)
 df.insert(8,'GFLOPS_libkpn', 0, allow_duplicates=False)
 
+<<<<<<< HEAD
 nops_tot = (df.s * KB - 2) * df.i * nops
 
 df.GFLOPS_omp = nops_tot / (df.spdup_omp * df.seq_t);
@@ -63,6 +64,11 @@ df.GFLOPS_grps = nops_tot / (df.spdup_grps * df.seq_t);
 df.GFLOPS_libkpn = nops_tot / (df.spdup_libkpn * df.seq_t);
 
 #-------------------------------------------------------------------------------
+=======
+df.GFLOPS_omp = ((df.s * KB - 2) * df.i * nops) / (df.spdup_omp * 1000.0 * df.seq_t);
+df.GFLOPS_grps = ((df.s * KB - 2) * df.i * nops) / (df.spdup_grps * 1000.0 * df.seq_t);
+df.GFLOPS_libkpn = ((df.s * KB - 2) * df.i * nops) / (df.spdup_libkpn * 1000.0 * df.seq_t);
+>>>>>>> 15b242f03f95bedde255eea558e06a9713b62f2d
 
 print df.columns
 
