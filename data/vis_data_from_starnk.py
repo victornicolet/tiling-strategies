@@ -38,11 +38,15 @@ df = pan.merge(ompdf, resdf, how='inner', on=['i','s'])
 
 df[['i', 's']] = df[['i', 's']].astype(int)
 
+#-------------------------------------------------------------------------------
 # Performance : time elapsed for current version / time elapsed for sequential
 # version
 df.insert(5, 'spdup_libkpn', 0, allow_duplicates=False)
 df.spdup_libkpn = 100.0 * df.t / df.seq_t;
 df.drop('t', axis=1, inplace=True)
+
+
+#-------------------------------------------------------------------------------
 # GFLOPS : for one calculation, we make 2 float add, one division -> 3 FLOPS
 # With doubles, makes 6 FLOPS.
 
@@ -52,9 +56,13 @@ df.insert(6,'GFLOPS_omp', 0, allow_duplicates=False)
 df.insert(7,'GFLOPS_grps', 0, allow_duplicates=False)
 df.insert(8,'GFLOPS_libkpn', 0, allow_duplicates=False)
 
-df.GFLOPS_omp = (((2**df.s) * KB - 2) * (2**df.i) * nops) / (df.spdup_omp * 1000.0 * df.seq_t);
-df.GFLOPS_grps = (((2**df.s) * KB - 2) * (2**df.i) * nops) / (df.spdup_grps * 1000.0 * df.seq_t);
-df.GFLOPS_libkpn = (((2**df.s) * KB - 2) * (2**df.i) * nops) / (df.spdup_libkpn * 1000.0 * df.seq_t);
+nops_tot = (df.s * KB - 2) * df.i * nops
+
+df.GFLOPS_omp = nops_tot / (df.spdup_omp * df.seq_t);
+df.GFLOPS_grps = nops_tot / (df.spdup_grps * df.seq_t);
+df.GFLOPS_libkpn = nops_tot / (df.spdup_libkpn * df.seq_t);
+
+#-------------------------------------------------------------------------------
 
 print df.columns
 
