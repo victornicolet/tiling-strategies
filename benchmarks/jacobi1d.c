@@ -30,6 +30,8 @@ static inline void do_base_hdiam(int, int, int, double *, double **)
     __attribute__((always_inline));
 static inline void do_topleft_hdiam(int, double **, double *)
     __attribute__((always_inline));
+static inline void do_topright_hdiam(int, int, double **, double *)
+    __attribute__((always_inline));
 
 /*
 * Different versions of jacobi1d have been implemented here.
@@ -145,9 +147,11 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double *jbi_in,
 
   /* Second loop : tip down tiles */
 #pragma omp parallel for schedule(static) shared(tmp) private(tile_no)
-  for (tile_no = 1; tile_no < num_tiles + 1; tile_no++) {
+  for (tile_no = 1; tile_no < num_tiles; tile_no++) {
     do_top_hdiam(tile_no, num_iters, pb_size, tmp, jbi_out);
   }
+
+  do_topright_hdiam(num_iters, pb_size, tmp, jbi_out);
   free_mx((void **)tmp, 2);
 
 }
@@ -1088,16 +1092,16 @@ static inline void do_top_hdiam(int tile_no, int num_iters, int pb_size,
 
   x0 = tile_no * tile_base_sz;
   l0 = max(x0 - num_iters - 1, 0);
-  r0 = min(x0 + num_iters + 1, pb_size);
+  r0 = min(x0 + num_iters + 1, pb_size - 1);
 
   double *li1, *li0;
 
   li1 = tmp[0] + l0;
   li0 = tmp[1] + l0;
 
-  for (t = 0; t < num_iters - 1; t++) {
+  for (t = 0; t < num_iters; t++) {
     l = max(x0 - (t + 1), 1);
-    r = min(x0 + t, pb_size - 1);
+    r = min(x0 + t, pb_size - 2);
     /* Load from the border-storing array */
 
     for (i = l; i <= r; i++) {
@@ -1106,22 +1110,15 @@ static inline void do_top_hdiam(int tile_no, int num_iters, int pb_size,
 
     swap(&li0, &li1);
   }
-  t = num_iters - 1;
-  l = max(x0 - (t + 1), 1);
-  r = min(x0 + t, pb_size - 1);
-  /* Load from the border-storing array */
-
-  for (i = l; i <= r; i++) {
-    li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
-  }
 
   /* Copy back to memory */
   for (i = l0 + 1; i < r0 - 1; i++) {
-    jbi_out[i] = li1[i - l0];
+    jbi_out[i] = li0[i - l0];
   }
 }
+
 static inline void do_topleft_hdiam(int num_iters, double **tmp,
-                                    double *jbi_out) {
+  double *jbi_out) {
   int i, t;
   double *li1, *li0;
 
@@ -1129,12 +1126,11 @@ static inline void do_topleft_hdiam(int num_iters, double **tmp,
   li0 = tmp[1];
 
   for (t = 0; t < num_iters - 1; t++) {
-    /* Load from the border-storing array */
     li0[t + 1] = tmp[1][t + 1];
     li0[t] = tmp[0][t];
 
     for (i = 1; i < t + 1; i++) {
-      li1[i] = (li0[i - 1] + li0[i] + li0[i + 1]) / 3;
+      li1[i] = (li0[i - 1] + li0[i] + li0[i + 1]) / 3.0;
     }
 
     swap(&li1, &li0);
@@ -1143,11 +1139,32 @@ static inline void do_topleft_hdiam(int num_iters, double **tmp,
   t = num_iters - 1;
 
   for (i = 1; i < t + 1; i++) {
-    li1[i] = (li0[i - 1] + li0[i] + li0[i + 1]) / 3;
+    li1[i] = (li0[i - 1] + li0[i] + li0[i + 1]) / 3.0;
   }
 
   for (i = 0; i < num_iters; i++) {
     jbi_out[i] = li1[i];
+  }
+}
+
+static inline void do_topright_hdiam(int num_iters, int pb_size, double **tmp,
+  double *jbi_out) {
+  int i, l0, t;
+  double *li1, *li0;
+
+  l0 = pb_size - num_iters - 2;
+  li1 = tmp[0] + l0;
+  li0 = tmp[1] + l0;
+
+  for (t = 0; t < num_iters; t++) {
+    for (i = pb_size - t - 1; i < pb_size - 1; i++) {
+      li1[i-l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
+    }
+    swap(&li1, &li0);
+  }
+
+  for (i = l0 + 1; i < pb_size - 1; i++) {
+    jbi_out[i] = li0[i - l0];
   }
 
 }
