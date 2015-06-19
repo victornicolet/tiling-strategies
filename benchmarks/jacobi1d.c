@@ -91,6 +91,9 @@ void djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs,
   int tile_no, grp_no;
   num_procs = 2 * num_procs;
   /* Tile bounds */
+  int i, t;
+  int x0, r0, l0, r, l;
+  double *li1, *li0;
   int tile_max;
   int tile_base_sz = 2 * num_iters;
   int num_tiles = (pb_size / tile_base_sz);
@@ -109,18 +112,63 @@ void djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs,
   for (grp_no = 0; grp_no < num_grps + 1; grp_no++) {
     tile_max = min((grp_no + 1) * group_size + 1, num_tiles);
 
-#pragma omp parallel for schedule(static) shared(tmp) private(tile_no) \
+#pragma omp parallel for schedule(static) shared(tmp) \
+    private(tile_no, x0, r0, l0, r, l, i ,t, li0, li1) \
     firstprivate(grp_no)
 
     for (tile_no = grp_no * group_size + 1; tile_no < tile_max; tile_no++) {
-      do_base_hdiam(tile_no, num_iters, pb_size, jbi, tmp);
+      /* Initial values */
+      l0 = max(tile_no * tile_base_sz, 0);
+      r0 = min(l0 + tile_base_sz, pb_size - 1);
+
+      li1 = tmp[0] + l0;
+      li0 = tmp[1] + l0;
+
+      for (i = l0; i < r0; i++) {
+        li0[i - l0] = jbi[i];
+        li1[i - l0] = 0.0;
+      }
+
+      for (t = 0; t < num_iters - 1; t++) {
+        l = max(l0 + t + 1, 1);
+        r = min(l0 + tile_base_sz - t - 1, pb_size);
+
+        for (i = l; i < r; i++) {
+          li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
+        }
+
+        swap(&li0, &li1);
+      }
     }
 
 #pragma omp parallel for schedule(static) shared(tmp) \
-    private(tile_no) firstprivate(grp_no)
+    private(tile_no, x0, r0, l0, r, l, i ,t, li0, li1) \
+    firstprivate(grp_no)
 
     for (tile_no = grp_no * group_size + 1; tile_no < tile_max; tile_no++) {
-      do_top_hdiam(tile_no, num_iters, pb_size, tmp, jbi_out);
+      x0 = tile_no * tile_base_sz;
+      l0 = max(x0 - num_iters - 1, 0);
+      r0 = min(x0 + num_iters + 1, pb_size - 1);
+
+      li1 = tmp[0] + l0;
+      li0 = tmp[1] + l0;
+
+      for (t = 0; t < num_iters; t++) {
+        l = max(x0 - (t + 1), 1);
+        r = min(x0 + t, pb_size - 2);
+        /* Load from the border-storing array */
+
+        for (i = l; i <= r; i++) {
+          li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
+        }
+
+        swap(&li0, &li1);
+      }
+
+      /* Copy back to memory */
+      for (i = l0 + 1; i < r0 - 1; i++) {
+        jbi_out[i] = li0[i - l0];
+      }
     }
   }
 
@@ -130,15 +178,41 @@ void djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs,
 
 void djbi1d_half_diamonds(int pb_size, int num_iters, double *jbi_in,
                           double *jbi_out) {
+  int i, t;
+  int x0, r0, l0, r, l;
+  int tile_base_sz = num_iters * 2;
+  double *li1, *li0;
   int tile_no;
   int num_tiles = (pb_size / (2 * num_iters));
   /* Store the border between base-down pyramids and base-up pyramids */
   double **tmp = alloc_double_mx(2, pb_size * sizeof(*tmp));
 
   /* First loop : base down tiles */
-#pragma omp parallel for schedule(static) shared(tmp) private(tile_no)
+#pragma omp parallel for schedule(static) shared(tmp) \
+  private(tile_no, x0, r0, l0, r, l, i ,t, li0, li1)
   for (tile_no = 0; tile_no < num_tiles; tile_no++) {
-    do_base_hdiam(tile_no, num_iters, pb_size, jbi_in, tmp);
+    /* Initial values */
+    l0 = max(tile_no * tile_base_sz, 0);
+    r0 = min(l0 + tile_base_sz, pb_size - 1);
+
+    li1 = tmp[0] + l0;
+    li0 = tmp[1] + l0;
+
+    for (i = l0; i < r0; i++) {
+      li0[i - l0] = jbi_in[i];
+      li1[i - l0] = 0.0;
+    }
+
+    for (t = 0; t < num_iters - 1; t++) {
+      l = max(l0 + t + 1, 1);
+      r = min(l0 + tile_base_sz - t - 1, pb_size);
+
+      for (i = l; i < r; i++) {
+        li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
+      }
+
+      swap(&li0, &li1);
+    }
   }
 
   /* Half-tile at beggining, in front of parallel loop */
@@ -146,9 +220,32 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double *jbi_in,
 
 
   /* Second loop : tip down tiles */
-#pragma omp parallel for schedule(static) shared(tmp) private(tile_no)
+#pragma omp parallel for schedule(static) shared(tmp) \
+  private(tile_no, x0, r0, l0, r, l, i ,t, li0, li1)
   for (tile_no = 1; tile_no < num_tiles; tile_no++) {
-    do_top_hdiam(tile_no, num_iters, pb_size, tmp, jbi_out);
+      x0 = tile_no * tile_base_sz;
+      l0 = max(x0 - num_iters - 1, 0);
+      r0 = min(x0 + num_iters + 1, pb_size - 1);
+
+      li1 = tmp[0] + l0;
+      li0 = tmp[1] + l0;
+
+      for (t = 0; t < num_iters; t++) {
+        l = max(x0 - (t + 1), 1);
+        r = min(x0 + t, pb_size - 2);
+        /* Load from the border-storing array */
+
+        for (i = l; i <= r; i++) {
+          li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
+        }
+
+        swap(&li0, &li1);
+      }
+
+      /* Copy back to memory */
+      for (i = l0 + 1; i < r0 - 1; i++) {
+        jbi_out[i] = li0[i - l0];
+      }
   }
 
   do_topright_hdiam(num_iters, pb_size, tmp, jbi_out);
