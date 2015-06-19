@@ -70,4 +70,21 @@ ax4.plot(Xb, Zb1, 'ro', color='b')
 ax4.plot(Xb, Zb2, 'ro', color='r')
 ax4.plot(Xb, Zb3, 'ro', color='g')
 ax4.axhline(1, color='r')
+
+fig2 = plt.figure(figsize=plt.figaspect(0.5))
+ax = fig2.add_subplot(1,1,1);
+
+omp_data = np.genfromtxt('jacobi1D_viz.csv', delimiter=';', skiprows=1)
+Xomp = omp_data[:,0]
+Yomp = np.vectorize(math.log)(my_data[:,1], 2)
+Zomp1 = omp_data[:,3]
+Zomp2 = omp_data[:,4]
+indx = np.where(Yomp == math.log(watch_size, 2))
+Xompb = Xomp[index]
+Zomp1b = Zomp1[index]
+Zomp2b= Zomp2[index]
+
+ax.plot(Xb, Zomp1b, 'ro', color='r')
+ax.plot(Xb, Zomp2b, 'ro', color='b')
+
 plt.show()
