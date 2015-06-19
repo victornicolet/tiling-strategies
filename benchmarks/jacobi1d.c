@@ -11,6 +11,8 @@
 #include <time.h>
 #include "jacobi1d.h"
 
+#include <omp.h>
+
 static struct timespec tend;
 static struct timespec tbegin;
 
@@ -88,23 +90,27 @@ void djbi1d_hdiam_tasked(int pb_size, int num_iters, double *jbi,
 
 void djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs,
                           double *jbi, double *jbi_out) {
-  int tile_no, grp_no;
+  int num_tiles, tile_base_sz, tile_max, tile_no;
+  int group_size, grp_no, num_grps;
+  double **tmp;
+
+
   num_procs = 2 * num_procs;
-  /* Tile bounds */
-  int tile_max;
-  int tile_base_sz = 2 * num_iters;
-  int num_tiles = (pb_size / tile_base_sz);
-  /* Gourp size */
-  int group_size = GROUP_FACTOR * (num_procs * L1_CACHE_SIZE) /
+  tile_base_sz = 2 * num_iters;
+  num_tiles = (pb_size / tile_base_sz);
+  group_size = GROUP_FACTOR * (num_procs * L1_CACHE_SIZE) /
     (num_iters * sizeof(double) * 4) ;
-  int num_grps = (num_tiles - 1) / group_size;
-  /* Store the border between base-down pyramids and base-up pyramids */
-  double **tmp = alloc_double_mx(2, pb_size * sizeof(*tmp));
+  num_grps = (num_tiles - 1) / group_size;
+  tmp = alloc_double_mx(2, pb_size * sizeof(*tmp));
 
   /* First execute first base-down tile and top-left corner */
   /* First base-down tile */
   do_base_hdiam(0, num_iters, pb_size, jbi, tmp);
   do_topleft_hdiam(num_iters, tmp, jbi_out);
+
+#ifdef TEST_LOCALITY
+  int tiles[2][num_tiles];
+#endif
 
   for (grp_no = 0; grp_no < num_grps + 1; grp_no++) {
     tile_max = min((grp_no + 1) * group_size + 1, num_tiles);
@@ -113,6 +119,9 @@ void djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs,
     firstprivate(grp_no)
 
     for (tile_no = grp_no * group_size + 1; tile_no < tile_max; tile_no++) {
+      #ifdef TEST_LOCALITY
+        tiles[0][tile_no] = omp_get_thread_num();
+      #endif
       do_base_hdiam(tile_no, num_iters, pb_size, jbi, tmp);
     }
 
@@ -120,24 +129,48 @@ void djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs,
     private(tile_no) firstprivate(grp_no)
 
     for (tile_no = grp_no * group_size + 1; tile_no < tile_max; tile_no++) {
+      #ifdef TEST_LOCALITY
+        tiles[1][tile_no] = omp_get_thread_num();
+      #endif
       do_top_hdiam(tile_no, num_iters, pb_size, tmp, jbi_out);
     }
   }
 
 
   free_mx((void **)tmp, 2);
+
+#ifdef TEST_LOCALITY
+  int bad_loc, i;
+  bad_loc = 0;
+  for (i = 0; i < num_tiles; i++) {
+    if(tiles[0][i] != tiles[1][i]) {
+      bad_loc++;
+    }
+  }
+  printf("\nLocality score : %8.4f\n", (double) bad_loc / num_tiles);
+#endif
+
 }
 
 void djbi1d_half_diamonds(int pb_size, int num_iters, double *jbi_in,
                           double *jbi_out) {
-  int tile_no;
-  int num_tiles = (pb_size / (2 * num_iters));
+  int num_tiles, tile_no;
+  double **tmp;
+
+  num_tiles = (pb_size / (2 * num_iters));
   /* Store the border between base-down pyramids and base-up pyramids */
-  double **tmp = alloc_double_mx(2, pb_size * sizeof(*tmp));
+  tmp = alloc_double_mx(2, pb_size * sizeof(*tmp));
+
+#ifdef TEST_LOCALITY
+  int tiles[2][num_tiles];
+#endif
 
   /* First loop : base down tiles */
 #pragma omp parallel for schedule(static) shared(tmp) private(tile_no)
   for (tile_no = 0; tile_no < num_tiles; tile_no++) {
+    #ifdef TEST_LOCALITY
+        tiles[0][tile_no] = omp_get_thread_num();
+    #endif
     do_base_hdiam(tile_no, num_iters, pb_size, jbi_in, tmp);
   }
 
@@ -148,11 +181,25 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double *jbi_in,
   /* Second loop : tip down tiles */
 #pragma omp parallel for schedule(static) shared(tmp) private(tile_no)
   for (tile_no = 1; tile_no < num_tiles; tile_no++) {
+    #ifdef TEST_LOCALITY
+        tiles[1][tile_no] = omp_get_thread_num();
+    #endif
     do_top_hdiam(tile_no, num_iters, pb_size, tmp, jbi_out);
   }
 
   do_topright_hdiam(num_iters, pb_size, tmp, jbi_out);
   free_mx((void **)tmp, 2);
+
+  #ifdef TEST_LOCALITY
+  int bad_loc, i;
+  bad_loc = 0;
+  for (i = 0; i < num_tiles; i++) {
+    if(tiles[0][i] != tiles[1][i]) {
+      bad_loc++;
+    }
+  }
+  printf("\nLocality score : %8.4f\n", (double) bad_loc / num_tiles);
+  #endif
 
 }
 
