@@ -302,7 +302,7 @@ get2dargs(int dimx, int dimy, int dimt, struct benchspec2d bs)
 struct args_dimt
 get1dargs(int dimx, int dimt, struct benchspec bs)
 {
-  if (dimx == 0 || dimt == 0) {
+  if (dimx < 0 || dimt < 0) {
     dimx = bs.size;
     dimt = bs.iters;
   }
