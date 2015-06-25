@@ -174,6 +174,8 @@ long compare_fast(int, double *, double *);
 
 long compare_l(long *, long *, int);
 
+void find_diffs(int, double *, double *, int *);
+
 void init_data_1d(int, double *);
 
 void init_data_1d_l(int, long *);
@@ -181,6 +183,8 @@ void init_data_1d_l(int, long *);
 void init_data_2d(int, int, double **);
 
 void print_benchspecs(int, struct benchspec *);
+
+void print_check(int, int, double *, double *);
 
 void print_test1d_summary(int, int, double, struct benchspec, double *,
                           double *);

@@ -22,13 +22,61 @@ long
 compare_fast(int n, double *t1, double *t2)
 {
   long diffs = 0L;
-  #pragma omp parallel for reduction(+ : diffs)
+  #pragma omp parallel for schedule(static) reduction(+ : diffs)
   for(int i = 0; i < n; i++){
     if (fabs(t1[i] - t2[i]) > DOUBLE_COMPARISON_THRESHOLD){
       diffs++;
     }
   }
   return diffs;
+}
+
+void print_check(int diffs, int pb_size, double *out_mx, double *ref_out)
+{
+  int i;
+  int *diff_rec;
+
+  diff_rec = malloc(pb_size * sizeof(*diff_rec));
+
+  find_diffs(pb_size, out_mx, ref_out, diff_rec);
+  (void)printf("Output not correct : %i/%i -(%4.3f)."
+    "\n",
+    diffs,
+    pb_size,
+    (double) diffs / pb_size);
+  (void)printf("Output from this version\n");
+
+  for (i = 0; i < DISPLAY_SIZE; i++) {
+    (void)printf("%10.3f", out_mx[i]);
+  }
+  (void)printf("\nOutput from reference version :\n");
+
+  for (i = 0; i < DISPLAY_SIZE; i++) {
+    (void)printf("%10.3f", ref_out[i]);
+  }
+
+  (void)printf("\n");
+  (void)printf("\nDiff record snapshot :\n");
+
+  for (i = 0; i < min(DISPLAY_SIZE, diffs); i++) {
+    (void)printf("%10i", diff_rec[i]);
+  }
+
+  (void)printf("\n");
+
+  free(diff_rec);
+}
+
+void find_diffs(int n, double *a, double *b, int * diff_rec){
+        /* Wno-unused */
+  int i,j;
+
+  j = 0;
+  for (i = 0; i < n; i++) {
+    if (fabs(a[i]-b[i]) > DOUBLE_COMPARISON_THRESHOLD) {
+      diff_rec[j++] = i;
+    }
+  }
 }
 
 long
@@ -99,7 +147,7 @@ print_test1d_summary(int nruns, int verbose, double total_time,
   int i;
   if (verbose) {
     printf("\n------------- Input ---------\n");
-    for (i = 0; i < DISPLAY_SIZE; i++) {
+    for (i = DISPLAY_OFFSET; i < DISPLAY_OFFSET + DISPLAY_SIZE; i++) {
       printf("%10.3f", data_in[i]);
     }
     printf("\nResult snapshot: %s\n", KRED);

@@ -368,17 +368,17 @@ test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
   print_test1d_summary(nruns, DISPLAY_VERBOSE, t_accu, benchmark, data_in,
    data_out);
 
-  double * ref_out = aligned_alloc(CACHE_LINE_SIZE, \
+  double *ref_out = aligned_alloc(CACHE_LINE_SIZE,
     sizeof(*ref_out) * args.width);
   djbi1d_sequential(args, data_in, ref_out);
 
   long diffs;
-  if ((diffs = compare_fast(args.width, data_out, ref_out))>0) {
-    printf("Differences : %li over %i ( %4.2f )\n", diffs, args.width,
-      (float) diffs / args.width);
+  if ((diffs = compare_fast(args.width, data_out, ref_out)) > 0) {
+    print_check(diffs, args.width, data_out, ref_out);
   }
   free(data_in);
   free(data_out);
+  free(ref_out);
   return t_accu;
 }
 
