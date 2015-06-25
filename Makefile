@@ -27,7 +27,10 @@ LDFLAGS=-lrt -lm
 SRC_DIR = 	benchmarks
 PROGRAM = 	test
 PROGRAMS = 	$(PROGRAM) jbi1d jbi2d
-SOURCES.c =	$(SRC_DIR)/jacobi1d.c $(SRC_DIR)/jacobi2d.c utils.c
+SOURCES.c =	utils.c
+SOURCES.c+=	$(SRC_DIR)/jacobi1d.c
+SOURCES.c+=     $(SRC_DIR)/jacobi2d.c
+SOURCES.c+= 	$(SRC_DIR)/jacobi1d_vslope.c
 HEADERS=	utils.h $(SRC_DIR)/jacobi1d.h $(SRC_DIR)/jacobi2d.h
 OBJECTS =	$(SOURCES.c:.c=.o)
 

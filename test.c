@@ -12,6 +12,7 @@
 
 #include "benchmarks/jacobi1d.h"
 #include "benchmarks/jacobi2d.h"
+#include "benchmarks/jacobi1d_vslope.h"
 
 /* Problem size (in space) between 2 ^ MIN_POW and 2 ^ MAX_POW */
 #define MIN_POW 3
@@ -117,6 +118,8 @@ main(int argc, char ** argv)
     {"JACOBI1D_HDIAM (TASKS)", djbi1d_hdiam_tasked_test, check_low_iter,
       Pbsize_1d, Num_iters_1d, 1},
     {"JACOBI1D_FROM_PLUTO", djbi1d_from_pluto, check_default,
+      Pbsize_1d, Num_iters_1d, 1},
+    {"JACOBI1D_HDIAM_(VAR. SLOPE)", djbi1d_hdiam_vslope_t, check_low_iter,
       Pbsize_1d, Num_iters_1d, 1}
   };
 
@@ -143,6 +146,8 @@ main(int argc, char ** argv)
       0, 0, 1},
     {"JACOBI1D_HALF_DIAMONDS", djbi1d_half_diamonds_test, check_low_iter,
       0, 0, 1},
+    {"JACOBI1D_HDIAM_(VAR. SLOPE)", djbi1d_hdiam_vslope_t, check_low_iter,
+      0, 0, 1},
     {"JACOBI1D_HDIAM(GROUPED TILES)", djbi1d_hdiam_grouped_test, check_low_iter,
       0, 0, 1},
     {"JACOBI1D_HDIAM (USING TASKS)", djbi1d_hdiam_tasked_test, check_low_iter,
@@ -162,7 +167,7 @@ main(int argc, char ** argv)
   int nruns = 0;
   char *benchmask, *hdmask;
 
-  hdmask = "11101";
+  hdmask = "111101";
 
   while ((opt =
     getopt_long(argc, argv, "hi:m:M:r:t:vx:y:", longopts, &option_index)) != -1) {
@@ -302,7 +307,7 @@ get2dargs(int dimx, int dimy, int dimt, struct benchspec2d bs)
 struct args_dimt
 get1dargs(int dimx, int dimt, struct benchspec bs)
 {
-  if (dimx < 0 || dimt < 0) {
+  if (dimx <= 0 || dimt <= 0) {
     dimx = bs.size;
     dimt = bs.iters;
   }
@@ -570,7 +575,7 @@ usage(int nbs, int nbs2d, char ** argv, struct benchspec * bs,
   for (i = nbs; i < nbs2d + nbs; i++) {
     printf("%i - %s\n", i, bs2d[i - nbs].name);
   }
-  printf("%sExample mask to test JACOBI1D_OMP_NAIVE and JACOBI2D_SEQ :%s\
+  printf("%sExample mask to test JACOBI1D_OMP_NAIVE and JACOBI1D_FROM_PLUTO:%s\
           \n\t .\\test 01000001\n", KBLU, KRESET);
   printf("%sChecking correctness with long versions of algorithms : %s\
           \n\t .\\test l\n", KBLU, KRESET);
