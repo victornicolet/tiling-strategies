@@ -33,7 +33,7 @@ static void djbi1d_hdiam_vslope(int pb_size, int num_iters, double *jbi_in,
   int num_tiles, slope, tile_no, tile_size;
   double **tmp;
   /* Slope caclulation : fit the tile in L1 cache */
-  slope = floor(L1_CACHE_SIZE / (num_iters * sizeof(double) * 4));
+  slope = max(floor(L1_CACHE_SIZE / (num_iters * sizeof(double) * 4)), 1);
   tile_size = 2 * slope * num_iters;
   num_tiles = pb_size / tile_size;
   /* Inter-tiles buffer, twice the problem size */
@@ -66,6 +66,12 @@ static void djbi1d_hdiam_vslope(int pb_size, int num_iters, double *jbi_in,
 
 double djbi1d_hdiam_vslope_t(struct args_dimt args, double *jbi_in,
   double *jbi_out) {
+  int slope;
+  slope = max(floor(L1_CACHE_SIZE / (args.iters * sizeof(double) * 4)), 1);
+  printf("\nTile size and slope for %i iterations : %i (slope 1/%i)\n",
+    args.iters,
+    slope * args.iters * 2,
+    slope);
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
   djbi1d_hdiam_vslope(args.width, args.iters, jbi_in, jbi_out);
   clock_gettime(CLOCK_MONOTONIC, &tend);
