@@ -6,7 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from numpy import genfromtxt
 from scipy.interpolate import griddata
 
-max_gain = 16
+max_gain = 24
 watch_size = 32768
 
 fig = plt.figure(figsize=plt.figaspect(0.5))
