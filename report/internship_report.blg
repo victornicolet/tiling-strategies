@@ -1,0 +1,48 @@
+This is BibTeX, Version 0.99d (TeX Live 2013/Debian)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
+The top-level auxiliary file: internship_report.aux
+The style file: acm.bst
+Database file #1: internship_report.bib.bib
+Warning--empty publisher in zhou_hierarchical_2012
+You've used 11 entries,
+            2253 wiz_defined-function locations,
+            612 strings with 6678 characters,
+and the built_in function-call counts, 4845 in all, are:
+= -- 481
+> -- 206
+< -- 0
++ -- 86
+- -- 73
+* -- 365
+:= -- 724
+add.period$ -- 34
+call.type$ -- 11
+change.case$ -- 69
+chr.to.int$ -- 0
+cite$ -- 12
+duplicate$ -- 208
+empty$ -- 401
+format.name$ -- 73
+if$ -- 1065
+int.to.chr$ -- 0
+int.to.str$ -- 11
+missing$ -- 10
+newline$ -- 57
+num.names$ -- 24
+pop$ -- 85
+preamble$ -- 1
+purify$ -- 58
+quote$ -- 0
+skip$ -- 156
+stack$ -- 0
+substring$ -- 325
+swap$ -- 78
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 44
+warning$ -- 1
+while$ -- 49
+width$ -- 13
+write$ -- 125
+(There was 1 warning)

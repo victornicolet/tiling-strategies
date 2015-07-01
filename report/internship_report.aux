@@ -1,0 +1,122 @@
+\relax 
+\bibstyle{acm}
+\select@language{english}
+\@writefile{toc}{\select@language{english}}
+\@writefile{lof}{\select@language{english}}
+\@writefile{lot}{\select@language{english}}
+\citation{bondhugula_automatic_2008}
+\citation{ragan-kelley_halide:_2013}
+\citation{kahn_semantics_1974}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{3}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.1}Motivation}{3}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2}Contribution and outline}{3}}
+\citation{bandishti_tiling_2012}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Background}{4}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Stencil applications}{4}}
+\@writefile{toc}{\contentsline {paragraph}{Characterization}{4}}
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{jbi1d_code:naive}{{1a}{5}}
+\newlabel{sub@jbi1d_code:naive}{{a}{5}}
+\newlabel{jbi1d_code:mem}{{1b}{5}}
+\newlabel{sub@jbi1d_code:mem}{{b}{5}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces 1-d Jacobi\relax }}{5}}
+\newlabel{jbi1d_code}{{1}{5}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Program transformations and polyhedral framework}{5}}
+\citation{bacon_compiler_1994}
+\citation{bondhugula_automatic_2008}
+\newlabel{jbi1d_tr:skewed}{{2a}{6}}
+\newlabel{sub@jbi1d_tr:skewed}{{a}{6}}
+\newlabel{jbi1d_tr:tiled}{{2b}{6}}
+\newlabel{sub@jbi1d_tr:tiled}{{b}{6}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces 1-d jacobi after loop transformations\relax }}{6}}
+\@writefile{toc}{\contentsline {paragraph}{Data dependency}{6}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.2.1}Loop transformations}{6}}
+\citation{bastoul_code_2004}
+\citation{bondhugula_automatic_2008}
+\newlabel{poly:itspace}{{3a}{7}}
+\newlabel{sub@poly:itspace}{{a}{7}}
+\newlabel{poly:deps}{{3b}{7}}
+\newlabel{sub@poly:deps}{{b}{7}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.2.2}Polyhedral model}{7}}
+\@writefile{toc}{\contentsline {paragraph}{Polyhedral representation of programs}{7}}
+\@writefile{toc}{\contentsline {paragraph}{Polyhedral dependencies}{7}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.2.3}Tiling}{7}}
+\@writefile{toc}{\contentsline {paragraph}{Tiling legality}{8}}
+\@writefile{toc}{\contentsline {paragraph}{Tiling for locality}{8}}
+\@writefile{toc}{\contentsline {paragraph}{Tiling for reuse}{8}}
+\@writefile{toc}{\contentsline {paragraph}{Tiling for communication-free parallelism}{8}}
+\citation{zhou_hierarchical_2012}
+\citation{grosser_split_2013}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.2.4}Tiling techniques in previous research work}{9}}
+\@writefile{toc}{\contentsline {paragraph}{Skewed tiling}{9}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Skewed tiling with inter-tile dependences and wavefront\relax }}{9}}
+\newlabel{skewed-tiling}{{4}{9}}
+\@writefile{toc}{\contentsline {paragraph}{Overlapped tiling}{9}}
+\@writefile{toc}{\contentsline {paragraph}{Split tiling}{9}}
+\citation{bandishti_tiling_2012}
+\citation{grosser_relation_2014}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Overlapped tiling with inter-tile dependences and redundant computations\relax }}{10}}
+\newlabel{over-tiling}{{5}{10}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Split tiling with inter-tile dependences\relax }}{10}}
+\newlabel{split-tiling}{{6}{10}}
+\@writefile{toc}{\contentsline {paragraph}{Diamond tiling}{10}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Diamond tiling with inter-tile dependences\relax }}{11}}
+\newlabel{diam-tiling}{{7}{11}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Scheduling}{11}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.1}Static loop scheduling}{11}}
+\citation{kahn_semantics_1974}
+\citation{thies2002streamit}
+\citation{blumofe_scheduling_1999}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.2}Tasks and Libkpn}{12}}
+\newlabel{task-model:omp}{{8a}{13}}
+\newlabel{sub@task-model:omp}{{a}{13}}
+\newlabel{task-model:cilk}{{8b}{13}}
+\newlabel{sub@task-model:cilk}{{b}{13}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Different models for task parallelism languages\relax }}{13}}
+\newlabel{task-model}{{8}{13}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Arbitrary dependencies and creation tree\relax }}{13}}
+\newlabel{task-model-libkpn}{{9}{13}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.3}Dynamic task scheduling}{13}}
+\@writefile{toc}{\contentsline {paragraph}{Work-stealing scheduler}{13}}
+\citation{harris1988combined}
+\citation{mullapudi_polymage_2015}
+\@writefile{toc}{\contentsline {paragraph}{Libkpn scheduler}{14}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Harris Corner Detection}{14}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Harris Corner Detection pipeline and parallelization opportunities}{15}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Algorithm with tasks}{15}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Harris Corner Detection image processing pipeline\relax }}{16}}
+\newlabel{orig_pipeline}{{10}{16}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Harris Corner Detection with fused stages\relax }}{16}}
+\newlabel{fused_pipeline}{{11}{16}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Results}{16}}
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Speedup relative to sequential Polymage, on machines with 2 and 12 cores, with gcc4.9.1 and icc 15.1\relax }}{17}}
+\newlabel{results_hcd}{{12}{17}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}1-d Jacobi}{17}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Half-diamonds tiling}{18}}
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Half-diamonds tiling for low-iterations stencil computations\relax }}{18}}
+\newlabel{hdiam_tiling}{{13}{18}}
+\@writefile{toc}{\contentsline {paragraph}{Grouping tiles}{18}}
+\@writefile{toc}{\contentsline {paragraph}{Results}{18}}
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Speedup relative to sequential version, on Intel Xeon E5 with 12 cores\relax }}{19}}
+\newlabel{jbi_res_grp}{{14}{19}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}A task-based approach}{19}}
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Tasks dependencies, synchronization points and creation schema\relax }}{19}}
+\newlabel{hdiam_tasking}{{15}{19}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}First results}{20}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Tile shape determination at runtime}{20}}
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Speedup relative to sequential 1-d jacobi on 12 cores, with different iteration sizes on a 32 Mb problem.\relax }}{21}}
+\newlabel{results_hdiam_var}{{16}{21}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Conclusion and future work}{21}}
+\bibdata{internship_report.bib}
+\bibcite{bacon_compiler_1994}{1}
+\bibcite{bandishti_tiling_2012}{2}
+\bibcite{bastoul_code_2004}{3}
+\bibcite{blumofe_scheduling_1999}{4}
+\bibcite{bondhugula_automatic_2008}{5}
+\bibcite{grosser_split_2013}{6}
+\bibcite{harris1988combined}{7}
+\bibcite{kahn_semantics_1974}{8}
+\bibcite{mullapudi_polymage_2015}{9}
+\bibcite{thies2002streamit}{10}
+\bibcite{zhou_hierarchical_2012}{11}
+\@writefile{toc}{\contentsline {section}{\numberline {6}References}{22}}
