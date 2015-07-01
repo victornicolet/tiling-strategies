@@ -3,46 +3,47 @@ Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
 The top-level auxiliary file: internship_report.aux
 The style file: acm.bst
 Database file #1: internship_report.bib.bib
+Warning--empty journal in grosser_relation_2014
 Warning--empty publisher in zhou_hierarchical_2012
-You've used 11 entries,
+You've used 13 entries,
             2253 wiz_defined-function locations,
-            612 strings with 6678 characters,
-and the built_in function-call counts, 4845 in all, are:
-= -- 481
-> -- 206
+            624 strings with 7249 characters,
+and the built_in function-call counts, 5698 in all, are:
+= -- 561
+> -- 260
 < -- 0
-+ -- 86
-- -- 73
-* -- 365
-:= -- 724
-add.period$ -- 34
-call.type$ -- 11
-change.case$ -- 69
++ -- 109
+- -- 93
+* -- 432
+:= -- 861
+add.period$ -- 39
+call.type$ -- 13
+change.case$ -- 85
 chr.to.int$ -- 0
-cite$ -- 12
-duplicate$ -- 208
-empty$ -- 401
-format.name$ -- 73
-if$ -- 1065
+cite$ -- 15
+duplicate$ -- 240
+empty$ -- 456
+format.name$ -- 93
+if$ -- 1241
 int.to.chr$ -- 0
-int.to.str$ -- 11
-missing$ -- 10
-newline$ -- 57
-num.names$ -- 24
-pop$ -- 85
+int.to.str$ -- 13
+missing$ -- 12
+newline$ -- 66
+num.names$ -- 28
+pop$ -- 102
 preamble$ -- 1
-purify$ -- 58
+purify$ -- 72
 quote$ -- 0
-skip$ -- 156
+skip$ -- 180
 stack$ -- 0
-substring$ -- 325
-swap$ -- 78
+substring$ -- 368
+swap$ -- 89
 text.length$ -- 0
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 44
-warning$ -- 1
-while$ -- 49
-width$ -- 13
-write$ -- 125
-(There was 1 warning)
+type$ -- 52
+warning$ -- 2
+while$ -- 56
+width$ -- 15
+write$ -- 144
+(There were 2 warnings)

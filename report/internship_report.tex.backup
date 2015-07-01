@@ -75,6 +75,8 @@ Finally, I would like to thank the whole PARKAS team for their welcome during my
 
 \clearpage
 \newpage
+\tableofcontents
+\newpage
 
 \section{Introduction}
 \subsection{Motivation}
@@ -116,25 +118,26 @@ with the task-based approach using Libkpn.
 
 \subsection{Contribution and outline}
 The PARKAS team, in which I did my internship, is focused on synchronous Kahn parallel networks. There 
-is to main research topics : the definition of high-level languages for embedded systems that provide
+is two main research topics : the definition of high-level languages for embedded systems that provide
 synchronous data-flow concurrency, and efficient compilation for synchronous and concurrent designs 
 targeting modern shared-memory parallel processors. \\
 I worked more specifically on Libkpn : a library that provides the user lightweight tasks and
-first-class dependencies to implement any networks of tasks for parallel execution, based
+first-class dependencies to implement any network of tasks for parallel execution, based
 on the model of Kahn process networks \cite{kahn_semantics_1974}.\\
 The main purpose of my internship was to show that tasks and dynamic scheduling can
-perform as well as the static scheduling used in widely used shared-memory models such
+perform as well as static scheduling,  widely used in shared-memory models such
 as OpenMP. Libkpn has already proved its efficiency on classic linear algebra kernels such
 as Cholesky decomposition and streaming applications. But other real world applications
-in image processing and scientific computation use computationally intensive kernels. \\
+in image processing and scientific computation use computationally intensive kernels, and these
+applications need high-performance parallelization.\\
 I initially focused on learning about the state of the art in parallel programming and concurrency
 models on shared-memory architectures. This included research on program transformations and dynamic
 scheduling. \\
 In the first application I had to develop, my goal was to use inner parallelism in an image processing
-application, Harris Corner Detection, but this did not lead to convincing results. Then my focus moved 
+pipeline, Harris Corner Detection, but this did not lead to convincing results. Then my focus moved 
 on to a stencil application, 1-d jacobi. We hoped that using tasks and dynamic scheduling, we would 
 improve performance by taking advantage of reuse between successive tiles. My work was an exploration
-of the potential applications for Libkpn, thus a part of the project and a continuation for previous 
+of the potential applications for Libkpn, thus a part of the project and a continuation of previous 
 articles.\\
 \vspace{1cm}
 The following report presents first the general background necessary to understand the tools and and models
@@ -151,7 +154,7 @@ strategy and task model used.
 Stencil applications are a broad family of compute intensive applications, widely used in
 the graphic or scientific domain. We can characterize them by an update of a point in a
 grid, using neighboring points. They have properties that make them a good subject for
-optimization. We will take as example the jacobi in one spatial dimension as example 
+optimization. We will take as example the jacobi stencil in one spatial dimension as example 
 (see figure~\ref{jbi1d_code:naive}).
 \paragraph{Characterization}
 A stencil computation is a time-iterated nearest-neighbor computation that operates on
@@ -185,7 +188,7 @@ using a time-space grid (figure~\ref{jbi1d_code:naive}) or two data grids
 with a time dimension allows to nest the two loops perfectly and permit simple transformations. 
 A \textbf{perfect loop nest} is a set of nested loops in which all statements appear in the innermost
 loop.
-But this is very memory-inefficient, and the time dimension is superfluous. \\
+But this is very memory-inefficient, and the time dimension in the array is superfluous. \\
 The second form of the program adds a second statement to swap data in arrays. However, there 
 is more statements and the second loop depends on the first one, creating additional dependencies.
 
@@ -222,7 +225,8 @@ is more statements and the second loop depends on the first one, creating additi
 
 In the remaining of the report, we will consider mainly stencil computations, or at least 
 computations that are structured alike : an outer “time” loop and dependencies from 
-one time step to another, spanning along the iteration space. The graph will present a 
+one time step to another, spanning along the iteration space and with some dependencies having
+non-negative components along the spatial dimension. The graphs will present a 
 time or iterations dimension, representing the domain of the outer loop, and a space dimension
 for the inner loop.
 
@@ -287,8 +291,8 @@ for(Tt = 0; tT < T; Tt+=64)
 Yet these transformations can be expressed in a more high level model, which will also
 allows to find suitable transformations for parallelization. Programming manually transformed 
 loops is a very tedious work and error prone. During my internship, I programmed
-various tilings using loop transformations, but the goal today in high performance computing 
-is to build an automatic system using the model described in the following paragraph.
+various tilings using manual loop transformations, but the goal today in high performance computing 
+is to build automatic systems using the model described in the following paragraph.
 Though I did not use it myself except for some experiments with Pluto \cite{bondhugula_automatic_2008}, 
 I could not dissociate the optimization of iteration spaces
 and tilings from this field of research, also very important in the team where I was working.
@@ -300,7 +304,8 @@ prove useful to express loop skewing, tiling, distributing etc. We will express 
 of our stencil applications in a linear-algebraic representation of programs, the polyhedral
 model, and provide a brief description of it. Given a representation of a program, it will
 be easier to express further transformations and show their validity.
-This model has been proved very useful in automatic parallelization at compile time \cite{bastoul_code_2004},
+This model has been proved very useful in automatic parallelization at compile time
+\cite{bastoul_code_2004},
 because it provides many abstractions to reason about program transformations.
 
 \paragraph{Polyhedral representation of programs} A program is a set of dynamic instances
@@ -310,13 +315,14 @@ on outer indexes values, the set of iterations vectors representing different in
 statement define a polytope $D_s$ (see figure~\ref{poly:itspace}), the domain of the statement, with 
 $m_s$ its dimensionality. In this model, we consider only convex iteration spaces.
 \paragraph{Polyhedral dependencies} The difficulty of parallelizing stencil applications arises
-when considering the dependencies between dynamic instances of the statements. Depen-
-dences are affine and exact, and only carried by the time loops in our stencil applications.
+when considering the dependencies between dynamic instances of the statements. Dependences are affine and
+exact, and only carried by the time loops in our stencil applications.
 The data dependence graph is a directed multi-graph, with each node $S_i$ representing a
 statement and each edge $e \in E$ representing a dependence between statements $S_i$ and $S_j$ .
 $e$ can be represented here a constant distance vector by analyzing the source and target
 iterators in the domain $D_s$ .
-In 1-d jacobi we have only 3 dependencies $\vec{d_1} = (−1, 1)$, $\vec{d_2} = (0, 1)$ and $\vec{d_3} = (1, 1)$
+In 1-d jacobi we have only 3 dependencies $\vec{d_1} = (−1, 1)$, $\vec{d_2} = (0, 1)$ and $\vec{d_3} = 
+(1, 1)$
 (figure~\ref{poly:deps}
 \begin{figure}
  \begin{subfigure}{.5\textwidth}
@@ -361,11 +367,11 @@ In 1-d jacobi we have only 3 dependencies $\vec{d_1} = (−1, 1)$, $\vec{d_2} = 
   \newtheorem{depsdef}{Definition}
   \newtheorem{legality}{Tiling legality}
   
-  \paragraph{Tiling legality} In figure~\ref{jbi1d_code:mem} we have an example of imperfectly-nested loops. It raises
-  more problems when searching for valid tiling hyperplanes. Using the polyhedral framework, 
-  we have conditions provided in prior research, expressed in \cite{bondhugula_automatic_2008}. A legal tiling is a 
-  tiling that ensures that we can construct a total order between tiles for execution 
-  (there is no tiles that depend on each other) and provided inter-tile dependencies
+  \paragraph{Tiling legality} In figure~\ref{jbi1d_code:mem} we have an example of imperfectly-nested loops.
+  It raises  more problems when searching for valid tiling hyperplanes. Using the polyhedral framework, 
+  we have conditions provided in prior research, expressed in \cite{bondhugula_automatic_2008}. A 
+  \textbf{legal tiling} is a tiling that ensures that we can construct a total order between tiles 
+  for execution (there is no tiles that depend on each other) and provided inter-tile dependencies
   are satisfied, a tile can execute atomically.
   \begin{depsdef}
     A hyperplane for a statement $S_i$ is of the following form:
@@ -378,14 +384,15 @@ In 1-d jacobi we have only 3 dependencies $\vec{d_1} = (−1, 1)$, $\vec{d_2} = 
     Let $\phi_{S_i}$ be a one-dimensional affine transform for statement
     $S_i$. For ${\phi_{S_0} , .., \phi_{S_k}}$ to be a legal tiling hyperplane, 
     the following should hold for each edge $e$ from $S_i$ to $S_j$ :
-    \[\phi_{S_j}(t) − \phi_{S_i}(s) \geq 0 \ , \ P_e\]
+    \[\phi_{S_j}(t) - \phi_{S_i}(s) \geq 0 \ , \ P_e\]
   \end{legality}
   In our example with only one statement, a legal tiling hyperplane with normal vector
   $⃗\vec{h} = (h_i, h_t$) must satisfy the following conditions :
-  \[\vec{h} \cdot \vec{d_1} = h_t − h_i \geq 0 \ , \ 
+  \[\vec{h} \cdot \vec{d_1} = h_t - h_i \geq 0 \ , \ 
   \vec{h} \cdot \vec{d_2} = h_t \geq 0 \ , \ 
   \vec{h} \cdot \vec{d_3} = h_i + h_t \geq 0\]
-  Here rectangular tilings are not considered legal, unless a space transformation is performed before.
+  Here rectangular tilings ($h_t = 0$ and $h_i > 0$) are not considered legal, unless 
+  a space transformation is performed before.
   Parallel computations should minimize interprocessor communications and rectangular tilings are not 
   satisfactory when dependence vectors have negative components along the space dimension.
 
@@ -409,7 +416,7 @@ In 1-d jacobi we have only 3 dependencies $\vec{d_1} = (−1, 1)$, $\vec{d_2} = 
   data from other concurrent calculations. \\
   A tiling enables a tile-wise concurrent start if all that tiles along one dimension of the iteration
   space can be started concurrently. If tiles carry dependences along one dimension,
-  they can’t be started concurrently along this dimension. \\
+  they can not be started concurrently along this dimension. \\
   When dependences span the entire iteration space, there is often a trade-off between locality,
   memory reuse and and communication-free parallelism.
 
@@ -435,8 +442,8 @@ overhead. Figure~\ref{over-tiling} shows schematically the shape of the tile alo
 and the time dimension. The shape of the tile is defined by the dependencies projected on
 the spatial dimension. Thus, overlapped tiling can be very efficient on low-order stencils
 and few iterations. \\
-Hierarchical overlapped tiling \cite{zhou_hierarchical_2012} has proven efficient for stencil computations by balancing
-communication overhead and redundant computation cost.
+Hierarchical overlapped tiling \cite{zhou_hierarchical_2012} has proven efficient for 
+stencil computations by balancing communication overhead and redundant computation cost.
 
   \begin{figure}[h]
    \input{pspic_ovrlp_tiling.tex}
@@ -444,13 +451,14 @@ communication overhead and redundant computation cost.
    \label{over-tiling}
   \end{figure}
  
- \paragraph{Split tiling} Split tiling \cite{grosser_split_2013} does not make redundant computation while allowing a concurrent 
- start along the space dimension. In figure~\ref{split-tiling}, the lower darker tiles are executed
-concurrently in a first step, then the lighter tiles, mapped onto threads so to reuse a
+ \paragraph{Split tiling} Split tiling \cite{grosser_split_2013} does not make redundant computation while 
+ allowing a concurrent start along the space dimension. In figure~\ref{split-tiling}, the lower 
+ darker tiles are executed
+ concurrently in a first step, then the lighter tiles, mapped onto threads so to reuse a
 maximum amount of memory. The horizontal double line represents the step by step calculation : 
 between each level and between light and dark tiles, we have a barrier. However,
 we could schedule the computation differently, using tasks where we wait for dependences
-to be satisfied. The new tiling, diamond tiling, shows a more natural space partition to
+to be satisfied. The next tiling, diamond tiling, shows a more natural space partition to
 use a schedule without space-wide barriers.
   \begin{figure}[h]
    \input{pspic_split_tiling.tex}
@@ -482,14 +490,14 @@ scheduling correctly how tiles are computed (in which order, on which core).
 In the exploitation of loop level parallelism, manually scheduling the iterations can be a
 difficult task for the programmer. In the shared-memory programming model OpenMP,
 there is typically two scheduling strategies : static or dynamic. \\
-We assume we work with a thread pool of $n_{worker\_threads}$ worker threads.
 
 \subsubsection{Static loop scheduling}
 For loops with good balance among iterations are good candidates for a static schedule,
 since a simple splitting of the loop work will yield balanced partitions of the total computation.
-A static schedule evenly divides the loop iteration space into $n_{worker\_threads}$
-chunks, and assigns each chunk to a processor, with $n_{worker\_threads}$ the number of worker
-threads, possibly equal to the number of cores. \\
+Assuming the thread pool has $n_{w}$ worker threads, a static schedule evenly divides 
+the loop iteration space into $n_{w}$
+chunks, and assigns each chunk to a worker thread.  In most cases in our experiments, $n_w$ is
+equal to then number of cores available.\\
 To parallelize an already tiled computation, the static schedule is applied to the outer loops
 iterating over the tiles. Without additional efforts or an advantageous configuration, the
 static schedule will not ensure data reuse between tiles (assuming there is a schedule providing
@@ -546,7 +554,7 @@ two-branch creation tree.
 \vspace{0.5cm}
 \begin{figure}[h]
  \input{pspic_task_model.tex}
- \caption{Different models for task parallelism languages}
+ \caption{Different models for task-network concurrent languages}
  \label{task-model}
 \end{figure}
 
@@ -603,23 +611,26 @@ The space requirement is also bounded by $p ∗ S_1$ with $S_1$ the space requir
 on a single processor. This means that there is no space overhead coming from
 the multi-processor execution, and the time overhead is bounded.
 
-\paragraph{Libkpn scheduler} Libkpn scheduler is a work-stealing algorithm with some adaptations. 
-The inner mechanisms of the scheduler have not been described above, but in multiprocessor 
-environment, task-scheduler synchronization is needed when any user-space
-execution hands back control to the scheduler. In this case Libkpn relies on relaxed C11
-primitives. The internal algorithm, managing the tasks cycles is correct but yields better
-performance since it gets rid of most of the heavy acquire/release lock synchronizations
-that would be used in a naive implementation. Chase and Lev (2005) have proposed a
-lock-free deque mechanism, leading to an implementation on current multi-core processors
-by L al. (2013). \\
-Libkpn’s scheduling algorithm itself is based on work-stealing with some adaptations.
+\paragraph{Libkpn scheduler} Libkpn scheduler is a work-stealing algorithm with some adaptations to the data dependencies between tasks. \\ 
+The inner mechanisms of implementation the scheduler have not been described above, 
+but in multiprocessor 
+environment, a task-scheduler synchronization is needed when any user-space
+execution hands back control to the scheduler (e.g. when a tasks dies or stalls).
+Synchronization mechanisms need to be applied to the structure managing the set
+of ready and running tasks in the scheduler. Chase and Lev (2005) have proposed a 
+lock-free deque mechanism, leading to an implementation on current multi-core
+processors by L\^e et al. (2013). \\
+Libkpn relies on relaxed C11 primitives. The internal algorithm, managing the tasks cycles 
+is correct and yields better performance since it gets rid of most of the heavy 
+acquire/release lock synchronizations that would be used in a naive implementation. 
 Since it works with tasks and there is a possible communication between them, there is
 also a need to add a mechanism to manage task stalling, since the previous was designed
-to handle only running and ready tasks. This algorithm has also been implemented with
-single-producer single-consumer lock-free queues to manage dependencies.\\
+to handle only running and ready tasks. More than using Chase and Lev's work, 
+the scheduling in Libkpn relies on the data dependency structure, a single-producer single-consumer,
+queue to manage also the set of stalled tasks.
 Since my internship is not focused on the scheduling but in implementing applications
-that use this scheduler, I will not dwell on this subject detailed in ** PAPER? **. But
-the understanding of the tool I was going to use seemed quite necessary to catch the
+that use this scheduler, I will not dwell on this subject. But the basic understanding
+of the tool I was going to use seemed quite necessary to catch the
 differences between Libkpn and other tools.
 
 
@@ -681,7 +692,7 @@ The pipeline can be executed atomically on each tiles :
 In our approach using tasks, we want to implement the algorithm and keep 
 parallelism in the pipeline. But some steps 
 are executed sequentially ($I_{xx}$ and $S_{xx}$ , $I_{yy}$
-and Syy , etc.), therefore we grouped them . We also grouped the three last
+and $S_{yy}$ , etc.), therefore we grouped them . We also grouped the three last
 stages, given their weak computational weight to balance the different tasks. In each task
 $(I_{xx} / S_{xx})$ we fuse the loops to produce only two nested loops with one statement. The
 task graph in figure~\ref{fused_pipeline} shows the modified pipeline. \\
@@ -702,14 +713,15 @@ It is the scheduler’s job to use memory efficiently in consideration of the de
 \subsection{Results}
 The benchmarks were run on an Intel Xeon E5-2630 with 12 cores (24 hyperthreads) and
 15Mb cache, and a dual-core Intel Core i7-4510U with 4Mb cache, and we used \texttt{gcc 4.9.1}
-and \texttt{icc 15.1} to compare versions from different compilers with 3 levels of optimization.
+and \texttt{icc 15.1} to compare versions from different compilers with 3 levels of optimization
+(compilation option \texttt{-O3} for both compilers).
 
 \begin{figure}[h]
   \begin{center}
     \input{tikz_results_hcd.tex}
   \end{center}
   \caption{Speedup relative to sequential Polymage, on machines with 2 and 12 cores,
-with gcc4.9.1 and icc 15.1}
+with \texttt{gcc 4.9.1} and \texttt{icc 15.1}.}
   \label{results_hcd}
 \end{figure}
 
@@ -720,8 +732,8 @@ and fused-loops distribution. But the excellent performance of Polymage, nearly 
 linearly with the number of cores (see [11] for more results) also relies on good compiler
 optimizations of the heavily computational step resulting from loop-fusion.\\
 We tried to measure performance without advanced compiler optimizations, using \texttt{-O2} for
-\texttt{gcc} and \texttt{icc}. This disables automatic loop vectorization. Since most of the time is spent in
-the computational fused loops, performance is badly reduced and parallel implementations
+\texttt{gcc} and \texttt{icc}. This disables automatic loop vectorization. Since most of the time 
+is spent in the computational fused loops, performance is badly reduced and parallel implementations
 of Harris Corner Detection are slower than the sequential with automatic vectorization. 
 But the version using OpenMP tasks performs better without compiler vectorization than
 Polymage version using heavily fused loops. \\
@@ -779,17 +791,9 @@ and upper tiles) :
 \paragraph{Results} The tiling for low iteration numbers without grouping tiles has proven efficient,
 scaling well with the number of processors. But the expected gain with grouping tiles
 has not been observed. The version with grouped tiles performs similarly to the simpler
-version, with a constant overhead (see figure 14). The schedule on the implementation
+version, with a constant overhead. The schedule on the implementation
 with a global barrier between lower and upper tiles is already taking advantage of reuse
-through a good mapping of tile on the threads. \\
-\begin{figure}
-% \input{pspic_graph_hdiam.tex}
- \caption{Speedup relative to sequential version, on Intel Xeon E5 with 12 cores}
- \label{jbi_res_grp}
-\end{figure}
-
-
-
+through a good mapping of tiles on the threads. \\
 We still need to determine why grouping the tile into a size fitting the fastest cache
 level does not improve the performance, since it should improve reuse. Varying the group
 size does not affect performance either, even if the tile scheduling on the different processor
@@ -797,17 +801,18 @@ is as expected : in each group upper tiles are executed on the same core as the 
 at their right.
 
 \subsection{A task-based approach}
-Using a task based approach, we wanted to show that the scheduler can improve data reuse
-in caches as much as the static scheduling with grouping. We constitute tasks containing
-one lower tile and the upper tile immediately to its left. The choice of taking the left
-tile will reduce task stalling. Indeed, the data dependency will probably be satisfied by
-the left task when the current task will begin to compute its upper tile. In figure~\ref{hdiam_tasking} we
-summarize the task graph construction: each tasks spawns its successor, then computes
-the lower tile and waits at the barrier that the left task has finished to compute the upper
+We wanted to show that the scheduler can improve data reuse in caches as much as the static 
+scheduling with grouping by using a task approach. We build the tasks with
+one lower tile and the upper tile immediately to its left. \\
+Taking the left tile will reduce task stalling : the data dependency will probably be satisfied 
+by the left task before the current task  begins to compute its upper tile. In 
+figure~\ref{hdiam_tasking} we summarize the task graph construction: each task 
+spawns its successor immediately after starting, then computes the lower tile and 
+stalls at the barrier if the left task has not finished to compute the upper
 tile. The upper half-tiles at the borders of the domain are treated separately.\\
 Data reuse can be exploited at the border between upper and lower tiles, by executing
-neighboring tasks on the same processor. But parallelism should not suffer and the computation 
-load has to be balanced between processing units.
+neighboring tasks on the same processor. But the scheduler has to keep computational
+load balanced between the different processors.
 
 \begin{figure}[h]
  \input{pspic_hdiam_tasking.tex}
@@ -822,8 +827,8 @@ This first version uses fixed-shape tiles : half diamonds with fixed hyperplanes
 width varies depending on the number of iterations. It does not perform well compared to
 the statically scheduled OpenMP reference we use with the same tiling. On small iteration
 numbers the task version is slower than the sequential version. It can be explained by the
-granularity of the execution, the tasks are very small given the small iterations numbers.
-The time spent in the computation is mostly scheduling: the runtime manages many tasks,
+granularity of the execution : the tasks are very small when the number of iterations is small.
+The time spent in the computation is mostly spent in scheduling: the runtime manages many tasks,
 which terminate very rapidly. \\
 The performance of the scheduler measured with this implementation with such very small
 tasks was still better than OpenMP4’s using tasks pragmas.
@@ -839,53 +844,65 @@ previous section,the tile size depends on the size of the cache to ensure a good
 that sufficient time is spent in the task. We vary the orientation of the oblique hyperplanes
 with a slope between 1 (as in the previous version) and a value so that there is enough tiles
 to be distributed among the working threads. Tiling hyperplanes normal vectors are now 
-$\vec{h1} = (−a, 1)$ and $\vec{h2} = (a, 1)$ with $1/a = n_{cores} \times (L1 \ cache \ size) / (tile \ size \ in  \ memory)$.
-This tiling is still legal and valid with $a \leq 1$, the scalar product between dependencies and hyperplanes
-normal vectors is positive or zero. \\n
+$\vec{h1} = (−a, 1)$ and $\vec{h2} = (a, 1)$ with $1/a = n_{cores} \times (L1 \ cache \ size) / 
+(tile \ size \ in  \ memory)$.
+This tiling is still legal and valid with $a \leq 1$, the scalar product between dependencies and
+hyperplanes normal vectors is positive or null. \\
 The only change using this tiling is the amount of computation in each tile. We can
-fear that using this skewed tiling space with large strides in the loop could lead to worse
-compiler automatic vectorization. \\
+fear that using this skewed tiling space with large strides in the inner-tile time loop 
+could lead to worse compiler automatic vectorization. \\
 This technique combined with the task approach to this problem has given better results, in
 par with OpenMP on small problems but performing better with increasing sizes, showing
 speedups better than linearly-increasing with the number of cores. On the 12-core machine
 with a problem size of 32 MB, we reached speedups up to 20 times better than sequential,
 3 times better than OpenMP. The results are shown in figure~\ref{results_hdiam_var}. \\
+To calculate the speedups, the execution times of OpenMP and Libkpn implementations have 
+been compared with a sequential  version of 1-d jacobi, without tiling or any optimization.
+This can explain the speedups greater than the number of cores. This results still need to be
+validated with a more rigorous method.\\
 We have bad performance with small iteration sizes and small space sizes. This may be
-coming from the lack of parallelism with a too-small number of tasks because the slope
+coming from the lack of parallelism with a number of tasks too small because the slope
 of the sides of the tiles was not bounded : for small iterations, the tile is very wide
-and it could span a large part of the space. The final program at the moment I am
-writing this report has still a few errors concerning the correctness of the output, but they
-do not affect performance in any way. They come from hand-tuning the loops and the
-tiling, a process that we seek to automate through polyhedral code generation tools and
+and it could span a large part of the space. \\
+The final program at the moment I am writing this report still contains a few errors, 
+concerning the correctness of the output, but they do not affect performance in any way. 
+They come from the hand-tuned loops during the tiling and transformations, a process 
+that we seek to automate through polyhedral code generation tools and
 compilation. The main goals here were to show a well performing tiling for time-iterated
-stencils, and validate the approach of implementing the algorithm using lightweight task
+stencils, and validate the approach of implementing the algorithm using lightweight tasks
 and dynamic scheduling instead of the classical approach with static scheduling through
 loop-chunk distribution.
 \begin{figure}[h]
- \input{tikz_results_hdiam_var.tex}
+  \begin{center}
+  \input{tikz_results_hdiam_var.tex}
+  \end{center}
  \caption{Speedup relative to sequential 1-d jacobi on 12 cores, with different iteration 
  sizes on a 32 Mb problem.}
  \label{results_hdiam_var}
 \end{figure}
 
+\newpage
 \section{Conclusion and future work}
-During my internship, I have had the opportunity to apply and augment my knowledge
-in computer science. I have learned a lot about the subjects mentioned in this report,
-from the tilings and the polyhedral compilation problems, to the Kahn’s parallel tasks
-network. During the first month of my internship, I mostly studied the topics I did not
-master through a bibliographic research on both recent and older publications. The first
-application did not provide satisfactory results but prepared me for the second subjects,
-especially on mastering profiling and debugging tools adapted with parallel applications.
-Then after a seminar from Uday Bondhugula, we discussed the possibility of taking advantage 
-of more parallelism in one of the applications presented, Harris Corner Detection,
-without convincing results. Then my focus moved on to a more simple example, 1-d jacobi,
-using a partly new tiling strategy for small iterations and implementing an application for
-Likbkpn, the library developed at Parkas. At the time of writing this report, my intern-
-ship is not yet finished. There is plenty applications to implement to show the strength
-of the library but since I have few time left, I will concentrate on improving the current
-example. \\
-Optimization is a very experimental field, and I learned to use various tools to validate or
-refute the hypothesis made during the process.
+My internship had a strong experimental component but I also learned a lot on the theoretical point
+of view. \\
+Optimization is a very experiment field, and I used various tools to validate of refute the 
+hypothesis, and to confirm optimization choices. Part of the time I spent on the applications for task
+parallelism was dedicated to profiling and debugging to understand what was happening during the concurrent
+computations.\\
+The bibliographic study of concurrent parallelism lead me to a better understanding of the different
+models I was working with (OpenMP and Libkpn). This was necessary for both developing the applications
+and analyzing their performance, as well as very enriching given my interest in computer science.\\
+The first results with Harris Corner Detection were not satisfying but provided me the tools
+for the next application. The results presented are yet to be confirmed with a more rigorous 
+experiment, but they are the outcome of a sequence of benchmarking and analysis.\\
+A the time of writing this report, my internship is not finished yet. There is still work to be done
+concerning the validation of the last results, and on their analysis, especially concerning the relation 
+between the slope in the tile shape and performance with automatic vectorization. I consider this
+as a good experience of experimental research work.\\
+Finally, this may internship might be part of future work. Testing Libkpn on 1-d jacobi was only an example,
+since this application is too simple and not very used in real scientific computations. More pertinent
+applications need to be implemented in order to lead to a publication.
+
 
 \newpage
 \section{References}

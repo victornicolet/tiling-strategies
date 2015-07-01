@@ -44,6 +44,10 @@
   {Processor} {Using} {Graphics} {Processing} {Units}\/} (New York, NY, USA,
   2013), {GPGPU}-6, ACM, pp.~24--31.
 
+\bibitem{grosser_relation_2014}
+{\sc Grosser, T., Cohen, A., Verdoolaege, S., and Sadayappan, P.}
+\newblock The relation between diamond tiling and hexagonal tiling.
+
 \bibitem{harris1988combined}
 {\sc Harris, C., and Stephens, M.}
 \newblock A combined corner and edge detector.
@@ -61,6 +65,15 @@
 \newblock In {\em Proceedings of the {Twentieth} {International} {Conference}
   on {Architectural} {Support} for {Programming} {Languages} and {Operating}
   {Systems}\/} (New York, NY, USA, 2015), {ASPLOS} '15, ACM, pp.~429--443.
+
+\bibitem{ragan-kelley_halide:_2013}
+{\sc Ragan-Kelley, J., Barnes, C., Adams, A., Paris, S., Durand, F., and
+  Amarasinghe, S.}
+\newblock Halide: {A} {Language} and {Compiler} for {Optimizing} {Parallelism},
+  {Locality}, and {Recomputation} in {Image} {Processing} {Pipelines}.
+\newblock In {\em Proceedings of the 34th {ACM} {SIGPLAN} {Conference} on
+  {Programming} {Language} {Design} and {Implementation}\/} (New York, NY, USA,
+  2013), {PLDI} '13, ACM, pp.~519--530.
 
 \bibitem{thies2002streamit}
 {\sc Thies, W., Karczmarek, M., and Amarasinghe, S.}
