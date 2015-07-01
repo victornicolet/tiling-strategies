@@ -7,3 +7,11 @@ jacobi1d.csv
 jbi1d
 test
 data/*.csv
+report/*.aux
+report/*.bbl
+report/*.blg
+report/*.log
+report/*.synctex.gz
+report/*.toc
+.gitignore~
+

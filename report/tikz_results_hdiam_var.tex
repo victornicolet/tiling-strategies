@@ -1,0 +1,24 @@
+\begin{tikzpicture}
+  \centering
+  \begin{axis}[
+    ybar,
+    enlargelimits=0.15,
+    enlarge y limits=false,
+    ymin=0,
+    ymax=26,
+     legend style={at={(0.5,-0.2)},
+        anchor=north,legend columns=-1},
+        ylabel={Speedup over sequential 1-d Jacobi},
+        symbolic x coords={16,32,64,128,256,512},
+      xtick=data,
+        nodes near coords,
+    every node near coord/.append style={
+        anchor=mid west,
+        rotate=90
+    }
+    ]
+    \addplot coordinates {(16,7.09)(32,8.46)(64,9.31)(128,9.74)(256,9.97)(512,7.72)};
+    \addplot coordinates {(16,9.38)(32,15.87)(64,19.37)(128,20.12)(256,21.15)(512,21.64)};
+    \legend{OpenMP, Libkpn}
+  \end{axis}
+\end{tikzpicture}

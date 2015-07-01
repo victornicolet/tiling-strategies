@@ -1,0 +1,216 @@
+
+@inproceedings{bandishti_tiling_2012,
+	address = {Los Alamitos, CA, USA},
+	series = {{SC} '12},
+	title = {Tiling {Stencil} {Computations} to {Maximize} {Parallelism}},
+	isbn = {978-1-4673-0804-5},
+	url = {http://dl.acm.org/citation.cfm?id=2388996.2389051},
+	abstract = {Most stencil computations allow tile-wise concurrent start, i.e., there always exists a face of the iteration space and a set of tiling hyperplanes such that all tiles along that face can be started concurrently. This provides load balance and maximizes parallelism. However, existing automatic tiling frameworks often choose hyperplanes that lead to pipelined start-up and load imbalance. We address this issue with a new tiling technique that ensures concurrent start-up as well as perfect load-balance whenever possible. We first provide necessary and sufficient conditions on tiling hyperplanes to enable concurrent start for programs with affine data accesses. We then provide an approach to find such hyperplanes. Experimental evaluation on a 12-core Intel Westmere shows that our code is able to outperform a tuned domain-specific stencil code generator by 4\% to 27\%, and previous compiler techniques by a factor of 2x to 10.14 x.},
+	urldate = {2015-04-02TZ},
+	booktitle = {Proceedings of the {International} {Conference} on {High} {Performance} {Computing}, {Networking}, {Storage} and {Analysis}},
+	publisher = {IEEE Computer Society Press},
+	author = {Bandishti, Vinayaka and Pananilath, Irshad and Bondhugula, Uday},
+	year = {2012},
+	keywords = {compilers, program transformation, stencils, tiling},
+	pages = {40:1--40:11}
+}
+
+
+@article{bacon_compiler_1994,
+	title = {Compiler {Transformations} for {High}-performance {Computing}},
+	volume = {26},
+	issn = {0360-0300},
+	url = {http://doi.acm.org/10.1145/197405.197406},
+	doi = {10.1145/197405.197406},
+	abstract = {In the last three decades a large number of compiler transformations for optimizing programs have been implemented. Most optimizations for uniprocessors reduce the number of instructions executed by the program using transformations based on the analysis of scalar quantities and data-flow techniques. In contrast, optimizations for high-performance superscalar, vector, and parallel processors maximize parallelism and memory locality with transformations that rely on tracking the properties of arrays using loop dependence analysis.This survey is a comprehensive overview of the important high-level program restructuring techniques for imperative languages, such as C and Fortran. Transformations for both sequential and various types of parallel architectures are covered in depth. We describe the purpose of each transformation, explain how to determine if it is legal, and give an example of its application.Programmers wishing to enhance the performance of their code can use this survey to improve their understanding of the optimizations that compilers can perform, or as a reference for techniques to be applied manually. Students can obtain an overview of optimizing compiler technology. Compiler writers can use this survey as a reference for most of the important optimizations developed to date, and as bibliographic reference for the details of each optimization. Readers are expected to be familiar with modern computer architecture and basic program compilation techniques.},
+	number = {4},
+	urldate = {2015-06-19TZ},
+	journal = {ACM Comput. Surv.},
+	author = {Bacon, David F. and Graham, Susan L. and Sharp, Oliver J.},
+	month = dec,
+	year = {1994},
+	keywords = {compilation, dependence analysis, locality, multiprocessors, optimization, parallelism, superscalar processors, vectorization},
+	pages = {345--420}
+}
+
+@inproceedings{bastoul_code_2004,
+	address = {Washington, DC, USA},
+	series = {{PACT} '04},
+	title = {Code {Generation} in the {Polyhedral} {Model} {Is} {Easier} {Than} {You} {Think}},
+	isbn = {0-7695-2229-7},
+	url = {http://dx.doi.org/10.1109/PACT.2004.11},
+	doi = {10.1109/PACT.2004.11},
+	abstract = {Many advances in automatic parallelization and optimization have been achieved through the polyhedral model. It has been extensively shown that this computational model provides convenient abstractions to reason about and apply program transformations. Nevertheless, the complexity of code generation has long been a deterrent for using polyhedral representation in optimizing compilers. First, code generators have a hard time coping with generated code size and control overhead that may spoil theoretical benefits achieved by the transformations. Second, this step is usually time consuming, hampering the integration of the polyhedral framework in production compilers or feedback-directed, iterative optimization schemes. Moreover, current code generation algorithms only cover a restrictive set of possible transformation functions. This paper discusses a general transformation framework able to deal with non-unimodular, non-invertible, non-integral or even non-uniform functions. It presents several improvements to a state-of-the-art code generation algorithm. Two directions are explored: generated code size and code generator efficiency. Experimental evidence proves the ability of the improved method to handle real-life problems.},
+	urldate = {2015-06-22TZ},
+	booktitle = {Proceedings of the 13th {International} {Conference} on {Parallel} {Architectures} and {Compilation} {Techniques}},
+	publisher = {IEEE Computer Society},
+	author = {Bastoul, Cedric},
+	year = {2004},
+	pages = {7--16}
+}
+
+
+@incollection{bondhugula_automatic_2008,
+	series = {Lecture {Notes} in {Computer} {Science}},
+	title = {Automatic {Transformations} for {Communication}-{Minimized} {Parallelization} and {Locality} {Optimization} in the {Polyhedral} {Model}},
+	copyright = {©2008 Springer-Verlag Berlin Heidelberg},
+	isbn = {978-3-540-78790-7, 978-3-540-78791-4},
+	url = {http://link.springer.com/chapter/10.1007/978-3-540-78791-4_9},
+	abstract = {The polyhedral model provides powerful abstractions to optimize loop nests with regular accesses. Affine transformations in this model capture a complex sequence of execution-reordering loop transformations that can improve performance by parallelization as well as locality enhancement. Although a significant body of research has addressed affine scheduling and partitioning, the problem of automatically finding good affine transforms for communication-optimized coarse-grained parallelization together with locality optimization for the general case of arbitrarily-nested loop sequences remains a challenging problem. We propose an automatic transformation framework to optimize arbitrarily-nested loop sequences with affine dependences for parallelism and locality simultaneously. The approach finds good tiling hyperplanes by embedding a powerful and versatile cost function into an Integer Linear Programming formulation. These tiling hyperplanes are used for communication-minimized coarse-grained parallelization as well as for locality optimization. The approach enables the minimization of inter-tile communication volume in the processor space, and minimization of reuse distances for local execution at each node. Programs requiring one-dimensional versus multi-dimensional time schedules (with scheduling-based approaches) are all handled with the same algorithm. Synchronization-free parallelism, permutable loops or pipelined parallelism at various levels can be detected. Preliminary studies of the framework show promising results.},
+	language = {en},
+	number = {4959},
+	urldate = {2015-06-19TZ},
+	booktitle = {Compiler {Construction}},
+	publisher = {Springer Berlin Heidelberg},
+	author = {Bondhugula, Uday and Baskaran, Muthu and Krishnamoorthy, Sriram and Ramanujam, J. and Rountev, Atanas and Sadayappan, P.},
+	editor = {Hendren, Laurie},
+	year = {2008},
+	keywords = {Artificial Intelligence (incl. Robotics), Logics and Meanings of Programs, Mathematical Logic and Formal Languages, Software Engineering},
+	pages = {132--146}
+}
+
+
+@incollection{zhou_hierarchical_2012,
+	title = {Hierarchical {Overlapped} {Tiling}},
+	isbn = {978-1-4503-1206-6},
+	abstract = {This paper introduces hierarchical overlapped tiling, a transformation that applies loop tiling and fusion to conventional loops. Overlapped tiling is a useful transformation to reduce communication overhead, but it may also generate a significant amount of redundant computation. Hierarchical overlapped tiling performs overlapped tiling hierarchically to balance communication overhead and redundant computation, and thus has the potential to provide better performance.
+
+In this paper, we describe the hierarchical overlapped tiling optimization and its implementation in an OpenCL compiler. We also evaluate the effectiveness of this optimization using 8 programs that implement different forms of stencil computation. Our results show that hierarchical overlapped tiling achieves an average 37\% speedup over traditional tiling on a 32-core workstation.},
+	booktitle = {{CGO} '12 {Proceedings} of the {Tenth} {International} {Symposium} on {Code} {Generation} and {Optimization}},
+	author = {Zhou, Xing and Giacalone, Jean-Pierre and Garzaran, Maria Jesus and Kuhn, Robert H and Ni, Yang and Padua, David},
+	year = {2012},
+	keywords = {Concurrent Programming, Parallel programming languages, Programming Languages - Processors - COmpilers, Programming Techniques, cgo12},
+	pages = {207--218}
+}
+
+
+@inproceedings{grosser_split_2013,
+	address = {New York, NY, USA},
+	series = {{GPGPU}-6},
+	title = {Split {Tiling} for {GPUs}: {Automatic} {Parallelization} {Using} {Trapezoidal} {Tiles}},
+	isbn = {978-1-4503-2017-7},
+	shorttitle = {Split {Tiling} for {GPUs}},
+	url = {http://doi.acm.org/10.1145/2458523.2458526},
+	doi = {10.1145/2458523.2458526},
+	abstract = {Tiling is a key technique to enhance data reuse. For computations structured as one sequential outer "time" loop enclosing a set of parallel inner loops, tiling only the parallel inner loops may not enable enough data reuse in the cache. Tiling the inner loops along with the outer time loop enhances data locality but may require other transformations like loop skewing that inhibit inter-tile parallelism. One approach to tiling that enhances data locality without inhibiting inter-tile parallelism is split tiling, where tiles are subdivided into a sequence of trapezoidal computation steps. In this paper, we develop an approach to generate split tiled code for GPUs in the PPCG polyhedral code generator. We propose a generic algorithm to calculate index-set splitting that enables us to perform tiling for locality and synchronization avoidance, while simultaneously maintaining parallelism, without the need for skewing or redundant computations. Our algorithm performs split tiling for an arbitrary number of dimensions and without the need to construct any large integer linear program. The method and its implementation are evaluated on standard stencil kernels and compared with a state-of-the-art polyhedral compiler and with a domain-specific stencil compiler, both targeting CUDA GPUs.},
+	urldate = {2015-06-23TZ},
+	booktitle = {Proceedings of the 6th {Workshop} on {General} {Purpose} {Processor} {Using} {Graphics} {Processing} {Units}},
+	publisher = {ACM},
+	author = {Grosser, Tobias and Cohen, Albert and Kelly, Paul H. J. and Ramanujam, J. and Sadayappan, P. and Verdoolaege, Sven},
+	year = {2013},
+	keywords = {CUDA, GPGPU, code generation, compilers, index set splitting, loop transformations, polyhedral model, stencil, time tiling},
+	pages = {24--31}
+}
+
+
+@misc{kahn_semantics_1974,
+	title = {The {Semantics} of a {Simple} {Language} for {Parallel} {Programming}},
+	author = {Kahn, Gilles},
+	booktitle={In Information Processing’74: Proceedings of the IFIP Congress},
+	volume={74},
+	pages={471--475},
+	year={1974}	
+}
+
+@inproceedings{thies2002streamit,
+  title={StreamIt: A language for streaming applications},
+  author={Thies, William and Karczmarek, Michal and Amarasinghe, Saman},
+  booktitle={Compiler Construction},
+  pages={179--196},
+  year={2002},
+  organization={Springer}
+}
+
+
+@article{blumofe_scheduling_1999,
+	title = {Scheduling {Multithreaded} {Computations} by {Work} {Stealing}},
+	volume = {46},
+	issn = {0004-5411},
+	url = {http://doi.acm.org/10.1145/324133.324234},
+	doi = {10.1145/324133.324234},
+	number = {5},
+	urldate = {2015-06-27TZ},
+	journal = {J. ACM},
+	author = {Blumofe, Robert D. and Leiserson, Charles E.},
+	month = sep,
+	year = {1999},
+	keywords = {critical-path length, multiprocessor, multithreading, randomized algorithm, thread scheduling, work stealing},
+	pages = {720--748}
+}
+
+@inproceedings{harris1988combined,
+  title={A combined corner and edge detector.},
+  author={Harris, Chris and Stephens, Mike},
+  booktitle={Alvey vision conference},
+  volume={15},
+  pages={50},
+  year={1988},
+  organization={Citeseer}
+}
+
+
+@inproceedings{mullapudi_polymage_2015,
+	address = {New York, NY, USA},
+	series = {{ASPLOS} '15},
+	title = {{PolyMage}: {Automatic} {Optimization} for {Image} {Processing} {Pipelines}},
+	isbn = {978-1-4503-2835-7},
+	shorttitle = {{PolyMage}},
+	url = {http://doi.acm.org/10.1145/2694344.2694364},
+	doi = {10.1145/2694344.2694364},
+	abstract = {This paper presents the design and implementation of PolyMage, a domain-specific language and compiler for image processing pipelines. An image processing pipeline can be viewed as a graph of interconnected stages which process images successively. Each stage typically performs one of point-wise, stencil, reduction or data-dependent operations on image pixels. Individual stages in a pipeline typically exhibit abundant data parallelism that can be exploited with relative ease. However, the stages also require high memory bandwidth preventing effective utilization of parallelism available on modern architectures. For applications that demand high performance, the traditional options are to use optimized libraries like OpenCV or to optimize manually. While using libraries precludes optimization across library routines, manual optimization accounting for both parallelism and locality is very tedious. The focus of our system, PolyMage, is on automatically generating high-performance implementations of image processing pipelines expressed in a high-level declarative language. Our optimization approach primarily relies on the transformation and code generation capabilities of the polyhedral compiler framework. To the best of our knowledge, this is the first model-driven compiler for image processing pipelines that performs complex fusion, tiling, and storage optimization automatically. Experimental results on a modern multicore system show that the performance achieved by our automatic approach is up to 1.81x better than that achieved through manual tuning in Halide, a state-of-the-art language and compiler for image processing pipelines. For a camera raw image processing pipeline, our performance is comparable to that of a hand-tuned implementation.},
+	urldate = {2015-06-23TZ},
+	booktitle = {Proceedings of the {Twentieth} {International} {Conference} on {Architectural} {Support} for {Programming} {Languages} and {Operating} {Systems}},
+	publisher = {ACM},
+	author = {Mullapudi, Ravi Teja and Vasista, Vinay and Bondhugula, Uday},
+	year = {2015},
+	keywords = {domain-specific language, image processing, locality, multicores, parallelism, polyhedral optimization, tiling, vectorization},
+	pages = {429--443}
+}
+
+
+@inproceedings{ragan-kelley_halide:_2013,
+	address = {New York, NY, USA},
+	series = {{PLDI} '13},
+	title = {Halide: {A} {Language} and {Compiler} for {Optimizing} {Parallelism}, {Locality}, and {Recomputation} in {Image} {Processing} {Pipelines}},
+	isbn = {978-1-4503-2014-6},
+	shorttitle = {Halide},
+	url = {http://doi.acm.org/10.1145/2491956.2462176},
+	doi = {10.1145/2491956.2462176},
+	abstract = {Image processing pipelines combine the challenges of stencil computations and stream programs. They are composed of large graphs of different stencil stages, as well as complex reductions, and stages with global or data-dependent access patterns. Because of their complex structure, the performance difference between a naive implementation of a pipeline and an optimized one is often an order of magnitude. Efficient implementations require optimization of both parallelism and locality, but due to the nature of stencils, there is a fundamental tension between parallelism, locality, and introducing redundant recomputation of shared values. We present a systematic model of the tradeoff space fundamental to stencil pipelines, a schedule representation which describes concrete points in this space for each stage in an image processing pipeline, and an optimizing compiler for the Halide image processing language that synthesizes high performance implementations from a Halide algorithm and a schedule. Combining this compiler with stochastic search over the space of schedules enables terse, composable programs to achieve state-of-the-art performance on a wide range of real image processing pipelines, and across different hardware architectures, including multicores with SIMD, and heterogeneous CPU+GPU execution. From simple Halide programs written in a few hours, we demonstrate performance up to 5x faster than hand-tuned C, intrinsics, and CUDA implementations optimized by experts over weeks or months, for image processing applications beyond the reach of past automatic compilers.},
+	urldate = {2015-07-01TZ},
+	booktitle = {Proceedings of the 34th {ACM} {SIGPLAN} {Conference} on {Programming} {Language} {Design} and {Implementation}},
+	publisher = {ACM},
+	author = {Ragan-Kelley, Jonathan and Barnes, Connelly and Adams, Andrew and Paris, Sylvain and Durand, Frédo and Amarasinghe, Saman},
+	year = {2013},
+	keywords = {autotuning, compiler, domain specific language, gpu, image processing, locality, optimization, parallelism, redundant computation, vectorization},
+	pages = {519--530}
+}
+
+
+@article{grosser_relation_2014,
+	title = {The relation between diamond tiling and hexagonal tiling},
+	volume = {24},
+	abstract = {Iterative stencil computations are important in scientific computing
+and more and more also in the embedded and mobile
+domain. Recent publications have shown that tiling schemes
+that ensure concurrent start provide efficient ways to execute
+these kernels. Diamond tiling and hybrid-hexagonal
+tiling are two successful tiling schemes that enable concurrent
+start. Both have different advantages: diamond tiling
+is integrated in a general purpose optimization framework
+and uses a cost function to choose among tiling hyperplanes,
+whereas the more flexible tile sizes of hybrid-hexagonal tiling
+have proven to be effective for the generation of GPU code.
+We show that these two approaches are even more interesting
+when combined. We revisit the formalization of
+diamond and hexagonal tiling, present the effects of tile size
+and wavefront choices on tile-level parallelism, and formulate
+constraints for optimal diamond tile shapes. We then extend
+the diamond tiling formulation into a hexagonal tiling one,
+combining the benefits of both. The paper closes with an
+outlook of hexagonal tiling in higher dimensional spaces, an
+important generalization suitable for massively parallel architectures.},
+	number = {03},
+	author = {Grosser, Tobias and Cohen, Albert and Verdoolaege, Sven and Sadayappan, P.},
+	year = {2014}
+}

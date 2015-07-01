@@ -1,0 +1,55 @@
+% \usepackage[usenames,dvipsnames]{pstricks}
+% \usepackage{epsfig}
+% \usepackage{pst-grad} % For gradients
+% \usepackage{pst-plot} % For axes
+% User Packages:
+% 
+% 
+\psscalebox{.7 .7} % Change this value to rescale the drawing.
+{
+\begin{pspicture}(0,-5.2)(10.4,5.2)
+\definecolor{colour0}{rgb}{0.003921569,0.003921569,0.003921569}
+\definecolor{colour1}{rgb}{0.5372549,0.5882353,0.99215686}
+\psframe[linecolor=colour0, linewidth=0.04, linestyle=dashed, dash=0.176cm 0.105cm, fillstyle=solid,fillcolor=colour1, dimen=outer](4.4,4.0)(2.0,2.8)
+\psframe[linecolor=colour0, linewidth=0.04, linestyle=dashed, dash=0.176cm 0.105cm, fillstyle=solid,fillcolor=colour1, dimen=outer](8.0,4.0)(5.6,2.8)
+\psframe[linecolor=colour0, linewidth=0.04, linestyle=dashed, dash=0.176cm 0.105cm, dimen=outer](2.8,2.0)(0.0,0.8)
+\psframe[linecolor=colour0, linewidth=0.04, linestyle=dashed, dash=0.176cm 0.105cm, dimen=outer](6.4,2.0)(3.6,0.8)
+\psframe[linecolor=colour0, linewidth=0.04, linestyle=dashed, dash=0.176cm 0.105cm, dimen=outer](10.4,2.0)(7.2,0.8)
+\psframe[linecolor=colour0, linewidth=0.04, linestyle=dashed, dash=0.176cm 0.105cm, dimen=outer](4.0,-1.6)(1.6,-2.8)
+\psframe[linecolor=colour0, linewidth=0.04, linestyle=dashed, dash=0.176cm 0.105cm, dimen=outer](8.4,-1.6)(6.0,-2.8)
+\psframe[linecolor=colour0, linewidth=0.04, linestyle=dashed, dash=0.176cm 0.105cm, dimen=outer](6.4,-3.6)(3.6,-5.2)
+\psframe[linecolor=colour0, linewidth=0.04, linestyle=dashed, dash=0.176cm 0.105cm, dimen=outer](6.8,5.2)(3.6,4.4)
+\psframe[linecolor=colour0, linewidth=0.04, linestyle=dashed, dash=0.176cm 0.105cm, dimen=outer](3.62,4.8)(3.6,4.78)
+\psline[linecolor=colour0, linewidth=0.056, arrowsize=0.052cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(3.6,4.4)(2.8,4.0)
+\psline[linecolor=colour0, linewidth=0.056, arrowsize=0.052cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(6.8,4.4)(7.2,4.0)
+\psline[linecolor=colour0, linewidth=0.056, arrowsize=0.052cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(6.4,2.8)(5.6,2.0)
+\psline[linecolor=colour0, linewidth=0.056, arrowsize=0.052cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(4.0,2.8)(4.4,2.0)
+\psline[linecolor=colour0, linewidth=0.056, arrowsize=0.052cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(2.8,2.8)(2.0,2.0)
+\psline[linecolor=colour0, linewidth=0.056, arrowsize=0.052cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(7.2,2.8)(8.0,2.0)
+\psline[linecolor=colour0, linewidth=0.056, arrowsize=0.052cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(8.4,-0.8)(7.6,-1.6)
+\psline[linecolor=colour0, linewidth=0.056, arrowsize=0.052cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(5.2,-0.8)(6.8,-1.6)
+\psline[linecolor=colour0, linewidth=0.056, arrowsize=0.052cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(2.4,-0.8)(6.0,-1.6)
+\psline[linecolor=colour0, linewidth=0.056, arrowsize=0.052cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(6.4,-0.8)(3.2,-1.6)
+\psline[linecolor=colour0, linewidth=0.056, arrowsize=0.052cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(1.2,-0.8)(2.4,-1.6)
+\psline[linecolor=colour0, linewidth=0.056, arrowsize=0.052cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(2.8,-2.8)(4.0,-3.6)
+\psline[linecolor=colour0, linewidth=0.056, arrowsize=0.052cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(6.8,-2.8)(6.0,-3.6)
+\rput(5.2,4.8){\textcolor{colour0}{Input}}
+\rput[br](6.8,3.2){\textcolor{colour0}{$I_y$}}
+\rput[tr](3.2,3.6){\textcolor{colour0}{$I_x$}}
+\rput[tr](1.6,1.6){\textcolor{colour0}{$I_{xx}$}}
+\rput[tr](5.2,1.6){\textcolor{colour0}{$I_{xy}$}}
+\rput[tr](9.2,1.6){\textcolor{colour0}{$I_{yy}$}}
+\rput[bl](2.4,-2.4){Trace	}
+\rput[bl](7.2,-2.4){Det}
+\rput[tr](5.2,-4.0){\textcolor{colour0}{Harris}}
+\psframe[linecolor=colour0, linewidth=0.04, linestyle=dashed, dash=0.176cm 0.105cm, fillstyle=solid,fillcolor=colour1, dimen=outer](2.8,0.4)(0.0,-0.8)
+\psframe[linecolor=colour0, linewidth=0.04, linestyle=dashed, dash=0.176cm 0.105cm, fillstyle=solid,fillcolor=colour1, dimen=outer](6.4,0.4)(3.6,-0.8)
+\psframe[linecolor=colour0, linewidth=0.04, linestyle=dashed, dash=0.176cm 0.105cm, fillstyle=solid,fillcolor=colour1, dimen=outer](10.4,0.4)(7.2,-0.8)
+\rput[tr](1.6,0.0){\textcolor{colour0}{$S_{xx}$}}
+\rput[tr](5.2,0.0){\textcolor{colour0}{$S_{xy}$}}
+\rput[tr](9.2,0.0){\textcolor{colour0}{$S_{yy}$}}
+\psline[linecolor=colour0, linewidth=0.06, arrowsize=0.052cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(1.6,0.8)(1.6,0.4)
+\psline[linecolor=colour0, linewidth=0.06, arrowsize=0.052cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(5.2,0.8)(5.2,0.4)
+\psline[linecolor=colour0, linewidth=0.06, arrowsize=0.052cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(9.2,0.8)(9.2,0.4)
+\end{pspicture}
+}
