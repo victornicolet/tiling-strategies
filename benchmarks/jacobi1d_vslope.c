@@ -36,17 +36,12 @@ int get_slope(int num_iters) {
 
 
 static void djbi1d_hdiam_vslope(int pb_size, int num_iters, double *jbi_in,
-  double *jbi_out) {
+  double *jbi_out, double **tmp) {
   int num_tiles, slope, tile_no, tile_size;
-  double **tmp;
   /* Slope caclulation : fit the tile in L1 cache */
-  slope = max(floor(L1_CACHE_SIZE / (num_iters * sizeof(double) * 4)), 1);
+  slope = get_slope(num_iters);
   tile_size = 2 * slope * num_iters;
   num_tiles = pb_size / tile_size;
-  /* Inter-tiles buffer, twice the problem size */
-  tmp = aligned_alloc(CACHE_LINE_SIZE, 2 * sizeof(*tmp));
-  tmp[0] = aligned_alloc(CACHE_LINE_SIZE, pb_size * sizeof(*(tmp[0])));
-  tmp[1] = aligned_alloc(CACHE_LINE_SIZE, pb_size * sizeof(*(tmp[1])));
 
     /* First loop : base down tiles */
 #pragma omp parallel for schedule(static) shared(tmp) private(tile_no)
@@ -73,10 +68,16 @@ static void djbi1d_hdiam_vslope(int pb_size, int num_iters, double *jbi_in,
 
 double djbi1d_hdiam_vslope_t(struct args_dimt args, double *jbi_in,
   double *jbi_out) {
-  int slope;
-  slope = get_slope(args.iters);
+
+  double **tmp;
+
+  /* Inter-tiles buffer, twice the problem size */
+  tmp = aligned_alloc(CACHE_LINE_SIZE, 2 * sizeof(*tmp));
+  tmp[0] = aligned_alloc(CACHE_LINE_SIZE, args.width * sizeof(*(tmp[0])));
+  tmp[1] = aligned_alloc(CACHE_LINE_SIZE, args.width * sizeof(*(tmp[1])));
+
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
-  djbi1d_hdiam_vslope(args.width, args.iters, jbi_in, jbi_out);
+  djbi1d_hdiam_vslope(args.width, args.iters, jbi_in, jbi_out, tmp);
   clock_gettime(CLOCK_MONOTONIC, &tend);
 
   return ELAPSED_TIME(tend, tbegin);
