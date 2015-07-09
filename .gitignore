@@ -14,4 +14,5 @@ report/*.log
 report/*.synctex.gz
 report/*.toc
 .gitignore~
+data/prepare_graph_data.pyc
 

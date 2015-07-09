@@ -6,6 +6,11 @@ from mpl_toolkits.mplot3d import Axes3D
 from numpy import genfromtxt
 from scipy.interpolate import griddata
 
+import prepare_graph_data as pgd
+
+
+pgd.prep_gdat(True)
+
 max_gain = 24
 watch_size = 32768
 
@@ -31,7 +36,7 @@ ax3.set_zlabel('Speedup - starnk');
 ax4.set_xlabel('Iterations, size : 32768 kB')
 ax4.set_ylabel('Speedup - not grouped vs. grouped');
 # note this: you can skip rows!
-my_data = np.genfromtxt('jacobi1D_full.csv', delimiter=',',skiprows=1)
+my_data = pgd.prep_gdat(False).as_matrix()
 X = my_data[:,0]
 Y = np.vectorize(math.log)(my_data[:,1], 2)
 Z1 = np.vectorize(lambda x: 100/x)(my_data[:,3])
@@ -71,20 +76,20 @@ ax4.plot(Xb, Zb2, 'ro', color='r')
 ax4.plot(Xb, Zb3, 'ro', color='g')
 ax4.axhline(1, color='r')
 
-fig2 = plt.figure(figsize=plt.figaspect(0.5))
-ax = fig2.add_subplot(1,1,1);
+# fig2 = plt.figure(figsize=plt.figaspect(0.5))
+# ax = fig2.add_subplot(1,1,1);
 
-omp_data = np.genfromtxt('jacobi1D_viz.csv', delimiter=';', skiprows=1)
-Xomp = omp_data[:,0]
-Yomp = np.vectorize(math.log)(my_data[:,1], 2)
-Zomp1 = omp_data[:,3]
-Zomp2 = omp_data[:,4]
-indx = np.where(Yomp == math.log(watch_size, 2))
-Xompb = Xomp[index]
-Zomp1b = Zomp1[index]
-Zomp2b= Zomp2[index]
+# omp_data = np.genfromtxt('jacobi1D_viz.csv', delimiter=';', skiprows=1)
+# Xomp = omp_data[:,0]
+# Yomp = np.vectorize(math.log)(my_data[:,1], 2)
+# Zomp1 = omp_data[:,3]
+# Zomp2 = omp_data[:,4]
+# indx = np.where(Yomp == math.log(watch_size, 2))
+# Xompb = Xomp[index]
+# Zomp1b = Zomp1[index]
+# Zomp2b= Zomp2[index]
 
-ax.plot(Xb, Zomp1b, 'ro', color='r')
-ax.plot(Xb, Zomp2b, 'ro', color='b')
+# ax.plot(Xb, Zomp1b, 'ro', color='r')
+# ax.plot(Xb, Zomp2b, 'ro', color='b')
 
 plt.show()

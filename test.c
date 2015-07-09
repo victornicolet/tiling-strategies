@@ -42,7 +42,10 @@ static const int Num_iters_2d = 1 << 4;
 static int debug_use_defaults = 0;
 static int hdiam_flag = 0;
 static int test_with_long_flag = 0;
+static int t_thread_flag = 0;
+static int t_stride = 0;
 static int verbose_flag = 0;
+static int use_special_t_stride = 0;
 
 static const struct option longopts[] = {
   {"brief",         no_argument,            &verbose_flag,        0},
@@ -50,12 +53,15 @@ static const struct option longopts[] = {
   {"dimx",          required_argument,      NULL,               'x'},
   {"dimy",          required_argument,      NULL,               'y'},
   {"hdiam",         no_argument,            &hdiam_flag,          1},
-  {"hdmask",       required_argument,      NULL,               'M'},
+  {"t_threads",     no_argument,            &t_thread_flag,       1},
+  {"hdmask",       required_argument,       NULL,               'M'},
   {"help",          no_argument,            NULL,               'h'},
   {"iters-range",   required_argument,      NULL,               'i'},
   {"mask",          required_argument,      NULL,               'm'},
   {"nruns",         required_argument,      NULL,               'n'},
   {"range",         required_argument,      NULL,               'r'},
+  {"size",          required_argument,      NULL,               's'},
+  {"t_stride",      required_argument,      NULL,               'S'},
   {"long",          no_argument,            &test_with_long_flag, 1},
   {"use_defaults",  no_argument,            &debug_use_defaults,  1},
   {"verbose",       no_argument,            &verbose_flag,        1},
@@ -68,6 +74,7 @@ static const char * opts_msg[] = {
   "\t\tfirst space dimension size.",
   "\t\tsecond space dimension size.",
   "\trun benchmarks with half-diamonds",
+  "\tmeasure performance for different number of threads",
   "\tspecify mask for half-diamond benchmarks",
   "\t\tprint options and other information.",
   "\t= value with --hdiam, iteration space dimensions ranges \n\
@@ -75,6 +82,9 @@ static const char * opts_msg[] = {
   "\t\t= value, mask as specified below",
   "\t= value. Number of tests / benchmark.",
   "\t= value with --hdiam, space dimension ranges from 2^5 to 2^(5+value)",
+  "\t\t Equivalent to --dimx",
+  "\t = value Change the stride between the space size values for benchmarking.\n\
+    \t\tDefault stride is by power of two",
   "\t\t run tests with longs for corectness checking",
   "\t use default values when debugging (small values)",
   "\t",
@@ -167,7 +177,7 @@ main(int argc, char ** argv)
   hdmask = "111101";
 
   while ((opt =
-    getopt_long(argc, argv, "hi:m:M:r:t:vx:y:", longopts, &option_index))
+    getopt_long(argc, argv, "hi:m:M:r:s:t:vx:y:", longopts, &option_index))
     != -1) {
       switch (opt) {
         case '0':
@@ -196,6 +206,13 @@ main(int argc, char ** argv)
           nruns = atoi(optarg);
         case 'r':
           range = atoi(optarg);
+          break;
+        case 's':
+          dimx = (2 << atoi(optarg)) * KB;
+          break;
+        case 'S':
+          t_stride = atoi(optarg);
+          use_special_t_stride = 1;
           break;
         case 't':
           dimt = 2 << atoi(optarg);
@@ -331,7 +348,7 @@ print_opts()
   int i;
   int nopts = sizeof(longopts) / sizeof(struct option) ;
   for(i = 0; i < nopts - 1; i++){
-    printf("--%s %s\n", longopts[i].name, opts_msg[i]);
+    printf("--%s %s\n\n", longopts[i].name, opts_msg[i]);
   }
 }
 
@@ -474,7 +491,7 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters, char *hdmask,
   printf("Maximum number of threads : %i\n", max_threads);
 
   fprintf(csv_file, "%s\n",
-    "iterations,size(Kb),algorithm,threads,time");
+    "iterations,size(Kb),algorithm,number of threads,time");
 
   for (iters_pow = MIN_ITER_POW; iters_pow < 3 + range_iters; iters_pow ++) {
     printf("%s%i iterations :%s\n", KRED, 1 << iters_pow, KRESET);
@@ -484,6 +501,10 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters, char *hdmask,
         for (pow2 = MIN_POW; pow2 < MIN_POW + range; pow2 ++) {
 
           struct args_dimt args = { (2 << pow2) * KB, 0 , 1 << iters_pow};
+
+          if(use_special_t_stride > 0) {
+             args.width = (t_stride * pow2) * KB;
+          }
 
           data_in = malloc(CACHE_LINE_SIZE * sizeof(*data_in) * args.width);
           if (data_in == NULL) {
@@ -501,15 +522,28 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters, char *hdmask,
 
           hdiam_benchmarks[bm_no].variant(args, data_in, data_out);
 
-          for(n_threads = 1; n_threads <= max_threads; n_threads++) {
+          for (run_no = 0; run_no < DEFAULT_NRUNS; run_no ++) {
 
-            omp_set_num_threads(n_threads);
+            /* If t_thread_flag is set, we run tests for different thread
+              values. If not we run the test only for the default test value,
+              for first level parallel region, max_threads = OMP_NUM_THREADS
+            */
 
-            for (run_no = 0; run_no < DEFAULT_NRUNS; run_no ++) {
-                elapsed_time = hdiam_benchmarks[bm_no].variant(args, data_in,
-                  data_out);
+            if(!t_thread_flag) {
+              elapsed_time = hdiam_benchmarks[bm_no].variant(args, data_in,
+                data_out);
+              fprintf(csv_file, "%i,%i,%i,%i,%f\n", args.iters,
+                args.width / KB, bm_no, omp_get_max_threads(), elapsed_time);
+
+            } else {
+
+              for(n_threads = 1; n_threads <= max_threads; n_threads++) {
+                omp_set_num_threads(n_threads);
+                elapsed_time = hdiam_benchmarks[bm_no].variant(args,
+                  data_in,data_out);
                 fprintf(csv_file, "%i,%i,%i,%i,%f\n", args.iters,
                   args.width / KB, bm_no, n_threads, elapsed_time);
+              }
             }
           }
 
