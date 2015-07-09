@@ -345,7 +345,10 @@ test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
   int i;
   double t_accu;
   struct args_dimt args = get1dargs(dimx, dimt, benchmark);
-  printf("%i\n", args.width);
+  if(verbose_flag > 0) {
+    printf("Problem size : \t\t%i \nNumber of iterations : \t%i\n", args.width,
+      args.iters);
+  }
 
   double * data_in = aligned_alloc(CACHE_LINE_SIZE, \
     sizeof(*data_in) * args.width);

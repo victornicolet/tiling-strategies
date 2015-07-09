@@ -39,7 +39,7 @@ void print_check(int diffs, int pb_size, double *out_mx, double *ref_out)
   diff_rec = malloc(pb_size * sizeof(*diff_rec));
 
   find_diffs(pb_size, out_mx, ref_out, diff_rec);
-  (void)printf("Output not correct : %i/%i -(%4.3f)."
+  (void)printf("Output not correct : %i false / %i total (%4.3f)."
     "\n",
     diffs,
     pb_size,

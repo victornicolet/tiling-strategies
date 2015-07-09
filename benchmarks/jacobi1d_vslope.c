@@ -28,6 +28,13 @@ static inline void do_topright_hdiam(int, int, int, double **, double *)
     __attribute__((always_inline));
 
 
+int get_slope(int num_iters) {
+  return max(
+    ((int) floor(L1_CACHE_SIZE / (num_iters * sizeof(double) * 4))) / 4 * 4,
+     1);
+}
+
+
 static void djbi1d_hdiam_vslope(int pb_size, int num_iters, double *jbi_in,
   double *jbi_out) {
   int num_tiles, slope, tile_no, tile_size;
@@ -67,11 +74,7 @@ static void djbi1d_hdiam_vslope(int pb_size, int num_iters, double *jbi_in,
 double djbi1d_hdiam_vslope_t(struct args_dimt args, double *jbi_in,
   double *jbi_out) {
   int slope;
-  slope = max(floor(L1_CACHE_SIZE / (args.iters * sizeof(double) * 4)), 1);
-  printf("\nTile size and slope for %i iterations : %i (slope 1/%i)\n",
-    args.iters,
-    slope * args.iters * 2,
-    slope);
+  slope = get_slope(args.iters);
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
   djbi1d_hdiam_vslope(args.width, args.iters, jbi_in, jbi_out);
   clock_gettime(CLOCK_MONOTONIC, &tend);
@@ -91,8 +94,8 @@ static inline void do_base_hdiam(int num_iters, int pb_size, int tile_no,
   l0 = max(tile_no * tile_base_sz, 0);
   r0 = min(l0 + tile_base_sz, pb_size - 1);
 
-  li1 = tmp[0] + l0;
-  li0 = tmp[1] + l0;
+  li1 = tmp[1] + l0;
+  li0 = tmp[0] + l0;
 
   for (i = l0; i < r0; i++) {
     li0[i - l0] = jbi_in[i];
@@ -100,8 +103,8 @@ static inline void do_base_hdiam(int num_iters, int pb_size, int tile_no,
   }
 
   for (t = 0; t < num_iters - 1; t++) {
-    l = max(l0 + slope * t + 1, 1);
-    r = min(l0 + tile_base_sz - slope * t - 1, pb_size);
+    l = max(l0 + slope * (t + 1), 1);
+    r = min(l0 + tile_base_sz - slope * (t + 1), pb_size);
 
     for (i = l; i < r; i++) {
       li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
@@ -123,13 +126,13 @@ static inline void do_top_hdiam(int num_iters, int pb_size, int tile_no,
 
   double *li1, *li0;
 
-  li1 = tmp[0] + l0;
-  li0 = tmp[1] + l0;
+  li1 = tmp[1] + l0;
+  li0 = tmp[0] + l0;
 
   for (t = 0; t < num_iters; t++) {
 
-    l = max(x0 - (slope * t + 1), 1);
-    r = min(x0 + slope * t, pb_size - 2);
+    l = max(x0 - slope * (t + 1), 1);
+    r = min(x0 + slope * (t + 1), pb_size - 2);
 
     for (i = l; i <= r; i++) {
       li1[i - l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
@@ -149,8 +152,8 @@ static inline void do_topleft_hdiam(int num_iters, int slope, double **tmp,
   int i, t;
   double *li1, *li0;
 
-  li1 = tmp[0];
-  li0 = tmp[1];
+  li1 = tmp[1];
+  li0 = tmp[0];
 
   for (t = 0; t < num_iters - 1; t++) {
     for (i = 1; i < slope * (t + 1); i++) {
@@ -159,7 +162,7 @@ static inline void do_topleft_hdiam(int num_iters, int slope, double **tmp,
     swap(&li1, &li0);
   }
 
-  for (i = 1; i < slope * t + 1; i++) {
+  for (i = 1; i < slope * (t + 1); i++) {
     li1[i] = (li0[i - 1] + li0[i] + li0[i + 1]) / 3.0;
   }
 
@@ -174,11 +177,11 @@ static inline void do_topright_hdiam(int num_iters, int pb_size, int slope,
   double *li1, *li0;
 
   l0 = pb_size - slope * num_iters - 2;
-  li1 = tmp[0] + l0;
-  li0 = tmp[1] + l0;
+  li1 = tmp[1] + l0;
+  li0 = tmp[0] + l0;
 
   for (t = 0; t < num_iters; t++) {
-    for (i = pb_size - slope * t - 1; i < pb_size - 1; i++) {
+    for (i = pb_size - slope * (t + 1); i < pb_size - 1; i++) {
       li1[i-l0] = (li0[i - 1 - l0] + li0[i - l0] + li0[i + 1 - l0]) / 3.0;
     }
     swap(&li1, &li0);
