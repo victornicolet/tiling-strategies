@@ -7,6 +7,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <omp.h>
 
 #include "utils.h"
 
@@ -142,8 +143,6 @@ main(int argc, char ** argv)
   /* Only half-diamonds in 1d */
   struct benchspec hdiam_benchmarks [] =
   {
-    {"JACOBI1D_SEQUENTIAL (reference)", djbi1d_sequential, check_default,
-      0, 0, 1},
     {"JACOBI1D_HALF_DIAMONDS", djbi1d_half_diamonds_test, check_low_iter,
       0, 0, 1},
     {"JACOBI1D_HDIAM_(VAR. SLOPE)", djbi1d_hdiam_vslope_t, check_low_iter,
@@ -151,8 +150,6 @@ main(int argc, char ** argv)
     {"JACOBI1D_HDIAM(GROUPED TILES)", djbi1d_hdiam_grouped_test, check_low_iter,
       0, 0, 1},
     {"JACOBI1D_HDIAM (USING TASKS)", djbi1d_hdiam_tasked_test, check_low_iter,
-      0, 0, 1},
-    {"JACOBI1D_PLUTO (reference)", djbi1d_from_pluto, check_low_iter,
       0, 0, 1}
   };
 
@@ -170,7 +167,8 @@ main(int argc, char ** argv)
   hdmask = "111101";
 
   while ((opt =
-    getopt_long(argc, argv, "hi:m:M:r:t:vx:y:", longopts, &option_index)) != -1) {
+    getopt_long(argc, argv, "hi:m:M:r:t:vx:y:", longopts, &option_index))
+    != -1) {
       switch (opt) {
         case '0':
         case 'h':
@@ -468,20 +466,18 @@ void
 test_suite_hdiam1d(int num_benchs, int range, int range_iters, char *hdmask,
  struct benchspec * hdiam_benchmarks, FILE * csv_file)
 {
-  int bm_no, iters_pow, pow2, run_no;
-  double t_accu, mean_t_ms;
-  double **timelog;
+  int bm_no, iters_pow, max_threads, n_threads, pow2, run_no;
+  double elapsed_time;
   double *data_in, *data_out;
 
-  fprintf(csv_file, "%s%s\n",
-    "iterations;size (kB);sequential time (ms); naive;half diamonds;",
-    "grouped half diamonds; with tasks");
+  max_threads = omp_get_max_threads();
+  printf("Maximum number of threads : %i\n", max_threads);
 
+  fprintf(csv_file, "%s\n",
+    "iterations,size(Kb),algorithm,threads,time");
 
   for (iters_pow = MIN_ITER_POW; iters_pow < 3 + range_iters; iters_pow ++) {
     printf("%s%i iterations :%s\n", KRED, 1 << iters_pow, KRESET);
-
-    timelog = alloc_double_mx(num_benchs, range);
 
     for (bm_no = 0; bm_no < num_benchs; bm_no ++) {
       if (hdmask[bm_no] == '1') {
@@ -503,60 +499,26 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters, char *hdmask,
 
           init_data_1d(args.width, data_in);
 
-          t_accu = 0.0;
           hdiam_benchmarks[bm_no].variant(args, data_in, data_out);
 
-          for (run_no = 0; run_no < DEFAULT_NRUNS; run_no ++) {
-              t_accu += hdiam_benchmarks[bm_no].variant(args, data_in,
-                data_out);
+          for(n_threads = 1; n_threads <= max_threads; n_threads++) {
+
+            omp_set_num_threads(n_threads);
+
+            for (run_no = 0; run_no < DEFAULT_NRUNS; run_no ++) {
+                elapsed_time = hdiam_benchmarks[bm_no].variant(args, data_in,
+                  data_out);
+                fprintf(csv_file, "%i,%i,%i,%i,%f\n", args.iters,
+                  args.width / KB, bm_no, n_threads, elapsed_time);
+            }
           }
-          mean_t_ms = (t_accu / DEFAULT_NRUNS) * 1000.0 ;
+
           /* Test output */
           free(data_out);
           free(data_in);
-          timelog[bm_no][pow2 - MIN_POW] = mean_t_ms;
         }
       }
     }
-
-    int i,j;
-
-    /* Standard output */
-    printf("\n");
-    for (i = 0; i < num_benchs; i++) {
-      if (hdmask[i] == '1'){
-        printf("%i : %s\n",i, hdiam_benchmarks[i].name);
-      }
-    }
-    printf("\n");
-    printf("%12s\t%18s\t%c%20s",
-      "Log2(size)","Sequential time (ms)",'%',
-      " of sequential time\n");
-    for (j = 0; j < range; j ++) {
-      printf("%i kB\t", 1 << (j + MIN_POW));
-      printf("\t%8f\t\t", timelog[0][j]);
-      for (i = 1; i < num_benchs; i ++) {
-        if (hdmask[i] == '1') {
-          printf("\t%5.3f", (timelog[i][j] / timelog[0][j]) * 100.0);
-        }
-      }
-      printf("\n");
-    }
-
-    /* Output in csv file */
-
-    for (i = 0; i < range; i++) {
-      fprintf(csv_file, "%i,%i,%f",
-        1 << iters_pow, 1 << (i + MIN_POW), timelog[0][i]);
-
-      for (j = 1; j < num_benchs; j++) {
-        fprintf(csv_file, ",%f", (timelog[j][i] / timelog[0][i]) * 100.0 );
-      }
-      fprintf(csv_file, "\n");
-    }
-
-
-    free_mx((void **) timelog, num_benchs);
   }
 }
 
