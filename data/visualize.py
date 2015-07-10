@@ -9,7 +9,7 @@ from scipy.interpolate import griddata
 import prepare_graph_data as pgd
 
 
-pgd.prep_gdat(True)
+my_data = pgd.prep_gdat(True).as_matrix()
 
 max_gain = 24
 watch_size = 32768
@@ -36,7 +36,6 @@ ax3.set_zlabel('Speedup - starnk');
 ax4.set_xlabel('Iterations, size : 32768 kB')
 ax4.set_ylabel('Speedup - not grouped vs. grouped');
 # note this: you can skip rows!
-my_data = pgd.prep_gdat(False).as_matrix()
 X = my_data[:,0]
 Y = np.vectorize(math.log)(my_data[:,1], 2)
 Z1 = np.vectorize(lambda x: 100/x)(my_data[:,3])

@@ -11,40 +11,49 @@ KB=150
 
 
 def prep_gdat(write_csv):
-        raw_dat = np.genfromtxt('jacobi1D_starnk_raw.csv', delimiter=';')
 
-        rawdf = pan.DataFrame(raw_dat, columns=['i','s','t'])
+        # Data from Starnk
+        kpn_raw_dat = np.genfromtxt('jacobi1D_starnk_raw.csv', delimiter=';')
 
-        max_i = int(np.max(rawdf['i']))
-        min_i = int(np.min(rawdf['i']))
-        range_i = int(math.floor(max_i - min_i))
-        max_s = int(np.max(rawdf['s']))
-        min_s = int(np.min(rawdf['s']))
-        range_s = int(math.floor(max_s - min_s))
+        kpn_rawdf = pan.DataFrame(kpn_raw_dat, columns=['i','s','t'])
 
-        resulting_data = np.zeros((range_i*range_s, 3))
+        min_i = int(np.min(kpn_rawdf['i']))
+        min_s = int(np.min(kpn_rawdf['s']))
 
-        calculated_means = rawdf.groupby(['i','s'], sort='yes')
 
-        for i in range(0, range_i):
-            for s in range(0, range_s):
-                resulting_data[i * range_s + s][0] = int((2<<(i + min_i)))
-                resulting_data[i * range_s + s][1] = int((2<<(s + min_s)))
-                resulting_data[i * range_s + s][2] = calculated_means.get_group((i+min_i,s+min_s))['t']._get_numeric_data().mean()
+        kpn_rawdf['i'] = kpn_rawdf['i'].astype(int)
+        kpn_rawdf['s'] = kpn_rawdf['s'].astype(int)
+        kpn_rawdf['i'].map(lambda x : int(2<<x))
+        kpn_rawdf['s'].map(lambda x : int(2<<x))
 
-        resdf = pan.DataFrame(resulting_data, columns=['i','s','t'])
-        omp_dat = np.genfromtxt('jacobi1D_stats.csv', delimiter=',', skip_header=3)
-        ompdf = pan.DataFrame(omp_dat, columns=['i','s', 'algo', 'nthreads','t_mean','t_median','t_std'])
-        ompdf.drop('t_mean', axis=1, inplace=True)
-        ompdf.drop('t_std', axis=1, inplace=True)
-        df = pan.merge(ompdf, resdf, how='inner', on=['i','s'])
+        kpn_stats = kpn_rawdf.groupby(['i','s'], sort='yes').agg([np.mean, np.median, np.std])
+
+        print kpn_stats
+
+        kpn_stats.to_csv('jacobi1D_starnk_stats.csv')
+
+        # Data from OpenMP
+        omp_stats = np.genfromtxt('jacobi1D_stats.csv', delimiter=',', skip_header=3)
+        ompdf = pan.DataFrame(omp_stats, columns=['i','s', 'algo', 'nthreads','omp_mean','omp_median','omp_std'])
+        ompdf.drop('nthreads', axis=1, inplace=True)
+        ompdf.drop('omp_mean', axis=1, inplace=True)
+        ompdf.drop('omp_std', axis=1, inplace=True)
+        #Separate data of each algorithm
+        omp_hdiam = ompdf.loc[ompdf['algo']==0];
+        omp_hdiam_var_tri = ompdf.loc[ompdf['algo']==1];
+        omp_hdiam_grp = ompdf.loc[ompdf['algo']==2];
+        omp_hdiam_tasks = ompdf.loc[ompdf['algo']==3];
+
+        print omp_hdiam_tasks
+        # Merge
+        df = pan.merge(omp_hdiam_tasks, kpn_stats, how='inner', on=['i','s'])
 
         df[['i', 's']] = df[['i', 's']].astype(int)
 
         #-------------------------------------------------------------------------------
-        # Performance : time elapsed for current version / time elapsed for OpenMP version
+        # Performance : time elapsed for libkpn version / time elapsed for OpenMP version
         df.insert(5, 'spdup_libkpn', 0, allow_duplicates=False)
-        df.spdup_libkpn = 100.0 * df.t / df.t_median;
+        df.spdup_libkpn = 100.0 * df.t / df.omp_median;
         df.drop('t', axis=1, inplace=True)
 
 
