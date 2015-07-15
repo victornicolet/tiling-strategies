@@ -535,7 +535,7 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters, char *hdmask,
                 data_out);
               fprintf(csv_file, "%i,%i,%i,%i,%f\n", args.iters,
                 args.width / KB, bm_no, omp_get_max_threads(),
-                elapsed_time * 1000.0;
+                elapsed_time * 1000.0);
 
             } else {
 
