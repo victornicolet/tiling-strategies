@@ -361,7 +361,8 @@ test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
   double t_accu;
   struct args_dimt args = get1dargs(dimx, dimt, benchmark);
   if(verbose_flag > 0) {
-    printf("Problem size : \t\t%i \nNumber of iterations : \t%i\n", args.width,
+    printf("Problem size (KB) : \t\t%i \nNumber of iterations : \t%i\n",
+      args.width / KB,
       args.iters);
   }
 
@@ -533,7 +534,8 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters, char *hdmask,
               elapsed_time = hdiam_benchmarks[bm_no].variant(args, data_in,
                 data_out);
               fprintf(csv_file, "%i,%i,%i,%i,%f\n", args.iters,
-                args.width / KB, bm_no, omp_get_max_threads(), elapsed_time);
+                args.width / KB, bm_no, omp_get_max_threads(),
+                elapsed_time * 1000.0;
 
             } else {
 
@@ -542,7 +544,7 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters, char *hdmask,
                 elapsed_time = hdiam_benchmarks[bm_no].variant(args,
                   data_in,data_out);
                 fprintf(csv_file, "%i,%i,%i,%i,%f\n", args.iters,
-                  args.width / KB, bm_no, n_threads, elapsed_time);
+                  args.width / KB, bm_no, n_threads, elapsed_time * 1000.0);
               }
             }
           }
