@@ -15,4 +15,7 @@ report/*.synctex.gz
 report/*.toc
 .gitignore~
 data/prepare_graph_data.pyc
-
+data/jacobi1D_viz.csv
+report/results.pdf
+report/results.tex
+report/tikz_results_starnk_comparison.tex
