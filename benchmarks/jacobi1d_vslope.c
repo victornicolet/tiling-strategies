@@ -73,12 +73,28 @@ double djbi1d_hdiam_vslope_t(struct args_dimt args, double *jbi_in,
 
   /* Inter-tiles buffer, twice the problem size */
   tmp = aligned_alloc(CACHE_LINE_SIZE, 2 * sizeof(*tmp));
+
+  if (tmp == NULL) {
+    printf("Allocation of tmp failed !  ... Aborting.\n");
+    return -1.0;
+  }
+
   tmp[0] = aligned_alloc(CACHE_LINE_SIZE, args.width * sizeof(*(tmp[0])));
   tmp[1] = aligned_alloc(CACHE_LINE_SIZE, args.width * sizeof(*(tmp[1])));
+
+  if (tmp[0] == NULL || tmp[1] == NULL) {
+    printf("Allocation of tmp lines failed !  ... Aborting\n");
+    free(tmp);
+    return -1.0;
+  }
 
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
   djbi1d_hdiam_vslope(args.width, args.iters, jbi_in, jbi_out, tmp);
   clock_gettime(CLOCK_MONOTONIC, &tend);
+
+  free(tmp[0]);
+  free(tmp[1]);
+  free(tmp);
 
   return ELAPSED_TIME(tend, tbegin);
 }
