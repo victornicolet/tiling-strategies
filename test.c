@@ -44,6 +44,7 @@ static int hdiam_flag = 0;
 static int test_with_long_flag = 0;
 static int t_thread_flag = 0;
 static int t_stride = 0;
+static int iter_stride = 10;
 static int verbose_flag = 0;
 static int use_special_t_stride = 0;
 
@@ -62,6 +63,7 @@ static const struct option longopts[] = {
   {"range",         required_argument,      NULL,               'r'},
   {"size",          required_argument,      NULL,               's'},
   {"t_stride",      required_argument,      NULL,               'S'},
+  {"iters-stride",  required_argument,      NULL,               'T'},
   {"long",          no_argument,            &test_with_long_flag, 1},
   {"use_defaults",  no_argument,            &debug_use_defaults,  1},
   {"verbose",       no_argument,            &verbose_flag,        1},
@@ -85,6 +87,7 @@ static const char * opts_msg[] = {
   "\t\t Equivalent to --dimx",
   "\t = value Change the stride between the space size values for benchmarking.\n\
     \t\tDefault stride is by power of two",
+  "\t = stride between iteration tests",
   "\t\t run tests with longs for corectness checking",
   "\t use default values when debugging (small values)",
   "\t",
@@ -177,7 +180,7 @@ main(int argc, char ** argv)
   hdmask = "111101";
 
   while ((opt =
-    getopt_long(argc, argv, "hi:m:M:r:s:t:vx:y:", longopts, &option_index))
+    getopt_long(argc, argv, "hi:m:M:r:s:S:t:T:vx:y:", longopts, &option_index))
     != -1) {
       switch (opt) {
         case '0':
@@ -216,6 +219,9 @@ main(int argc, char ** argv)
           break;
         case 't':
           dimt = 2 << atoi(optarg);
+          break;
+        case 'T':
+          iter_stride = max(atoi(optarg),10);
           break;
         case 'v':
           verbose_flag++;
@@ -482,9 +488,9 @@ test2d(int nruns, int dimx, int dimy, int dimt, struct benchspec2d benchmark)
 
 void
 test_suite_hdiam1d(int num_benchs, int range, int range_iters, char *hdmask,
- struct benchspec * hdiam_benchmarks, FILE * csv_file)
+  struct benchspec * hdiam_benchmarks, FILE * csv_file)
 {
-  int bm_no, iters_pow, max_threads, n_threads, pow2, run_no;
+  int bm_no, iters, max_threads, n_threads, pow2, run_no;
   double elapsed_time;
   double *data_in, *data_out;
 
@@ -494,14 +500,15 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters, char *hdmask,
   fprintf(csv_file, "%s\n",
     "iterations,size(Kb),algorithm,number of threads,time");
 
-  for (iters_pow = MIN_ITER_POW; iters_pow < 3 + range_iters; iters_pow ++) {
-    printf("%s%i iterations :%s\n", KRED, 1 << iters_pow, KRESET);
+  for (iters = (1 << MIN_ITER_POW) ; iters < range_iters; iters+=
+    iter_stride) {
+    printf("%s%i iterations :%s\n", KRED, iters, KRESET);
 
     for (bm_no = 0; bm_no < num_benchs; bm_no ++) {
       if (hdmask[bm_no] == '1') {
         for (pow2 = MIN_POW; pow2 < MIN_POW + range; pow2 ++) {
 
-          struct args_dimt args = { (2 << pow2) * KB, 0 , 1 << iters_pow};
+          struct args_dimt args = { (2 << pow2) * KB, 0 , iters};
 
           if(use_special_t_stride > 0) {
              args.width = (t_stride * pow2) * KB;
