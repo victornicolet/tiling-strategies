@@ -16,7 +16,7 @@
 #include "benchmarks/jacobi1d_vslope.h"
 
 /* Problem size (in space) between 2 ^ MIN_POW and 2 ^ MAX_POW */
-#define MIN_POW 3
+#define MIN_POW 6
 #define MIN_ITER_POW 4
 #define DEFAULT_RANGE 9
 #define DEFAULT_NRUNS 20
@@ -510,16 +510,19 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters, char *hdmask,
 
           struct args_dimt args = { (2 << pow2) * KB, 0 , iters};
 
+          printf("%sSize %i (%i elements)%s\n", KBLU, pow2, args.width,
+              KRESET);
+
           if(use_special_t_stride > 0) {
              args.width = (t_stride * pow2) * KB;
           }
 
-          data_in = malloc(CACHE_LINE_SIZE * sizeof(*data_in) * args.width);
+          data_in = malloc(sizeof(*data_in) * args.width);
           if (data_in == NULL) {
             printf("Allocation of %i failed, aborting...\n", args.width);
             return;
           }
-          data_out = malloc(CACHE_LINE_SIZE * sizeof(*data_out) * args.width);
+          data_out = malloc(sizeof(*data_out) * args.width);
           if (data_out == NULL) {
             free(data_in);
             printf("Allocation of %i failed, aborting...\n", args.width);
