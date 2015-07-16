@@ -92,10 +92,6 @@ double djbi1d_hdiam_vslope_t(struct args_dimt args, double *jbi_in,
   djbi1d_hdiam_vslope(args.width, args.iters, jbi_in, jbi_out, tmp);
   clock_gettime(CLOCK_MONOTONIC, &tend);
 
-  free(tmp[0]);
-  free(tmp[1]);
-  free(tmp);
-
   return ELAPSED_TIME(tend, tbegin);
 }
 
