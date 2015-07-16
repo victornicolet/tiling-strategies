@@ -16,3 +16,11 @@ We propose different implementations of the stencil computation for concurrent e
 ## Viewing half-diamond tiling performance
 The aim of this project was to compare the algorithm using a barrier between upper and lower tiles, with static scheduling, and an algorithm relying on tasks. Data from the task implmeentation has been imported in ```data/jacobi1D_starnk_raw.csv```. \\
 Run ```stat_from_data.py``` and then ```visualize.py``` in ```data/``` to view some performance graphs. We use ```pandas```, ```numpy```,```matplotlib``` and ```scipy``` packages.
+
+The graph below shows the comparison between running times of three different version : 
+
+0. OpenMP : tiles with variable slope but constant size, and a barrier between lower and upper tiles.
+1. Opt : optimal version in Libkpn, where on tasks wraps two tiles, enhancing reuse between tiles.
+2. Naive : a task only wraps a tile.
+
+![alt-text](data/figure_2.png)
