@@ -1,6 +1,5 @@
 #define _POSIX_C_SOURCE 200112L
 
-#include <immintrin.h>
 #include <inttypes.h>
 #include <math.h>
 #include <signal.h>
@@ -44,115 +43,19 @@ static inline void do_topright_hdiam(int, int, double **, double *)
 *   - sequential with swapping
 */
 
-void djbi1d_hdiam_tasked(int pb_size, int num_iters, double *jbi,
-                         double *jbi_out) {
-  /* Tile bounds */
-  int tile_no;
-  int tile_base_sz = 2 * num_iters;
-  int num_tiles = (pb_size / tile_base_sz);
-  /* Store the border between base-down pyramids and base-up pyramids */
-  double **tmp = alloc_double_mx(2, pb_size * sizeof(*tmp));
 
-  uint8_t task_index[num_tiles] __attribute__((unused));
-
-#pragma omp parallel
-#pragma omp single
-  {
 /*
-* Execute top-left task upfront : here the use of task pragma is only meant
-* to satisfy the dependency.
-*/
+ * Half-diamond tiling : for a small number of iterations, it is not necessary
+ * have multiple levels of tiles along the time dimension. Here we use
+ * triangle tiles, with one level base-down, on base top.
+ * We have a naive version, using a barrier between the two levels,
+ * a version using distributed barriers among groups whose size is calculated
+ * to provide time locality.
+ * Another version using tasks.
+ * See also jacobi1d_vslope for half-diamond tiling with variable slope
+ */
 
-#pragma omp task depend(out : task_index[0])
-    { do_base_hdiam(tile_no, num_iters, pb_size, jbi, tmp); }
-    do_topleft_hdiam(num_iters, tmp, jbi_out);
-
-    /* Loop over all tasks */
-    for (tile_no = 1; tile_no < num_tiles; tile_no++) {
-/* Base down tile */
-#pragma omp task firstprivate(tile_no) shared(tmp) \
-    depend(out : task_index[tile_no])
-      { do_base_hdiam(tile_no, num_iters, pb_size, jbi, tmp); }
-
-/* Tip down tile */
-#pragma omp task firstprivate(tile_no) shared(tmp) \
-    depend(in : task_index[tile_no - 1], task_index[tile_no])
-      { do_top_hdiam(tile_no, num_iters, pb_size, tmp, jbi_out); }
-    }
-
-    /* Final task (top-right)*/
-
-    do_top_hdiam(num_tiles, num_iters, pb_size, tmp, jbi_out);
-
-  }
-  /* End parallel - single region */
-}
-
-void djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs,
-                          double *jbi, double *jbi_out) {
-  int num_tiles, tile_base_sz, tile_max, tile_no;
-  int group_size, grp_no, num_grps;
-  double **tmp;
-
-
-  num_procs = 2 * num_procs;
-  tile_base_sz = 2 * num_iters;
-  num_tiles = (pb_size / tile_base_sz);
-  group_size = GROUP_FACTOR * (num_procs * L1_CACHE_SIZE) /
-    (num_iters * sizeof(double) * 4) ;
-  num_grps = (num_tiles - 1) / group_size;
-  tmp = alloc_double_mx(2, pb_size * sizeof(*tmp));
-
-  /* First execute first base-down tile and top-left corner */
-  /* First base-down tile */
-  do_base_hdiam(0, num_iters, pb_size, jbi, tmp);
-  do_topleft_hdiam(num_iters, tmp, jbi_out);
-
-#ifdef TEST_LOCALITY
-  int tiles[2][num_tiles];
-#endif
-
-  for (grp_no = 0; grp_no < num_grps + 1; grp_no++) {
-    tile_max = min((grp_no + 1) * group_size + 1, num_tiles);
-
-#pragma omp parallel for schedule(static) shared(tmp) private(tile_no) \
-    firstprivate(grp_no)
-
-    for (tile_no = grp_no * group_size + 1; tile_no < tile_max; tile_no++) {
-      #ifdef TEST_LOCALITY
-        tiles[0][tile_no] = omp_get_thread_num();
-      #endif
-      do_base_hdiam(tile_no, num_iters, pb_size, jbi, tmp);
-    }
-
-#pragma omp parallel for schedule(static) shared(tmp) \
-    private(tile_no) firstprivate(grp_no)
-
-    for (tile_no = grp_no * group_size + 1; tile_no < tile_max; tile_no++) {
-      #ifdef TEST_LOCALITY
-        tiles[1][tile_no] = omp_get_thread_num();
-      #endif
-      do_top_hdiam(tile_no, num_iters, pb_size, tmp, jbi_out);
-    }
-  }
-
-
-  free_mx((void **)tmp, 2);
-
-#ifdef TEST_LOCALITY
-  int bad_loc, i;
-  bad_loc = 0;
-  for (i = 0; i < num_tiles; i++) {
-    if(tiles[0][i] != tiles[1][i]) {
-      bad_loc++;
-    }
-  }
-  printf("\nLocality score : %8.4f\n", (double) bad_loc / num_tiles);
-#endif
-
-}
-
-void djbi1d_half_diamonds(int pb_size, int num_iters, double *jbi_in,
+void djbi1d_hdiam(int pb_size, int num_iters, double *jbi_in,
                           double *jbi_out) {
   int num_tiles, tile_no;
   double **tmp;
@@ -203,6 +106,131 @@ void djbi1d_half_diamonds(int pb_size, int num_iters, double *jbi_in,
 
 }
 
+void djbi1d_hdiam_grouped(int pb_size, int num_iters, int num_procs,
+                          double *jbi, double *jbi_out) {
+  int num_tiles, tile_base_sz, tile_max, tile_no;
+  int group_size, grp_no, num_grps;
+  double **tmp;
+
+
+  num_procs = 2 * num_procs;
+  tile_base_sz = 2 * num_iters;
+  num_tiles = (pb_size / tile_base_sz);
+/*
+ * Group size calculation :
+ * One group must occupy the memory of the lowest level caches, with
+ * a tuning factor GROUP_FACTOR
+ */
+  group_size = GROUP_FACTOR * (num_procs * L1_CACHE_SIZE) /
+    (num_iters * sizeof(double) * 4) ;
+  num_grps = (num_tiles - 1) / group_size;
+  tmp = alloc_double_mx(2, pb_size * sizeof(*tmp));
+
+/* First execute first base-down tile and top-left corner */
+/* First base-down tile */
+  do_base_hdiam(0, num_iters, pb_size, jbi, tmp);
+  do_topleft_hdiam(num_iters, tmp, jbi_out);
+
+#ifdef TEST_LOCALITY
+  int tiles[2][num_tiles];
+#endif
+
+  for (grp_no = 0; grp_no < num_grps + 1; grp_no++) {
+    tile_max = min((grp_no + 1) * group_size + 1, num_tiles);
+
+#pragma omp parallel for schedule(static) shared(tmp) private(tile_no) \
+    firstprivate(grp_no)
+
+    for (tile_no = grp_no * group_size + 1; tile_no < tile_max; tile_no++) {
+      #ifdef TEST_LOCALITY
+        tiles[0][tile_no] = omp_get_thread_num();
+      #endif
+      do_base_hdiam(tile_no, num_iters, pb_size, jbi, tmp);
+    }
+
+#pragma omp parallel for schedule(static) shared(tmp) \
+    private(tile_no) firstprivate(grp_no)
+
+    for (tile_no = grp_no * group_size + 1; tile_no < tile_max; tile_no++) {
+      #ifdef TEST_LOCALITY
+        tiles[1][tile_no] = omp_get_thread_num();
+      #endif
+      do_top_hdiam(tile_no, num_iters, pb_size, tmp, jbi_out);
+    }
+  }
+
+
+  free_mx((void **)tmp, 2);
+
+#ifdef TEST_LOCALITY
+  int bad_loc, i;
+  bad_loc = 0;
+  for (i = 0; i < num_tiles; i++) {
+    if(tiles[0][i] != tiles[1][i]) {
+      bad_loc++;
+    }
+  }
+  printf("\nLocality score : %8.4f\n", (double) bad_loc / num_tiles);
+#endif
+
+}
+
+/*
+ * The task version does not yield satisfactory performance. But the high
+ * granularity of the task schedule using the fixed-slope tiles mays be the main
+ * reason.
+ * TODO : build tasks using variable slope (jacobi1d_vslope.c)
+ */
+
+void djbi1d_hdiam_tasked(int pb_size, int num_iters, double *jbi,
+                         double *jbi_out) {
+  /* Tile bounds */
+  int tile_no;
+  int tile_base_sz = 2 * num_iters;
+  int num_tiles = (pb_size / tile_base_sz);
+  /* Store the border between base-down pyramids and base-up pyramids */
+  double **tmp = alloc_double_mx(2, pb_size * sizeof(*tmp));
+
+  uint8_t task_index[num_tiles] __attribute__((unused));
+
+#pragma omp parallel
+#pragma omp single
+  {
+/*
+* Execute top-left task upfront : here the use of task pragma is only meant
+* to satisfy the dependency.
+*/
+
+#pragma omp task depend(out : task_index[0])
+    { do_base_hdiam(tile_no, num_iters, pb_size, jbi, tmp); }
+    do_topleft_hdiam(num_iters, tmp, jbi_out);
+
+    /* Loop over all tasks */
+    for (tile_no = 1; tile_no < num_tiles; tile_no++) {
+/* Base down tile */
+#pragma omp task firstprivate(tile_no) shared(tmp) \
+    depend(out : task_index[tile_no])
+      { do_base_hdiam(tile_no, num_iters, pb_size, jbi, tmp); }
+
+/* Tip down tile */
+#pragma omp task firstprivate(tile_no) shared(tmp) \
+    depend(in : task_index[tile_no - 1], task_index[tile_no])
+      { do_top_hdiam(tile_no, num_iters, pb_size, tmp, jbi_out); }
+    }
+
+    /* Final task (top-right)*/
+
+    do_top_hdiam(num_tiles, num_iters, pb_size, tmp, jbi_out);
+
+  }
+  /* End parallel - single region */
+}
+
+/*
+ * Use long to test for correction.
+ * This version is not up to date anymore.
+ */
+
 void ljbi1d_half_diamonds(int pb_size, int num_iters, long *jbi,
                           long *jbi_out) {
   int tile_no, t, i;
@@ -211,7 +239,6 @@ void ljbi1d_half_diamonds(int pb_size, int num_iters, long *jbi,
 
   int tile_base_sz = 2 * num_iters;
   int num_tiles = (pb_size / tile_base_sz);
-  // Store the border between base-down pyramids and base-up pyramids
   long **tmp = alloc_long_mx(2, pb_size * sizeof(*tmp));
 
   for (i = 0; i < pb_size; i++) {
@@ -316,7 +343,15 @@ void ljbi1d_half_diamonds(int pb_size, int num_iters, long *jbi,
   free(tmp);
 }
 
-/* In this algorithm we work only on full parallelograms : no partial tiles.
+/*
+ * Skewed tiling : tiles are paralleograms, the parallelism is limited to
+ * wavefronts but memory reuse is easier along one dimension of the skewed
+ * space.
+ * This version still contains many errors.
+ */
+
+/*
+ * In this algorithm we work only on full parallelograms : no partial tiles.
  * We are interested in performance measures, and understanding, rather
  * than corectness here
  */
@@ -376,20 +411,20 @@ uint8_t **djbi1d_sk_full_tiles(int num_strips, int num_steps, double *dashs,
   return taskdep_index;
 }
 
+/* In this version we assume T_ITERS = T_WIDTH_DBL so we have to make a
+ *   difference between regular tiles ( parallelogram-shaped ones) and
+ *   triangular tiles, but the patile_tern is quite regular and dependencies
+ *   are
+ *   straightforward at the boundaries of the domain.
+ *   ---------------
+ *
+ *  num_steps = (iters / T_ITERS) + 1;
+ *   num_strips = (n / T_WIDTH_DBL) + 1 ;
+ */
+
+/* Unused except in omp task pragmas */
 void djbi1d_skewed_tiles(int num_strips, int num_steps, double *dashs,
                          double *slashs) {
-  /* In this version we assume T_ITERS = T_WIDTH_DBL so we have to make a
-   *   difference between regular tiles ( parallelogram-shaped ones) and
-   *   triangular tiles, but the patile_tern is quite regular and dependencies
-   *are
-   *   straightforward at the boundaries of the domain.
-   *   ---------------
-   *
-   *  num_steps = (iters / T_ITERS) + 1;
-   *   num_strips = (n / T_WIDTH_DBL) + 1 ;
-   */
-
-  /* Unused except in omp task pragmas */
   uint8_t taskdep_index[num_strips + 1][num_steps] __attribute__((unused));
 
 #ifdef DEBUG_PARALLEL
@@ -434,7 +469,8 @@ void djbi1d_skewed_tiles(int num_strips, int num_steps, double *dashs,
           }
 
         } else if (tile_i == 0 && tile_t > 0) {
-/* Left edge tile : triangular tiles
+/*
+ * Left edge tile : triangular tiles
  * Only one in dependency, one out
  * ( here we assume T_ITERS == T_WIDTH_DBL )
  */
@@ -493,30 +529,8 @@ void djbi1d_skewed_tiles(int num_strips, int num_steps, double *dashs,
   }
 }
 
-double djbi1d_diamond_tiles(int n, int num_stencil_iters, double **jbi) {
-  int r, l, bot, top;
 
-  int stg = (num_stencil_iters / T_ITERS_DIAM) + 1;
-  int strp = (n / T_WIDTH_DBL_DIAM);
-  for (long tile_i = -1; tile_i < strp + 1; tile_i++) {
-    for (long tile_t = 0; tile_t < stg; tile_t++) {
-      /* tile_ile height */
-      bot = max(tile_t * T_ITERS_DIAM, 1);
-      top = min((tile_t + 1) * T_ITERS_DIAM, num_stencil_iters);
-      for (int t = bot; t < top; t++) {
-        /* Line boundaries */
-        l = max(tile_i * T_WIDTH_DBL_DIAM - (t - bot), 1);
-        r = min((tile_i + 1) * T_WIDTH_DBL_DIAM - (t - bot), n - 1);
-        for (int i = l; i < r; i++) {
-          JBI1D_STENCIL_T(jbi);
-        }
-      }
-    }
-  }
-
-  /* Not implemented */
-  return -1.0;
-}
+/* Naive version : just try to distribute each time iteration */
 
 double djbi1d_omp_naive(struct args_dimt args, double *jbi_in,
 	double *jbi_out) {
@@ -554,6 +568,8 @@ double djbi1d_omp_naive(struct args_dimt args, double *jbi_in,
 
   return elapsed;
 }
+
+/* Overlap : use trapezoïdal tiles with overlapping */
 
 double djbi1d_omp_overlap(struct args_dimt args, double *jbi_in,
   double *jbi_out) {
@@ -605,9 +621,9 @@ double djbi1d_omp_overlap(struct args_dimt args, double *jbi_in,
       free(lvl1);
       free(lvl0);
     }
-    /* Implicit barrier here, when all chunks of the loops are finished,
-     * we copy the resulting data in the "source"
-     */
+/* Implicit barrier here, when all chunks of the loops are finished,
+ * we copy the resulting data in the "source"
+ */
     memcpy(jbi_in, jbi_out, pb_size * sizeof(double));
   }
 
@@ -615,6 +631,13 @@ double djbi1d_omp_overlap(struct args_dimt args, double *jbi_in,
 
   return ELAPSED_TIME(tend, tbegin);
 }
+
+
+/*
+ * Sequential algorithms for comparison. The sequential alogrithm is simply
+ * the sequential update of all the points and does not expose any parallelism
+ * written this way !
+ */
 
 double djbi1d_sequential(struct args_dimt args, double *jbi_in,
   double *jbi_out) {
@@ -679,6 +702,11 @@ double ljbi1d_sequential(struct args_dimt args, long *jbi_in, long *jbi_out) {
 
   return ELAPSED_TIME(tend, tbegin);
 }
+
+/*
+ * Only for comparison : the output from pluto, when given the sequential
+ * version as input.
+ */
 
 double djbi1d_from_pluto(struct args_dimt args, double *jbi_in,
   double *jbi_out) {
@@ -792,7 +820,7 @@ double djbi1d_from_pluto(struct args_dimt args, double *jbi_in,
 }
 
 /* ==========================================================================*/
-/*                               Tests                                       */
+/*                               Tests  functions                            */
 /* ==========================================================================*/
 
 double djbi1d_hdiam_tasked_test(struct args_dimt args, double *jbi_in,
@@ -808,7 +836,7 @@ double djbi1d_half_diamonds_test(struct args_dimt args, double *jbi_in,
   double *jbi_out) {
   int pb_size = args.width, num_stencil_iters = args.iters;
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
-  djbi1d_half_diamonds(pb_size, num_stencil_iters, jbi_in, jbi_out);
+  djbi1d_hdiam(pb_size, num_stencil_iters, jbi_in, jbi_out);
   clock_gettime(CLOCK_MONOTONIC, &tend);
   return ELAPSED_TIME(tend, tbegin);
 }
@@ -936,6 +964,10 @@ double djbi1d_skewed_tiles_test(struct args_dimt args, double *jbi_in,
 
   return ELAPSED_TIME(tend, tbegin);
 }
+
+/* ==========================================================================*/
+/*                               Task  functions                             */
+/* ==========================================================================*/
 
 /* Task functions :
  * do_i0_t0 : starting task, botile_tom-left corner of the space-time matrix
@@ -1215,6 +1247,10 @@ static inline void do_topright_hdiam(int num_iters, int pb_size, double **tmp,
   }
 
 }
+
+/* ==========================================================================*/
+/*                               Checking  functions                         */
+/* ==========================================================================*/
 
 /*
 * task[i][j] is set to 1 if the task on time step i and column j has been

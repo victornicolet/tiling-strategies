@@ -29,6 +29,13 @@
 #define T_WIDTH_DBL_DIAM 8
 #define T_ITERS_DIAM 32
 
+/*
+ * Group factor is the parameter used for the group size calculation in
+ * djbi1d_hdiam_grouped_test.
+ * The group size is calculated so the memory used by the group will use
+ * the sum of L1 caches memories times the group factor.
+ */
+
 #ifndef GROUP_FACTOR
 #define GROUP_FACTOR 1
 #endif

@@ -1,7 +1,5 @@
 #define _POSIX_C_SOURCE 200112L
 
-#include <immintrin.h>
-#include <inttypes.h>
 #include <math.h>
 #include <signal.h>
 #include <stdlib.h>
