@@ -39,6 +39,7 @@ static const int Pbsize_2d = 1 << 8;
 static const int Num_iters_2d = 1 << 4;
 
 /* Options */
+static int do_check_flag = 0;
 static int debug_use_defaults = 0;
 static int hdiam_flag = 0;
 static int test_with_long_flag = 0;
@@ -67,6 +68,7 @@ static const struct option longopts[] = {
   {"long",          no_argument,            &test_with_long_flag, 1},
   {"use_defaults",  no_argument,            &debug_use_defaults,  1},
   {"verbose",       no_argument,            &verbose_flag,        1},
+  {"check",         no_argument,            NULL,                'c'},
   {0, 0, 0, 0}
 };
 
@@ -90,7 +92,7 @@ static const char * opts_msg[] = {
   "\t = stride between iteration tests",
   "\t\t run tests with longs for corectness checking",
   "\t use default values when debugging (small values)",
-  "\t",
+  "\t\t check if the output is correct",
   "/0"
 };
 
@@ -180,10 +182,13 @@ main(int argc, char ** argv)
   hdmask = "111101";
 
   while ((opt =
-    getopt_long(argc, argv, "hi:m:M:r:s:S:t:T:vx:y:", longopts, &option_index))
+    getopt_long(argc, argv, "chi:m:M:r:s:S:t:T:vx:y:", longopts, &option_index))
     != -1) {
       switch (opt) {
         case '0':
+        case 'c':
+          do_check_flag = 1;
+          break;
         case 'h':
           print_opts();
           usage(nbench, nbench2d, argv, benchmarks, benchmarks2d);
@@ -395,17 +400,19 @@ test1d(int nruns, int dimx, int dimt, struct benchspec benchmark)
   print_test1d_summary(nruns, DISPLAY_VERBOSE, t_accu, benchmark, data_in,
    data_out);
 
-  double *ref_out = aligned_alloc(CACHE_LINE_SIZE,
-    sizeof(*ref_out) * args.width);
-  djbi1d_sequential(args, data_in, ref_out);
+  if (do_check_flag > 0) {
+    double *ref_out = aligned_alloc(CACHE_LINE_SIZE,
+      sizeof(*ref_out) * args.width);
+    djbi1d_sequential(args, data_in, ref_out);
 
-  long diffs;
-  if ((diffs = compare_fast(args.width, data_out, ref_out)) > 0) {
-    print_check(diffs, args.width, data_out, ref_out);
+    long diffs;
+    if ((diffs = compare_fast(args.width, data_out, ref_out)) > 0) {
+      print_check(diffs, args.width, data_out, ref_out);
+    }
+    free(ref_out);
   }
   free(data_in);
   free(data_out);
-  free(ref_out);
   return t_accu;
 }
 
