@@ -28,7 +28,6 @@ ax1.set_xlabel('Iterations');
 ax1.set_ylabel('log(size_kB)');
 ax1.set_zlabel('Speedup - opt / naive');
 
-# note this: you can skip rows!
 X = my_data[:,0]
 Y = np.vectorize(math.log)(my_data[:,1], 2)
 Z1 = np.vectorize(lambda x: 1/x)(my_data[:,2 ])
@@ -68,13 +67,6 @@ ax1.set_zlim([0, max_gain_01]);
 surf1 = ax1.plot_surface(xig, yig, zi1,
         linewidth=0, color='b')
 
-point  = np.array([0, 0, 1])
-normal = np.array([0, 0, 1])
-d = -point.dot(normal)
-xx, yy = np.meshgrid(np.arange(X.min(), X.max()), np.arange(Y.min(),
- Y.max()))
-z = (-normal[0] * xx - normal[1] * yy - d) * 1. /normal[2]
-plane = ax1.plot_surface(xx,yy,z,linewidth=0, color='r')
 
 # comparison for specific problem size
 fig2 = plt.figure()
@@ -83,7 +75,7 @@ ax3 = fig2.add_subplot(3,1,2)
 ax4 = fig2.add_subplot(3,1,3)
 
 ax2.set_xlabel('Iterations')
-ax2.set_ylabel('Speedup opt/separate tiles')
+ax2.set_ylabel('Speedup opt / naive')
 
 ax3.set_xlabel('Iterations')
 ax3.set_ylabel('Speedup Libkpn opt / OpenMP')
@@ -94,14 +86,26 @@ ax4.set_ylabel('Speedup Libkpn naive / OpenMP')
 l1, = ax2.plot(Xb,Zb1, color='red')
 l2, = ax2.plot(Xb,Zb1_2, color='blue')
 l3, = ax2.plot(Xb,Zb1_3, color='green')
+line21, = ax2.plot([1,1000],[1,1], color='black')
+line21.set_dashes([8, 4, 2, 4, 2, 4])
+line22, =ax2.plot([1,1000],[2,2], color='black')
+line22.set_dashes([8, 4, 2, 4, 2, 4])
 
 ax3.plot(Xb,Zomp1, color='red')
 ax3.plot(Xb,Zomp2, color='blue')
 ax3.plot(Xb,Zomp3, color='green')
+line31, = ax3.plot([1,1000],[1,1], color='black')
+line31.set_dashes([8, 4, 2, 4, 2, 4])
+line32, =ax3.plot([1,1000],[2,2], color='black')
+line32.set_dashes([8, 4, 2, 4, 2, 4])
 
 ax4.plot(Xb,Zomp_n1, color='red')
 ax4.plot(Xb,Zomp_n2, color='blue')
 ax4.plot(Xb,Zomp_n3, color='green')
+line41, =ax4.plot([1,1000],[1,1], color='black')
+line41.set_dashes([8, 4, 2, 4, 2, 4])
+line42, =ax4.plot([1,1000],[2,2], color='black')
+line42.set_dashes([8, 4, 2, 4, 2, 4])
 
 fig2.legend([l1,l2,l3],['32768 Kb','65536 Kb', '131072 Kb'],
         loc='bottom', ncol=3)

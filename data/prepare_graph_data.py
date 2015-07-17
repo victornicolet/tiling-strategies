@@ -7,7 +7,6 @@ from mpl_toolkits.mplot3d import Axes3D
 from numpy import genfromtxt
 from scipy.interpolate import griddata
 
-KB=125
 
 
 def prep_gdat(write_csv):
@@ -16,7 +15,7 @@ def prep_gdat(write_csv):
         kpn_raw_dat = np.genfromtxt('jacobi1D_starnk_raw.csv', delimiter=';')
 
         # Data from Libkpn - naive version
-        kpn_raw_naive = np.genfromtxt('jacobi1D_starnk_raw_naive.csv',
+        kpn_raw_naive = np.genfromtxt('jacobi1D_starnk_naive_raw.csv',
                 delimiter=';')
 
         kpn_rawdf = pan.DataFrame(kpn_raw_dat, columns=['i','s','t_opt'])
@@ -31,12 +30,12 @@ def prep_gdat(write_csv):
 
         kpn_rawdf['i'] = kpn_rawdf['i'].astype(int)
         kpn_rawdf['s'] = kpn_rawdf['s'].astype(int)
-        kpn_rawdf['i'] = kpn_rawdf['i'].map(lambda x : int(2<<x))
+        #kpn_rawdf['i'] = kpn_rawdf['i'].map(lambda x : int(2<<x))
         kpn_rawdf['s'] = kpn_rawdf['s'].map(lambda x : int(2<<x))
 
         kpn_naive_rawdf['i'] = kpn_naive_rawdf['i'].astype(int)
         kpn_naive_rawdf['s'] = kpn_naive_rawdf['s'].astype(int)
-        kpn_naive_rawdf['i'] = kpn_naive_rawdf['i'].map(lambda x : int(2<<x))
+        #kpn_naive_rawdf['i'] = kpn_naive_rawdf['i'].map(lambda x : int(2<<x))
         kpn_naive_rawdf['s'] = kpn_naive_rawdf['s'].map(lambda x : int(2<<x))
 
         kpn_merged = pan.merge(kpn_rawdf, kpn_naive_rawdf, how='inner',
@@ -69,8 +68,9 @@ def prep_gdat(write_csv):
         omp_hdiam_tasks = ompdf.loc[ompdf['algo']==3];
 
         # Merge
-        df = pan.merge(omp_hdiam, kpn_stats, how='inner',
+        df = pan.merge(omp_hdiam_var_tri, kpn_stats, how='inner',
                 on=['i','s'])
+
         df.drop('algo', axis=1, inplace=True)
 
         df[['i', 's']] = df[['i', 's']].astype(int)
