@@ -564,7 +564,7 @@ double djbi1d_omp_naive(struct args_dimt args, double *jbi_in,
   free(l1);
   free(l2);
 
-  elapsed = ELAPSED_TIME(tend, tbegin);
+  elapsed = ELAPSED_TIME_S(tend, tbegin);
 
   return elapsed;
 }
@@ -629,7 +629,7 @@ double djbi1d_omp_overlap(struct args_dimt args, double *jbi_in,
 
   clock_gettime(CLOCK_MONOTONIC, &tend);
 
-  return ELAPSED_TIME(tend, tbegin);
+  return ELAPSED_TIME_S(tend, tbegin);
 }
 
 
@@ -667,7 +667,7 @@ double djbi1d_sequential(struct args_dimt args, double *jbi_in,
   free(l1);
   free(l2);
 
-  return ELAPSED_TIME(tend, tbegin);
+  return ELAPSED_TIME_S(tend, tbegin);
 
 }
 
@@ -700,7 +700,7 @@ double ljbi1d_sequential(struct args_dimt args, long *jbi_in, long *jbi_out) {
   free(l1);
   free(l2);
 
-  return ELAPSED_TIME(tend, tbegin);
+  return ELAPSED_TIME_S(tend, tbegin);
 }
 
 /*
@@ -816,7 +816,7 @@ double djbi1d_from_pluto(struct args_dimt args, double *jbi_in,
   }
   clock_gettime(CLOCK_MONOTONIC, &tend);
 
-  return ELAPSED_TIME(tend, tbegin);
+  return ELAPSED_TIME_S(tend, tbegin);
 }
 
 /* ==========================================================================*/
@@ -829,7 +829,7 @@ double djbi1d_hdiam_tasked_test(struct args_dimt args, double *jbi_in,
   djbi1d_hdiam_tasked(args.width, args.iters, jbi_in, jbi_out);
   clock_gettime(CLOCK_MONOTONIC, &tend);
 
-  return ELAPSED_TIME(tend, tbegin);
+  return ELAPSED_TIME_S(tend, tbegin);
 }
 
 double djbi1d_half_diamonds_test(struct args_dimt args, double *jbi_in,
@@ -838,7 +838,7 @@ double djbi1d_half_diamonds_test(struct args_dimt args, double *jbi_in,
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
   djbi1d_hdiam(pb_size, num_stencil_iters, jbi_in, jbi_out);
   clock_gettime(CLOCK_MONOTONIC, &tend);
-  return ELAPSED_TIME(tend, tbegin);
+  return ELAPSED_TIME_S(tend, tbegin);
 }
 
 double djbi1d_hdiam_grouped_test(struct args_dimt args, double *jbi_in,
@@ -851,7 +851,7 @@ double djbi1d_hdiam_grouped_test(struct args_dimt args, double *jbi_in,
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
   djbi1d_hdiam_grouped(pb_size, num_stencil_iters, num_procs, jbi_in, jbi_out);
   clock_gettime(CLOCK_MONOTONIC, &tend);
-  return ELAPSED_TIME(tend, tbegin);
+  return ELAPSED_TIME_S(tend, tbegin);
 }
 
 double ljbi1d_half_diamonds_test(struct args_dimt args, long *jbi_in,
@@ -860,7 +860,7 @@ double ljbi1d_half_diamonds_test(struct args_dimt args, long *jbi_in,
   clock_gettime(CLOCK_MONOTONIC, &tbegin);
   ljbi1d_half_diamonds(pb_size, num_stencil_iters, jbi_in, jbi_out);
   clock_gettime(CLOCK_MONOTONIC, &tend);
-  return ELAPSED_TIME(tend, tbegin);
+  return ELAPSED_TIME_S(tend, tbegin);
 }
 
 double djbi1d_sk_full_tiles_test(struct args_dimt args, double *jbi_in,
@@ -920,7 +920,7 @@ double djbi1d_sk_full_tiles_test(struct args_dimt args, double *jbi_in,
   free(jbi_slashs);
 
 
-  return ELAPSED_TIME(tend, tbegin);
+  return ELAPSED_TIME_S(tend, tbegin);
 }
 
 double djbi1d_skewed_tiles_test(struct args_dimt args, double *jbi_in,
@@ -962,7 +962,7 @@ double djbi1d_skewed_tiles_test(struct args_dimt args, double *jbi_in,
   free(jbi_dashs);
   free(jbi_slashs);
 
-  return ELAPSED_TIME(tend, tbegin);
+  return ELAPSED_TIME_S(tend, tbegin);
 }
 
 /* ==========================================================================*/

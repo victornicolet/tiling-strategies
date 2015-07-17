@@ -142,7 +142,7 @@ djbi2d_seq(struct args_dimt args, double ** data_in, double ** data_out)
 
   clock_gettime(CLOCK_MONOTONIC, &tend);
 
-  return ELAPSED_TIME(tend, tbegin);
+  return ELAPSED_TIME_S(tend, tbegin);
 }
 
 

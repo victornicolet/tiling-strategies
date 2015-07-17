@@ -23,7 +23,7 @@
 #define BILLION 1000000000.0
 #define DOUBLE_COMPARISON_THRESHOLD 10e-7
 /* a, b timespec structs -> returns difference btw a and b in secs */
-#define ELAPSED_TIME(a,b) (a.tv_sec - b.tv_sec) +                             \
+#define ELAPSED_TIME_S(a,b) (a.tv_sec - b.tv_sec) +                             \
                           ((a.tv_nsec - b.tv_nsec ) / BILLION)
 
 #define min(a,b) ((a) > (b) ? (b) : (a))

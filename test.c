@@ -493,7 +493,7 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters, char *hdmask,
   struct benchspec * hdiam_benchmarks, FILE * csv_file)
 {
   int bm_no, iters, max_threads, n_threads, pow2, run_no;
-  double elapsed_time;
+  double ELAPSED_TIME_S;
   double *data_in, *data_out;
 
   max_threads = omp_get_max_threads();
@@ -543,20 +543,20 @@ test_suite_hdiam1d(int num_benchs, int range, int range_iters, char *hdmask,
             */
 
             if(!t_thread_flag) {
-              elapsed_time = hdiam_benchmarks[bm_no].variant(args, data_in,
+              ELAPSED_TIME_S = hdiam_benchmarks[bm_no].variant(args, data_in,
                 data_out);
               fprintf(csv_file, "%i,%i,%i,%i,%f\n", args.iters,
                 args.width / KB, bm_no, omp_get_max_threads(),
-                elapsed_time * 1000.0);
+                ELAPSED_TIME_S * 1000.0);
 
             } else {
 
               for(n_threads = 1; n_threads <= max_threads; n_threads++) {
                 omp_set_num_threads(n_threads);
-                elapsed_time = hdiam_benchmarks[bm_no].variant(args,
+                ELAPSED_TIME_S = hdiam_benchmarks[bm_no].variant(args,
                   data_in,data_out);
                 fprintf(csv_file, "%i,%i,%i,%i,%f\n", args.iters,
-                  args.width / KB, bm_no, n_threads, elapsed_time * 1000.0);
+                  args.width / KB, bm_no, n_threads, ELAPSED_TIME_S * 1000.0);
               }
             }
           }
