@@ -205,8 +205,10 @@ main(int argc, char ** argv)
             printf("Error : the hdiams mask you specified is too long."
               "Must be maximum %i bits long.\n", nbench_hd);
           }
+          break;
         case 'n':
           nruns = atoi(optarg);
+          break;
         case 'r':
           range = atoi(optarg);
           break;
